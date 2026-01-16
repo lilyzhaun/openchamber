@@ -27,7 +27,6 @@ import {
 
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { GridLoader } from '@/components/ui/grid-loader';
 import {
   RiAddLine,
   RiArrowDownSLine,
@@ -39,6 +38,7 @@ import {
   RiFileCopyLine,
   RiFolderAddLine,
   RiGitBranchLine,
+  RiGitRepositoryLine,
   RiLinkUnlinkM,
   RiMore2Line,
   RiPencilAiLine,
@@ -59,6 +59,7 @@ import { checkIsGitRepository } from '@/lib/gitApi';
 import { getSafeStorage } from '@/stores/utils/safeStorage';
 import { createWorktreeSession } from '@/lib/worktreeSessionCreator';
 import { isVSCodeRuntime } from '@/lib/desktop';
+import { BranchPickerDialog } from './BranchPickerDialog';
 
 const PROJECT_COLLAPSE_STORAGE_KEY = 'oc.sessions.projectCollapse';
 const SESSION_EXPANDED_STORAGE_KEY = 'oc.sessions.expandedParents';
@@ -135,6 +136,7 @@ interface SortableProjectItemProps {
   onHoverChange: (hovered: boolean) => void;
   onNewSession: () => void;
   onNewWorktreeSession?: () => void;
+  onOpenBranchPicker?: () => void;
   onOpenMultiRunLauncher: () => void;
   onClose: () => void;
   sentinelRef: (el: HTMLDivElement | null) => void;
@@ -157,6 +159,7 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
   onHoverChange,
   onNewSession,
   onNewWorktreeSession,
+  onOpenBranchPicker,
   onOpenMultiRunLauncher,
   onClose,
   sentinelRef,
@@ -255,8 +258,9 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {isRepo && onNewWorktreeSession && (
-            <Tooltip>
+          {/* Worktree button - visible on hover for git repos */}
+          {isRepo && !hideDirectoryControls && onNewWorktreeSession && (
+            <Tooltip delayDuration={700}>
               <TooltipTrigger asChild>
                 <button
                   type="button"
@@ -265,20 +269,43 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                     onNewWorktreeSession();
                   }}
                   className={cn(
-                    'inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:text-foreground',
+                    'inline-flex h-6 w-6 items-center justify-center text-muted-foreground hover:text-foreground flex-shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-opacity',
                     mobileVariant ? 'opacity-70' : 'opacity-0 group-hover/project:opacity-100',
                   )}
-                  aria-label="New session in worktree"
+                  aria-label="New worktree session"
                 >
                   <RiGitBranchLine className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" sideOffset={4}>
-                <p>New session in worktree</p>
-              </TooltipContent>
+              <TooltipContent side="bottom">New worktree session</TooltipContent>
             </Tooltip>
           )}
-          <Tooltip>
+
+          {/* Branch picker button - visible on hover for git repos */}
+          {isRepo && !hideDirectoryControls && onOpenBranchPicker && (
+            <Tooltip delayDuration={700}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenBranchPicker();
+                  }}
+                  className={cn(
+                    'inline-flex h-6 w-6 items-center justify-center text-muted-foreground hover:text-foreground flex-shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-opacity',
+                    mobileVariant ? 'opacity-70' : 'opacity-0 group-hover/project:opacity-100',
+                  )}
+                  aria-label="Browse branches"
+                >
+                  <RiGitRepositoryLine className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Browse branches</TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* New session button */}
+          <Tooltip delayDuration={700}>
             <TooltipTrigger asChild>
               <button
                 type="button"
@@ -292,9 +319,7 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                 <RiAddLine className="h-4 w-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={4}>
-              <p>New session</p>
-            </TooltipContent>
+            <TooltipContent side="bottom">New session</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -365,9 +390,9 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const [projectRepoStatus, setProjectRepoStatus] = React.useState<Map<string, boolean | null>>(new Map());
   const [expandedSessionGroups, setExpandedSessionGroups] = React.useState<Set<string>>(new Set());
   const [hoveredProjectId, setHoveredProjectId] = React.useState<string | null>(null);
+  const [branchPickerOpen, setBranchPickerOpen] = React.useState(false);
   const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
   const [stuckProjectHeaders, setStuckProjectHeaders] = React.useState<Set<string>>(new Set());
-  const [openMenuSessionId, setOpenMenuSessionId] = React.useState<string | null>(null);
   const projectHeaderSentinelRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map());
   const ignoreIntersectionUntil = React.useRef<number>(0);
 
@@ -1133,10 +1158,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
               isMissingDirectory ? 'opacity-75' : '',
               depth > 0 && 'pl-[20px]',
             )}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setOpenMenuSessionId(session.id);
-            }}
           >
             <div className="flex min-w-0 flex-1 items-center">
               <button
@@ -1149,10 +1170,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
               >
                 {}
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {isStreaming ? (
-                    <GridLoader size="xs" className="text-primary flex-shrink-0" />
-                  ) : null}
-                  <span className="truncate typography-ui-label font-normal text-foreground">
+                  <span
+                    className={cn(
+                      'truncate typography-ui-label font-normal text-foreground',
+                      isStreaming && 'animate-pulse [animation-duration:1.8s]'
+                    )}
+                  >
                     {sessionTitle}
                   </span>
 
@@ -1234,10 +1257,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
 
               <div className="flex items-center gap-1.5 self-stretch">
                 {streamingIndicator}
-                <DropdownMenu
-                  open={openMenuSessionId === session.id}
-                  onOpenChange={(open) => setOpenMenuSessionId(open ? session.id : null)}
-                >
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
@@ -1358,7 +1378,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       setActiveMainTab,
       setSessionSwitcherOpen,
       openNewSessionDraft,
-      openMenuSessionId,
     ],
   );
 
@@ -1590,6 +1609,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                       }
                       createWorktreeSession();
                     }}
+                    onOpenBranchPicker={() => setBranchPickerOpen(true)}
                     onOpenMultiRunLauncher={() => {
                       if (projectKey !== activeProjectId) {
                         setActiveProject(projectKey);
@@ -1624,6 +1644,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         )}
       </ScrollableOverlay>
 
+      <BranchPickerDialog
+        open={branchPickerOpen}
+        onOpenChange={setBranchPickerOpen}
+        projects={normalizedProjects}
+        activeProjectId={activeProjectId}
+      />
     </div>
   );
 };
