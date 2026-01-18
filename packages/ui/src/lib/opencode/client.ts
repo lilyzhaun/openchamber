@@ -120,6 +120,15 @@ export type DirectorySwitchResult = {
   models?: unknown[];
 };
 
+export type GitHubRepo = {
+  name: string;
+  fullName: string;
+  description: string | null;
+  isPrivate: boolean;
+  url: string;
+  cloneUrl: string;
+};
+
 const normalizeFsPath = (path: string): string => path.replace(/\\/g, "/");
 
 const getDesktopFilesApi = (): FilesAPI | null => {
@@ -1672,6 +1681,45 @@ class OpencodeService {
     } catch {
       return false;
     }
+  }
+
+  isDesktopRuntime(): boolean {
+    if (typeof window === 'undefined') return false;
+    const apis = (window as typeof window & { __OPENCHAMBER_RUNTIME_APIS__?: RuntimeAPIs }).__OPENCHAMBER_RUNTIME_APIS__;
+    return Boolean(apis?.runtime?.isDesktop);
+  }
+
+  // GitHub Operations
+  async listGitHubRepos(): Promise<GitHubRepo[]> {
+    if (this.isDesktopRuntime()) {
+      throw new Error('GitHub integration is not available in the desktop app. Use the web version or clone repositories manually.');
+    }
+    const response = await fetch(`${this.baseUrl}/github/repos`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to fetch GitHub repositories' }));
+      throw new Error(error.error || 'Failed to fetch GitHub repositories');
+    }
+    return response.json();
+  }
+
+  async cloneGitHubRepo(cloneUrl: string, targetDirectory: string): Promise<{ success: boolean; path: string }> {
+    if (this.isDesktopRuntime()) {
+      throw new Error('GitHub integration is not available in the desktop app. Use the web version or clone repositories manually.');
+    }
+    const response = await fetch(`${this.baseUrl}/github/clone`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ cloneUrl, targetDirectory }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to clone repository' }));
+      throw new Error(error.error || 'Failed to clone repository');
+    }
+
+    return response.json();
   }
 
   // File System Operations

@@ -53,6 +53,7 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { usePanes } from '@/stores/usePaneStore';
 import { useConfigStore } from '@/stores/useConfigStore';
 import type { WorktreeMetadata } from '@/types/worktree';
 import { opencodeClient } from '@/lib/opencode/client';
@@ -413,6 +414,10 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
   const openMultiRunLauncher = useUIStore((state) => state.openMultiRunLauncher);
 
+  const activeProject = useProjectsStore((state) => state.getActiveProject());
+  const worktreeId = activeProject?.path ?? 'global';
+  const { openChatSession, focusedPane, setFocusedPane } = usePanes(worktreeId);
+
   const settingsAutoCreateWorktree = useConfigStore((state) => state.settingsAutoCreateWorktree);
 
   const sessions = useSessionStore((state) => state.sessions);
@@ -627,7 +632,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       }
 
       if (projectId && projectId !== activeProjectId) {
-        // Important: avoid switching to the project root first (that can select the wrong session).
         setActiveProjectIdOnly(projectId);
       }
 
@@ -644,7 +648,13 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         onSessionSelected?.(sessionId);
         return;
       }
+
+      const session = sessions.find((s) => s.id === sessionId);
+      const title = session?.title || 'Chat';
+      
+      openChatSession(focusedPane, sessionId, title);
       setCurrentSession(sessionId);
+      setFocusedPane(focusedPane);
       onSessionSelected?.(sessionId);
     },
     [
@@ -652,12 +662,16 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       allowReselect,
       currentDirectory,
       currentSessionId,
+      focusedPane,
       mobileVariant,
       onSessionSelected,
+      openChatSession,
+      sessions,
       setActiveMainTab,
       setActiveProjectIdOnly,
       setCurrentSession,
       setDirectory,
+      setFocusedPane,
       setSessionSwitcherOpen,
     ],
   );
@@ -1150,13 +1164,24 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         return null;
       })();
 
+      const handleSessionDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('application/x-openchamber-session', JSON.stringify({
+          sessionId: session.id,
+          title: sessionTitle,
+          directory: sessionDirectory,
+        }));
+      };
+
       return (
         <React.Fragment key={session.id}>
           <div
+            draggable={!isMissingDirectory}
+            onDragStart={handleSessionDragStart}
             className={cn(
-              'group relative flex items-center rounded-md px-1.5 py-1',
+              'group relative flex items-center rounded-md px-1.5 py-1 cursor-grab active:cursor-grabbing',
               isActive ? 'dark:bg-accent/80 bg-primary/12' : 'hover:dark:bg-accent/40 hover:bg-primary/6',
-              isMissingDirectory ? 'opacity-75' : '',
+              isMissingDirectory ? 'opacity-75 cursor-default' : '',
               depth > 0 && 'pl-[20px]',
             )}
           >

@@ -3982,6 +3982,90 @@ async function main(options = {}) {
     }
   });
 
+  app.get('/api/github/repos', async (req, res) => {
+    try {
+      const result = spawnSync('gh', [
+        'repo', 'list',
+        '--json', 'name,nameWithOwner,description,isPrivate,url,sshUrl',
+        '--limit', '100'
+      ], { encoding: 'utf8', timeout: 30000 });
+
+      if (result.error) {
+        const errorMessage = result.error.message || 'GitHub CLI error';
+        if (errorMessage.includes('ENOENT')) {
+          return res.status(500).json({ error: 'GitHub CLI (gh) not installed' });
+        }
+        return res.status(500).json({ error: errorMessage });
+      }
+
+      if (result.status !== 0) {
+        const stderr = result.stderr || '';
+        if (stderr.includes('auth') || stderr.includes('login')) {
+          return res.status(401).json({ error: 'Not logged in. Run "gh auth login" in your terminal.' });
+        }
+        return res.status(500).json({ error: stderr || 'GitHub CLI error' });
+      }
+
+      const repos = JSON.parse(result.stdout || '[]');
+      const mapped = repos.map((r) => ({
+        name: r.name,
+        fullName: r.nameWithOwner,
+        description: r.description,
+        isPrivate: r.isPrivate,
+        url: r.url,
+        cloneUrl: r.url + '.git'
+      }));
+
+      res.json(mapped);
+    } catch (error) {
+      console.error('Failed to fetch GitHub repos:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch GitHub repositories' });
+    }
+  });
+
+  app.post('/api/github/clone', async (req, res) => {
+    try {
+      const { cloneUrl, targetDirectory } = req.body;
+
+      if (!cloneUrl || typeof cloneUrl !== 'string') {
+        return res.status(400).json({ error: 'Clone URL is required' });
+      }
+      if (!targetDirectory || typeof targetDirectory !== 'string') {
+        return res.status(400).json({ error: 'Target directory is required' });
+      }
+
+      const expandedPath = normalizeDirectoryPath(targetDirectory);
+      const resolvedPath = path.resolve(expandedPath);
+
+      if (fs.existsSync(resolvedPath)) {
+        return res.status(400).json({ error: `Directory already exists: ${resolvedPath}` });
+      }
+
+      const parentDir = path.dirname(resolvedPath);
+      if (!fs.existsSync(parentDir)) {
+        fs.mkdirSync(parentDir, { recursive: true });
+      }
+
+      const result = spawnSync('git', ['clone', cloneUrl, resolvedPath], {
+        encoding: 'utf8',
+        timeout: 120000
+      });
+
+      if (result.error) {
+        return res.status(500).json({ error: result.error.message || 'Git clone failed' });
+      }
+
+      if (result.status !== 0) {
+        return res.status(500).json({ error: result.stderr || 'Git clone failed' });
+      }
+
+      res.json({ success: true, path: resolvedPath });
+    } catch (error) {
+      console.error('Failed to clone repository:', error);
+      res.status(500).json({ error: error.message || 'Failed to clone repository' });
+    }
+  });
+
   app.get('/api/fs/home', (req, res) => {
     try {
       const home = os.homedir();
