@@ -7,6 +7,7 @@ import { GitSettings } from './GitSettings';
 import { WorktreeSectionContent } from './WorktreeSectionContent';
 import { NotificationSettings } from './NotificationSettings';
 import { LayoutSettings } from './LayoutSettings';
+import { AppRunnerSettings } from './AppRunnerSettings';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { useDeviceInfo } from '@/lib/device';
 import { isWebRuntime } from '@/lib/desktop';
@@ -60,6 +61,8 @@ export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => 
                 return <GitSectionContent />;
             case 'notifications':
                 return <NotificationSectionContent />;
+            case 'appRunner':
+                return <AppRunnerSectionContent />;
             default:
                 return null;
         }
@@ -124,4 +127,9 @@ const GitSectionContent: React.FC = () => {
 // Notifications section: Native browser notifications
 const NotificationSectionContent: React.FC = () => {
     return <NotificationSettings />;
+};
+
+// App Runner section: Dev server with start/stop controls
+const AppRunnerSectionContent: React.FC = () => {
+    return <AppRunnerSettings />;
 };
