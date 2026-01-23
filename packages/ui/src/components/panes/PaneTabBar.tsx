@@ -34,20 +34,22 @@ interface DraggableTabItemProps {
   isActive: boolean;
   isDragOver: boolean;
   isDragging: boolean;
-  onActivate: (tabId: string) => void;
-  onClose: (tabId: string) => void;
+  displayTitle: string;
+  onActivate: () => void;
+  onClose: () => void;
   onDragStart: (e: React.DragEvent, tabId: string) => void;
-  onDragOver: (e: React.DragEvent, tabId: string) => void;
+  onDragOver: (e: React.DragEvent) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, targetTabId: string) => void;
 }
 
-const DraggableTabItem = React.memo<DraggableTabItemProps>(({
+const DraggableTabItem: React.FC<DraggableTabItemProps> = ({
   tab,
   paneId,
   isActive,
   isDragOver,
   isDragging,
+  displayTitle,
   onActivate,
   onClose,
   onDragStart,
@@ -61,28 +63,12 @@ const DraggableTabItem = React.memo<DraggableTabItemProps>(({
   const showLoader = tab.type === 'chat' && isStreaming;
   const isClosable = tab.type !== 'appRunner';
 
-  // Look up title directly from store - only re-renders when THIS session's title changes
-  const displayTitle = useSessionStore(
-    useCallback((s) => {
-      if (tab.type === 'chat' && tab.sessionId) {
-        const session = s.sessions.find((sess) => sess.id === tab.sessionId);
-        const title = session?.title;
-        if (title && title.trim().length > 0) return title;
-      }
-      return tab.title || getTabLabel(tab.type);
-    }, [tab.type, tab.sessionId, tab.title])
-  );
-
-  const handleActivate = useCallback(() => {
-    onActivate(tab.id);
-  }, [onActivate, tab.id]);
-
   const handleClose = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      onClose(tab.id);
+      onClose();
     },
-    [onClose, tab.id]
+    [onClose]
   );
 
   const handleDragStart = useCallback(
@@ -97,28 +83,14 @@ const DraggableTabItem = React.memo<DraggableTabItemProps>(({
     [tab, paneId, onDragStart]
   );
 
-  const handleDragOver = useCallback(
-    (e: React.DragEvent) => {
-      onDragOver(e, tab.id);
-    },
-    [onDragOver, tab.id]
-  );
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      onDrop(e, tab.id);
-    },
-    [onDrop, tab.id]
-  );
-
   return (
     <div
-      onClick={handleActivate}
+      onClick={onActivate}
       draggable={isClosable}
       onDragStart={isClosable ? handleDragStart : undefined}
-      onDragOver={handleDragOver}
+      onDragOver={onDragOver}
       onDragLeave={onDragLeave}
-      onDrop={handleDrop}
+      onDrop={(e) => onDrop(e, tab.id)}
       className={cn(
         'group relative flex h-12 items-center gap-1.5 px-3 cursor-pointer select-none app-region-no-drag',
         'border-r transition-colors',
@@ -155,7 +127,7 @@ const DraggableTabItem = React.memo<DraggableTabItemProps>(({
       )}
     </div>
   );
-});
+};
 
 interface NewTabMenuProps {
   onSelect: (type: PaneTabType) => void;
@@ -252,8 +224,17 @@ export const PaneTabBar: React.FC<PaneTabBarProps> = ({
   const [showUrlMenu, setShowUrlMenu] = useState(false);
   const urlButtonRef = useRef<HTMLButtonElement>(null);
   
+  const sessions = useSessionStore((s) => s.sessions);
   const currentDirectory = useDirectoryStore((s) => s.currentDirectory);
   const { addTab } = usePanes(currentDirectory);
+
+  const getDisplayTitle = useCallback((tab: PaneTab) => {
+    if (tab.type === 'chat' && tab.sessionId) {
+      const session = sessions.find((s) => s.id === tab.sessionId);
+      if (session?.title) return session.title;
+    }
+    return tab.title || getTabLabel(tab.type);
+  }, [sessions]);
 
   // Detect fullscreen mode - disable app-region-drag in fullscreen since window can't be dragged anyway
   // and it interferes with HTML5 drag-and-drop
@@ -428,10 +409,11 @@ export const PaneTabBar: React.FC<PaneTabBarProps> = ({
             isActive={tab.id === activeTabId}
             isDragOver={dragOverTabId === tab.id}
             isDragging={draggingTabId === tab.id}
-            onActivate={onActivateTab}
-            onClose={onCloseTab}
+            displayTitle={getDisplayTitle(tab)}
+            onActivate={() => onActivateTab(tab.id)}
+            onClose={() => onCloseTab(tab.id)}
             onDragStart={handleDragStart}
-            onDragOver={handleTabDragOver}
+            onDragOver={(e) => handleTabDragOver(e, tab.id)}
             onDragLeave={handleTabDragLeave}
             onDrop={handleTabDrop}
           />
