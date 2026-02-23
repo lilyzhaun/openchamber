@@ -87,10 +87,17 @@ const getToolIcon = (toolName: string) => {
     return <RiToolsLine className={iconClass} />;
 };
 
-const IMAGE_PREVIEW_ANIMATION_MS = 150;
+const PREVIEW_ANIMATION_MS = 150;
 const MERMAID_DIALOG_HEADER_HEIGHT = 40;
 const MERMAID_ASPECT_RETRY_DELAY_MS = 120;
 const MERMAID_ASPECT_MAX_RETRIES = 3;
+
+type ViewportSize = { width: number; height: number };
+
+const getWindowViewport = (): ViewportSize => ({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+});
 
 const PREVIEW_VIEWPORT_LIMITS = {
     mobile: { widthRatio: 0.94, heightRatio: 0.86, padding: 10 },
@@ -162,6 +169,76 @@ const getSvgAspectRatio = (svg: SVGElement): number | null => {
     return null;
 };
 
+const usePreviewOverlayState = (open: boolean) => {
+    const [isRendered, setIsRendered] = React.useState(open);
+    const [isVisible, setIsVisible] = React.useState(open);
+    const [isTransitioning, setIsTransitioning] = React.useState(false);
+
+    React.useEffect(() => {
+        if (open) {
+            setIsRendered(true);
+            setIsTransitioning(true);
+            if (typeof window === 'undefined') {
+                setIsVisible(true);
+                return;
+            }
+
+            const raf = window.requestAnimationFrame(() => {
+                setIsVisible(true);
+            });
+
+            const doneId = window.setTimeout(() => {
+                setIsTransitioning(false);
+            }, PREVIEW_ANIMATION_MS);
+
+            return () => {
+                window.cancelAnimationFrame(raf);
+                window.clearTimeout(doneId);
+            };
+        }
+
+        setIsVisible(false);
+        setIsTransitioning(true);
+        if (typeof window === 'undefined') {
+            setIsRendered(false);
+            return;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            setIsRendered(false);
+            setIsTransitioning(false);
+        }, PREVIEW_ANIMATION_MS);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, [open]);
+
+    return { isRendered, isVisible, isTransitioning };
+};
+
+const usePreviewViewport = (open: boolean) => {
+    const [viewport, setViewport] = React.useState<ViewportSize>(getWindowViewport);
+
+    React.useEffect(() => {
+        if (!open || typeof window === 'undefined') {
+            return;
+        }
+
+        const onResize = () => {
+            setViewport(getWindowViewport());
+        };
+
+        onResize();
+        window.addEventListener('resize', onResize);
+        return () => {
+            window.removeEventListener('resize', onResize);
+        };
+    }, [open]);
+
+    return viewport;
+};
+
 const ImagePreviewDialog: React.FC<{
     popup: ToolPopupContent;
     onOpenChange: (open: boolean) => void;
@@ -188,13 +265,8 @@ const ImagePreviewDialog: React.FC<{
 
     const [currentIndex, setCurrentIndex] = React.useState(0);
     const [imageNaturalSize, setImageNaturalSize] = React.useState<{ width: number; height: number } | null>(null);
-    const [isRendered, setIsRendered] = React.useState(popup.open);
-    const [isVisible, setIsVisible] = React.useState(popup.open);
-    const [isTransitioning, setIsTransitioning] = React.useState(false);
-    const [viewport, setViewport] = React.useState<{ width: number; height: number }>({
-        width: typeof window !== 'undefined' ? window.innerWidth : 0,
-        height: typeof window !== 'undefined' ? window.innerHeight : 0,
-    });
+    const { isRendered, isVisible, isTransitioning } = usePreviewOverlayState(popup.open);
+    const viewport = usePreviewViewport(popup.open);
 
     React.useEffect(() => {
         if (!popup.open || gallery.length === 0) {
@@ -228,46 +300,6 @@ const ImagePreviewDialog: React.FC<{
     }, [gallery.length]);
 
     React.useEffect(() => {
-        if (popup.open) {
-            setIsRendered(true);
-            setIsTransitioning(true);
-            if (typeof window === 'undefined') {
-                setIsVisible(true);
-                return;
-            }
-
-            const raf = window.requestAnimationFrame(() => {
-                setIsVisible(true);
-            });
-
-            const doneId = window.setTimeout(() => {
-                setIsTransitioning(false);
-            }, IMAGE_PREVIEW_ANIMATION_MS);
-
-            return () => {
-                window.cancelAnimationFrame(raf);
-                window.clearTimeout(doneId);
-            };
-        }
-
-        setIsVisible(false);
-        setIsTransitioning(true);
-        if (typeof window === 'undefined') {
-            setIsRendered(false);
-            return;
-        }
-
-        const timeoutId = window.setTimeout(() => {
-            setIsRendered(false);
-            setIsTransitioning(false);
-        }, IMAGE_PREVIEW_ANIMATION_MS);
-
-        return () => {
-            window.clearTimeout(timeoutId);
-        };
-    }, [popup.open]);
-
-    React.useEffect(() => {
         if (!popup.open) {
             return;
         }
@@ -295,22 +327,6 @@ const ImagePreviewDialog: React.FC<{
             window.removeEventListener('keydown', onKeyDown);
         };
     }, [hasMultipleImages, onOpenChange, popup.open, showNext, showPrevious]);
-
-    React.useEffect(() => {
-        if (!popup.open || typeof window === 'undefined') {
-            return;
-        }
-
-        const onResize = () => {
-            setViewport({ width: window.innerWidth, height: window.innerHeight });
-        };
-
-        onResize();
-        window.addEventListener('resize', onResize);
-        return () => {
-            window.removeEventListener('resize', onResize);
-        };
-    }, [popup.open]);
 
     React.useEffect(() => {
         setImageNaturalSize(null);
@@ -537,14 +553,9 @@ const MermaidPreviewDialog: React.FC<{
     const [source, setSource] = React.useState<string>(popup.mermaid?.source || '');
     const [status, setStatus] = React.useState<'idle' | 'loading' | 'ready' | 'error'>(popup.mermaid?.source ? 'ready' : 'idle');
     const [errorMessage, setErrorMessage] = React.useState<string>('');
-    const [isRendered, setIsRendered] = React.useState(popup.open);
-    const [isVisible, setIsVisible] = React.useState(popup.open);
-    const [isTransitioning, setIsTransitioning] = React.useState(false);
+    const { isRendered, isVisible, isTransitioning } = usePreviewOverlayState(popup.open);
     const [diagramAspectRatio, setDiagramAspectRatio] = React.useState<number | null>(null);
-    const [viewport, setViewport] = React.useState<{ width: number; height: number }>({
-        width: typeof window !== 'undefined' ? window.innerWidth : 0,
-        height: typeof window !== 'undefined' ? window.innerHeight : 0,
-    });
+    const viewport = usePreviewViewport(popup.open);
     const requestIdRef = React.useRef(0);
     const mermaidPreviewRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -674,46 +685,6 @@ const MermaidPreviewDialog: React.FC<{
     }, [loadMermaidSource, popup.mermaid, popup.open]);
 
     React.useEffect(() => {
-        if (popup.open) {
-            setIsRendered(true);
-            setIsTransitioning(true);
-            if (typeof window === 'undefined') {
-                setIsVisible(true);
-                return;
-            }
-
-            const raf = window.requestAnimationFrame(() => {
-                setIsVisible(true);
-            });
-
-            const doneId = window.setTimeout(() => {
-                setIsTransitioning(false);
-            }, IMAGE_PREVIEW_ANIMATION_MS);
-
-            return () => {
-                window.cancelAnimationFrame(raf);
-                window.clearTimeout(doneId);
-            };
-        }
-
-        setIsVisible(false);
-        setIsTransitioning(true);
-        if (typeof window === 'undefined') {
-            setIsRendered(false);
-            return;
-        }
-
-        const timeoutId = window.setTimeout(() => {
-            setIsRendered(false);
-            setIsTransitioning(false);
-        }, IMAGE_PREVIEW_ANIMATION_MS);
-
-        return () => {
-            window.clearTimeout(timeoutId);
-        };
-    }, [popup.open]);
-
-    React.useEffect(() => {
         if (!popup.open) {
             return;
         }
@@ -729,22 +700,6 @@ const MermaidPreviewDialog: React.FC<{
             window.removeEventListener('keydown', onKeyDown);
         };
     }, [onOpenChange, popup.open]);
-
-    React.useEffect(() => {
-        if (!popup.open || typeof window === 'undefined') {
-            return;
-        }
-
-        const onResize = () => {
-            setViewport({ width: window.innerWidth, height: window.innerHeight });
-        };
-
-        onResize();
-        window.addEventListener('resize', onResize);
-        return () => {
-            window.removeEventListener('resize', onResize);
-        };
-    }, [popup.open]);
 
     React.useEffect(() => {
         if (!popup.open || status !== 'ready') {
