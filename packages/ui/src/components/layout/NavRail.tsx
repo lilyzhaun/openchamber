@@ -1,5 +1,20 @@
 import React from 'react';
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type Modifier,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   RiFolderAddLine,
   RiSettings3Line,
   RiQuestionLine,
@@ -25,7 +40,7 @@ import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
-import { cn, formatDirectoryName } from '@/lib/utils';
+import { cn, formatDirectoryName, hasModifier } from '@/lib/utils';
 import { PROJECT_ICON_MAP, PROJECT_COLOR_MAP } from '@/lib/projectMeta';
 import { isDesktopLocalOriginActive, isDesktopShell, isTauriShell } from '@/lib/desktop';
 import { useLongPress } from '@/hooks/useLongPress';
@@ -99,6 +114,7 @@ const ProjectTile: React.FC<{
   });
 
   return (
+    <>
     <Tooltip delayDuration={400}>
       <TooltipTrigger asChild>
         <div
@@ -157,45 +173,83 @@ const ProjectTile: React.FC<{
             </button>
           )}
 
-          {/* Right-click context menu */}
-          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-            <DropdownMenuTrigger asChild>
-              <span className="sr-only">Project options</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="right" sideOffset={4} className="min-w-[160px]">
-              <DropdownMenuItem onClick={onEdit} className="gap-2">
-                <RiPencilLine className="h-4 w-4" />
-                Edit project
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={onClose}
-                className="text-destructive focus:text-destructive gap-2"
-              >
-                <RiCloseLine className="h-4 w-4" />
-                Close project
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={8}>
         {label}
       </TooltipContent>
     </Tooltip>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+      <DropdownMenuTrigger asChild>
+        <span className="sr-only">Project options</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" side="right" sideOffset={4} className="min-w-[160px]">
+        <DropdownMenuItem onClick={onEdit} className="gap-2">
+          <RiPencilLine className="h-4 w-4" />
+          Edit project
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={onClose}
+          className="text-destructive focus:text-destructive gap-2"
+        >
+          <RiCloseLine className="h-4 w-4" />
+          Close project
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    </>
+  );
+};
+
+/** Constrain drag to Y axis only */
+const restrictToYAxis: Modifier = ({ transform }) => ({
+  ...transform,
+  x: 0,
+});
+
+/** Sortable wrapper for ProjectTile */
+const SortableProjectTile: React.FC<{
+  id: string;
+  children: React.ReactNode;
+}> = ({ id, children }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      className={cn(isDragging && 'opacity-30 z-50')}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </div>
   );
 };
 
 interface NavRailProps {
   className?: string;
+  mobile?: boolean;
 }
 
-export const NavRail: React.FC<NavRailProps> = ({ className }) => {
+export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
   const projects = useProjectsStore((s) => s.projects);
   const activeProjectId = useProjectsStore((s) => s.activeProjectId);
   const setActiveProject = useProjectsStore((s) => s.setActiveProject);
   const addProject = useProjectsStore((s) => s.addProject);
   const removeProject = useProjectsStore((s) => s.removeProject);
+  const reorderProjects = useProjectsStore((s) => s.reorderProjects);
   const updateProjectMeta = useProjectsStore((s) => s.updateProjectMeta);
   const homeDirectory = useDirectoryStore((s) => s.homeDirectory);
   const setSettingsDialogOpen = useUIStore((s) => s.setSettingsDialogOpen);
@@ -358,6 +412,44 @@ export const NavRail: React.FC<NavRailProps> = ({ className }) => {
     [removeProject],
   );
 
+  // Cmd/Ctrl+number to switch projects
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (hasModifier(e) && !e.shiftKey && !e.altKey) {
+        const num = parseInt(e.key, 10);
+        if (num >= 1 && num <= projects.length) {
+          e.preventDefault();
+          const target = projects[num - 1];
+          if (target && target.id !== activeProjectId) {
+            setActiveProject(target.id);
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [projects, activeProjectId, setActiveProject]);
+
+  // Drag-to-reorder
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const projectIds = React.useMemo(() => projects.map((p) => p.id), [projects]);
+
+  const handleDragEnd = React.useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const fromIndex = projects.findIndex((p) => p.id === active.id);
+      const toIndex = projects.findIndex((p) => p.id === over.id);
+      if (fromIndex !== -1 && toIndex !== -1) {
+        reorderProjects(fromIndex, toIndex);
+      }
+    },
+    [projects, reorderProjects],
+  );
+
   return (
     <>
       <nav
@@ -369,30 +461,43 @@ export const NavRail: React.FC<NavRailProps> = ({ className }) => {
       >
         {/* Projects list */}
         <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden scrollbar-none">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToYAxis]}
+          >
+          <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col items-center gap-3 px-1 py-3">
             {projects.map((project) => {
               const isActive = project.id === activeProjectId;
               const indicators = projectIndicators.get(project.id);
               return (
-                <ProjectTile
-                  key={project.id}
-                  project={project}
-                  isActive={isActive}
-                  hasStreaming={indicators?.hasStreaming ?? false}
-                  hasUnread={indicators?.hasUnread ?? false}
-                  label={formatLabel(project)}
-                  onClick={() => {
-                    if (project.id !== activeProjectId) {
-                      setActiveProject(project.id);
-                    }
-                  }}
-                  onEdit={() => handleEditProject(project.id)}
-                  onClose={() => handleCloseProject(project.id)}
-                />
+                <SortableProjectTile key={project.id} id={project.id}>
+                  <ProjectTile
+                    project={project}
+                    isActive={isActive}
+                    hasStreaming={indicators?.hasStreaming ?? false}
+                    hasUnread={indicators?.hasUnread ?? false}
+                    label={formatLabel(project)}
+                    onClick={() => {
+                      if (project.id !== activeProjectId) {
+                        setActiveProject(project.id);
+                      }
+                    }}
+                    onEdit={() => handleEditProject(project.id)}
+                    onClose={() => handleCloseProject(project.id)}
+                  />
+                </SortableProjectTile>
               );
             })}
 
+          </div>
+          </SortableContext>
+          </DndContext>
+
             {/* Add project button */}
+            <div className="flex flex-col items-center px-1 pb-3">
             <Tooltip delayDuration={400}>
               <TooltipTrigger asChild>
                 <button
@@ -414,7 +519,7 @@ export const NavRail: React.FC<NavRailProps> = ({ className }) => {
                 Add project
               </TooltipContent>
             </Tooltip>
-          </div>
+            </div>
         </div>
 
         {/* Bottom actions */}
@@ -463,25 +568,27 @@ export const NavRail: React.FC<NavRailProps> = ({ className }) => {
             </Tooltip>
           )}
 
-          <Tooltip delayDuration={400}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={toggleHelpDialog}
-                className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-lg',
-                  'text-[var(--surface-muted-foreground)] hover:text-[var(--surface-foreground)]',
-                  'hover:bg-[var(--interactive-hover)] transition-colors',
-                )}
-                aria-label="Keyboard shortcuts"
-              >
-                <RiQuestionLine className="h-5 w-5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={8}>
-              Keyboard shortcuts
-            </TooltipContent>
-          </Tooltip>
+          {!mobile && (
+            <Tooltip delayDuration={400}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleHelpDialog}
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-lg',
+                    'text-[var(--surface-muted-foreground)] hover:text-[var(--surface-foreground)]',
+                    'hover:bg-[var(--interactive-hover)] transition-colors',
+                  )}
+                  aria-label="Keyboard shortcuts"
+                >
+                  <RiQuestionLine className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                Keyboard shortcuts
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           <Tooltip delayDuration={400}>
             <TooltipTrigger asChild>

@@ -748,7 +748,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   onSessionSelected,
   allowReselect = false,
   hideDirectoryControls = false,
-  hideProjectSelector = false,
+  hideProjectSelector = true,
   showOnlyMainWorkspace = false,
 }) => {
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -2732,11 +2732,11 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
             {!hideGroupLabel ? (
               <div className={cn(
                 "min-w-0 flex items-center gap-1.5 pl-1.5 transition-[padding]",
-                !mobileVariant && (
-                  !group.isMain && group.worktree
+                mobileVariant
+                  ? (!group.isMain && group.worktree ? "pr-14" : "pr-7")
+                  : (!group.isMain && group.worktree
                     ? "group-hover/gh:pr-14 group-focus-within/gh:pr-14"
-                    : "group-hover/gh:pr-7 group-focus-within/gh:pr-7"
-                ),
+                    : "group-hover/gh:pr-7 group-focus-within/gh:pr-7"),
               )}>
                 {!group.isMain || isGitProject ? (
                   <RiGitBranchLine className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />

@@ -660,7 +660,7 @@ export const MainLayout: React.FC = () => {
                         aria-hidden={!mobileLeftDrawerOpen}
                     >
                         <div className="h-full overflow-hidden flex bg-sidebar shadow-xl drawer-safe-area">
-                            <NavRail className="shrink-0" />
+                            <NavRail className="shrink-0" mobile />
                             <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
                                 <ErrorBoundary>
                                     <SessionSidebar mobileVariant />
