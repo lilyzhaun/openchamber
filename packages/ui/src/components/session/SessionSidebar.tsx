@@ -13,7 +13,6 @@ import {
   useSensors,
   useDraggable,
   useDroppable,
-  type Modifier,
   type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -218,19 +217,6 @@ const compareSessionsByPinnedAndTime = (
   return getSessionUpdatedAt(b) - getSessionUpdatedAt(a);
 };
 
-const centerDragOverlayUnderPointer: Modifier = ({ transform, activeNodeRect, activatorEvent }) => {
-  if (!(activatorEvent instanceof MouseEvent) || !activeNodeRect) {
-    return transform;
-  }
-  const overlayHeight = 32;
-  const pointerLiftY = 16;
-  return {
-    ...transform,
-    x: transform.x,
-    y: transform.y - overlayHeight / 2 - pointerLiftY,
-  };
-};
-
 // Format project label: kebab-case/snake_case → Title Case
 const formatProjectLabel = (label: string): string => {
   return label
@@ -289,7 +275,7 @@ const DraggableSessionRow: React.FC<{
       ref={setNodeRef}
       {...attributes}
       onPointerDown={handlePointerDown}
-      className={isDragging ? 'opacity-40' : undefined}
+      className={isDragging ? 'opacity-30' : undefined}
     >
       {children}
     </div>
@@ -375,14 +361,14 @@ const SessionFolderDndScope: React.FC<{
       onDragEnd={handleDragEnd}
     >
       {children}
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay>
         {activeDragId && hasFolders ? (
           <div 
             style={{ 
               width: activeDragWidth ? `${activeDragWidth}px` : 'auto',
               height: activeDragHeight ? `${activeDragHeight}px` : 'auto'
             }}
-            className="flex items-center rounded-md border border-border bg-sidebar px-1.5 py-1 shadow-lg opacity-90 pointer-events-none"
+            className="flex items-center rounded-lg border border-[var(--interactive-border)] bg-[var(--surface-elevated)] px-2.5 py-1 shadow-md pointer-events-none"
           >
             <RiStickyNoteLine className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
             <div className="min-w-0 flex-1 truncate typography-ui-label font-normal text-foreground">
@@ -466,13 +452,19 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
     attributes,
     listeners,
     setNodeRef,
+    transform,
+    transition,
     isDragging,
   } = useSortable({ id });
 
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
   return (
-    <div ref={setNodeRef} className={cn('relative', isDragging && 'opacity-40')}>
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn('relative', isDragging && 'opacity-30')}
+    >
       {!hideHeader ? (
         <>
           {/* Sentinel for sticky detection */}
@@ -708,10 +700,13 @@ const SortableGroupItemBase: React.FC<{
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, willChange: 'transform' }}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
       className={cn(
         'space-y-0.5 rounded-md',
-        isDragging && 'opacity-0',
+        isDragging && 'opacity-50',
       )}
       {...attributes}
       {...listeners}
@@ -723,16 +718,7 @@ const SortableGroupItemBase: React.FC<{
 
 const SortableGroupItem = React.memo(SortableGroupItemBase);
 
-const GroupDragOverlayBase: React.FC<{ label: string; showBranchIcon: boolean; width?: number }> = ({ label, showBranchIcon, width }) => {
-  return (
-    <div style={width ? { width: `${width}px` } : undefined} className="h-8 min-w-[180px] max-w-[320px] rounded-sm border border-border bg-sidebar px-2 shadow-lg flex items-center gap-1.5">
-      {showBranchIcon ? <RiGitBranchLine className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" /> : null}
-      <p className="text-[15px] font-semibold truncate text-foreground">{label}</p>
-    </div>
-  );
-};
 
-const GroupDragOverlay = React.memo(GroupDragOverlayBase);
 
 interface SessionSidebarProps {
   mobileVariant?: boolean;
@@ -847,8 +833,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       return new Map();
     }
   });
-  const [activeDraggedGroupId, setActiveDraggedGroupId] = React.useState<string | null>(null);
-  const [activeDraggedGroupWidth, setActiveDraggedGroupWidth] = React.useState<number | null>(null);
+
   const [isProjectRenameInline, setIsProjectRenameInline] = React.useState(false);
   const [projectRenameDraft, setProjectRenameDraft] = React.useState('');
   const [projectRootBranches, setProjectRootBranches] = React.useState<Map<string, string>>(new Map());
@@ -3296,19 +3281,8 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                           <DndContext
                             sensors={sensors}
                             collisionDetection={closestCenter}
-                            onDragStart={(event) => {
-                              setActiveDraggedGroupId(String(event.active.id));
-                              const width = (event.active.rect.current.initial?.width ?? null);
-                              setActiveDraggedGroupWidth(typeof width === 'number' ? width : null);
-                            }}
-                            onDragCancel={() => {
-                              setActiveDraggedGroupId(null);
-                              setActiveDraggedGroupWidth(null);
-                            }}
                             onDragEnd={(event) => {
                               const { active, over } = event;
-                              setActiveDraggedGroupId(null);
-                              setActiveDraggedGroupWidth(null);
                               if (!over || active.id === over.id) {
                                 return;
                               }
@@ -3338,18 +3312,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                                 );
                               })}
                             </SortableContext>
-                            <DragOverlay modifiers={[centerDragOverlayUnderPointer]} dropAnimation={null}>
-                              {activeDraggedGroupId ? (
-                                (() => {
-                                  const dragGroup = orderedGroups.find((group) => group.id === activeDraggedGroupId);
-                                  if (!dragGroup) {
-                                    return null;
-                                  }
-                                  const showBranchIcon = !dragGroup.isMain || Boolean(isRepo);
-                                  return <GroupDragOverlay label={dragGroup.label} showBranchIcon={showBranchIcon} width={activeDraggedGroupWidth ?? undefined} />;
-                                })()
-                              ) : null}
-                            </DragOverlay>
+                            <DragOverlay dropAnimation={null} />
                           </DndContext>
                         ) : (
                           <div className="py-1 text-left typography-micro text-muted-foreground">
