@@ -759,15 +759,8 @@ export const Header: React.FC<HeaderProps> = ({
       return base;
     }
 
-    // Desktop: Chat is implicit default, only show Plan when available
-    const base: TabConfig[] = [];
-    if (showPlanTab) {
-      base.push(
-        { id: 'chat', label: 'Chat', icon: RiChat4Line },
-        { id: 'plan', label: 'Plan', icon: RiFileTextLine },
-      );
-    }
-    return base;
+    // Desktop: no tabs in header
+    return [];
   }, [isMobile, showPlanTab]);
 
   const shortcutLabel = React.useCallback((actionId: string) => {
