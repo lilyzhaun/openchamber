@@ -481,11 +481,11 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
           <div
             className={cn(
               'sticky top-0 z-10 pt-2 pb-1.5 w-full text-left cursor-pointer group/project border-b select-none',
-              !isDesktopShell && 'bg-sidebar',
+              !isDesktopShell && 'bg-transparent',
             )}
             style={{
               backgroundColor: isDesktopShell
-                ? isStuck ? 'var(--sidebar-stuck-bg)' : 'transparent'
+                ? (isStuck ? 'transparent' : 'transparent')
                 : undefined,
               borderColor: isHovered
                 ? 'var(--color-border-hover)'
@@ -863,9 +863,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const settingsAutoCreateWorktree = useConfigStore((state) => state.settingsAutoCreateWorktree);
 
   // Session Folders store
-  // Subscribe to foldersMap so renderSessionNode/renderGroupSessions re-run when any folder changes.
-  // getFoldersForScope is a stable function selector and does not trigger re-renders on its own.
-  const foldersMap = useSessionFoldersStore((state) => state.foldersMap);
   const collapsedFolderIds = useSessionFoldersStore((state) => state.collapsedFolderIds);
   const getFoldersForScope = useSessionFoldersStore((state) => state.getFoldersForScope);
   const createFolder = useSessionFoldersStore((state) => state.createFolder);
@@ -2030,7 +2027,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     mobileVariant
       ? 'h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50'
       : 'h-8 w-8 text-foreground hover:bg-interactive-hover',
-    !isDesktopShellRuntime && 'bg-sidebar/60 hover:bg-sidebar',
+    !isDesktopShellRuntime && 'bg-transparent hover:bg-sidebar/40',
   );
 
   // Track when project sticky headers become "stuck"
@@ -2503,7 +2500,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       removeSessionFromFolder,
       createFolderAndStartRename,
       notifyOnSubtasks,
-      foldersMap, // trigger re-render when folder data changes (getFoldersForScope is a stable fn selector)
     ],
   );
 
@@ -2882,7 +2878,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       renamingFolderId,
       renameFolderDraft,
       pinnedSessionIds,
-      foldersMap, // trigger re-render when folder data changes (getFoldersForScope is a stable fn selector)
     ]
   );
 
@@ -2902,7 +2897,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     <div
       className={cn(
         'flex h-full flex-col text-foreground overflow-x-hidden',
-        mobileVariant ? '' : 'bg-sidebar',
+        mobileVariant ? '' : 'bg-transparent',
       )}
     >
       {!hideDirectoryControls && (
