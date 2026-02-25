@@ -79,6 +79,80 @@ const readSessionSelectionMap = (): SessionSelectionMap => {
 let sessionSelectionCache: SessionSelectionMap | null = null;
 let loadSessionsRequestSeq = 0;
 
+type ProjectSessionResult = {
+    projectId: string;
+    projectPath: string | null;
+    sessions: Session[];
+    discoveredWorktrees: WorktreeMetadata[];
+    validPaths: Set<string>;
+};
+
+type ProjectSessionCacheEntry = {
+    cachedAt: number;
+    result: ProjectSessionResult;
+};
+
+type ProjectRepoCacheEntry = {
+    cachedAt: number;
+    isGitRepo: boolean;
+};
+
+const PROJECT_SESSION_CACHE_TTL_MS = 30_000;
+const PROJECT_REPO_STATUS_CACHE_TTL_MS = 120_000;
+const projectSessionCache = new Map<string, ProjectSessionCacheEntry>();
+const projectRepoStatusCache = new Map<string, ProjectRepoCacheEntry>();
+
+const getFreshProjectSessionCache = (projectPath: string): ProjectSessionResult | null => {
+    const key = normalizePath(projectPath) ?? projectPath;
+    const cached = projectSessionCache.get(key);
+    if (!cached) {
+        return null;
+    }
+    if (Date.now() - cached.cachedAt > PROJECT_SESSION_CACHE_TTL_MS) {
+        projectSessionCache.delete(key);
+        return null;
+    }
+    return cached.result;
+};
+
+const setProjectSessionCache = (projectPath: string, result: ProjectSessionResult) => {
+    const key = normalizePath(projectPath) ?? projectPath;
+    projectSessionCache.set(key, { cachedAt: Date.now(), result });
+};
+
+const pruneProjectCaches = (validProjectPaths: Iterable<string>) => {
+    const valid = new Set<string>();
+    for (const path of validProjectPaths) {
+        const normalized = normalizePath(path) ?? path;
+        if (normalized) {
+            valid.add(normalized);
+        }
+    }
+
+    for (const key of projectSessionCache.keys()) {
+        if (!valid.has(key)) {
+            projectSessionCache.delete(key);
+        }
+    }
+    for (const key of projectRepoStatusCache.keys()) {
+        if (!valid.has(key)) {
+            projectRepoStatusCache.delete(key);
+        }
+    }
+};
+
+const getProjectRepoStatus = async (projectPath: string): Promise<boolean> => {
+    const key = normalizePath(projectPath) ?? projectPath;
+    const cached = projectRepoStatusCache.get(key);
+    if (cached && Date.now() - cached.cachedAt <= PROJECT_REPO_STATUS_CACHE_TTL_MS) {
+        return cached.isGitRepo;
+    }
+
+    const isGitRepo = await checkIsGitRepository(key).catch(() => false);
+    projectRepoStatusCache.set(key, { cachedAt: Date.now(), isGitRepo });
+    return isGitRepo;
+};
+
 const getSessionSelectionMap = (): SessionSelectionMap => {
     if (!sessionSelectionCache) {
         sessionSelectionCache = readSessionSelectionMap();
@@ -263,7 +337,8 @@ const getSessionDirectory = (sessions: Session[], sessionId: string): string | n
 const hydrateSessionWorktreeMetadata = async (
     sessions: Session[],
     projectDirectory: string | null,
-    existingMetadata: Map<string, WorktreeMetadata>
+    existingMetadata: Map<string, WorktreeMetadata>,
+    preloadedWorktrees?: WorktreeMetadata[]
 ): Promise<Map<string, WorktreeMetadata> | null> => {
     const normalizedProject = normalizePath(projectDirectory);
     if (!normalizedProject || sessions.length === 0) {
@@ -279,11 +354,15 @@ const hydrateSessionWorktreeMetadata = async (
     }
 
     let worktreeEntries: WorktreeMetadata[];
-    try {
-        worktreeEntries = await listProjectWorktrees({ id: `path:${normalizedProject}`, path: normalizedProject });
-    } catch (error) {
-        console.debug("Failed to hydrate worktree metadata from worktree list:", error);
-        return null;
+    if (Array.isArray(preloadedWorktrees)) {
+        worktreeEntries = preloadedWorktrees;
+    } else {
+        try {
+            worktreeEntries = await listProjectWorktrees({ id: `path:${normalizedProject}`, path: normalizedProject });
+        } catch (error) {
+            console.debug("Failed to hydrate worktree metadata from worktree list:", error);
+            return null;
+        }
     }
 
     if (!Array.isArray(worktreeEntries) || worktreeEntries.length === 0) {
@@ -551,14 +630,6 @@ export const useSessionStore = create<SessionStore>()(
                             ? projectsStore.projects
                             : (legacyRoot ? [{ id: 'legacy', path: legacyRoot }] : []);
 
-                        type ProjectSessionResult = {
-                            projectId: string;
-                            projectPath: string | null;
-                            sessions: Session[];
-                            discoveredWorktrees: WorktreeMetadata[];
-                            validPaths: Set<string>;
-                        };
-
                         if (projectEntries.length === 0) {
                             if (!isLatestRequest()) {
                                 return;
@@ -576,6 +647,8 @@ export const useSessionStore = create<SessionStore>()(
                             return;
                         }
 
+                        pruneProjectCaches(projectEntries.map((entry) => entry.path));
+
                         const projectResults: ProjectSessionResult[] = await Promise.all(
                             projectEntries.map(async (project: Pick<ProjectEntry, 'id' | 'path'>) => {
                                 const normalizedProject = normalizePath(project.path);
@@ -589,7 +662,15 @@ export const useSessionStore = create<SessionStore>()(
                                     };
                                 }
 
-                                const isGitRepo = await checkIsGitRepository(normalizedProject).catch(() => false);
+                                const isActiveProject = project.id === projectsStore.activeProjectId;
+                                if (!isActiveProject) {
+                                    const cached = getFreshProjectSessionCache(normalizedProject);
+                                    if (cached) {
+                                        return cached;
+                                    }
+                                }
+
+                                const isGitRepo = await getProjectRepoStatus(normalizedProject);
                                 const parentSessions = await fetchSessionsForDirectory(normalizedProject || null);
                                 vscodeDebugLog("projectSessions", {
                                     projectId: project.id,
@@ -640,13 +721,16 @@ export const useSessionStore = create<SessionStore>()(
 
                                 const mergedSessions = dedupeSessionsById([...parentSessions, ...subdirectorySessions]);
 
-                                return {
+                                const result: ProjectSessionResult = {
                                     projectId: project.id,
                                     projectPath: normalizedProject,
                                     sessions: mergedSessions,
                                     discoveredWorktrees,
                                     validPaths,
                                 };
+
+                                setProjectSessionCache(normalizedProject, result);
+                                return result;
                             })
                         );
 
@@ -678,7 +762,8 @@ export const useSessionStore = create<SessionStore>()(
                                 const hydratedMetadata = await hydrateSessionWorktreeMetadata(
                                     result.sessions,
                                     result.projectPath,
-                                    nextWorktreeMetadata
+                                    nextWorktreeMetadata,
+                                    result.discoveredWorktrees
                                 );
                                 if (hydratedMetadata) {
                                     nextWorktreeMetadata = hydratedMetadata;
