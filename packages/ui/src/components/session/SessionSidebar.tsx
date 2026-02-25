@@ -850,7 +850,6 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const activeProjectId = useProjectsStore((state) => state.activeProjectId);
   const addProject = useProjectsStore((state) => state.addProject);
   const removeProject = useProjectsStore((state) => state.removeProject);
-  const setActiveProject = useProjectsStore((state) => state.setActiveProject);
   const setActiveProjectIdOnly = useProjectsStore((state) => state.setActiveProjectIdOnly);
   const renameProject = useProjectsStore((state) => state.renameProject);
 
@@ -2622,7 +2621,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                 depth={depth}
                 onNewSession={() => {
                   if (projectId && projectId !== activeProjectId) {
-                    setActiveProject(projectId);
+                    setActiveProjectIdOnly(projectId);
                   }
                   setActiveMainTab('chat');
                   if (mobileVariant) {
@@ -2796,7 +2795,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                         onClick={(event) => {
                           event.stopPropagation();
                           if (projectId && projectId !== activeProjectId) {
-                            setActiveProject(projectId);
+                            setActiveProjectIdOnly(projectId);
                           }
                           setActiveMainTab('chat');
                           if (mobileVariant) {
@@ -2867,7 +2866,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       renderSessionNode,
       toggleGroupSessionLimit,
       activeProjectId,
-      setActiveProject,
+      setActiveProjectIdOnly,
       setActiveMainTab,
       mobileVariant,
       setSessionSwitcherOpen,
@@ -2944,7 +2943,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                   return (
                     <DropdownMenuItem
                       key={project.id}
-                      onClick={() => setActiveProject(project.id)}
+                      onClick={() => setActiveProjectIdOnly(project.id)}
                       className={cn('truncate', project.id === activeProjectId && 'text-primary')}
                     >
                       <span className="truncate">{label}</span>
@@ -3042,7 +3041,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                         return;
                       }
                       if (activeProjectForHeader.id !== activeProjectId) {
-                        setActiveProject(activeProjectForHeader.id);
+                        setActiveProjectIdOnly(activeProjectForHeader.id);
                       }
                       const newWorktreePath = await createWorktreeOnly();
                       if (!newWorktreePath) {
@@ -3232,7 +3231,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     onHoverChange={(hovered) => setHoveredProjectId(hovered ? projectKey : null)}
                     onNewSession={() => {
                       if (projectKey !== activeProjectId) {
-                        setActiveProject(projectKey);
+                        setActiveProjectIdOnly(projectKey);
                       }
                       setActiveMainTab('chat');
                       if (mobileVariant) {
@@ -3242,7 +3241,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     }}
                     onNewWorktreeSession={() => {
                       if (projectKey !== activeProjectId) {
-                        setActiveProject(projectKey);
+                        setActiveProjectIdOnly(projectKey);
                       }
                       setActiveMainTab('chat');
                       if (mobileVariant) {
@@ -3252,19 +3251,19 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     }}
                     onNewSessionFromGitHubIssue={() => {
                       if (projectKey !== activeProjectId) {
-                        setActiveProject(projectKey);
+                        setActiveProjectIdOnly(projectKey);
                       }
                       setIssuePickerOpen(true);
                     }}
                     onNewSessionFromGitHubPR={() => {
                       if (projectKey !== activeProjectId) {
-                        setActiveProject(projectKey);
+                        setActiveProjectIdOnly(projectKey);
                       }
                       setPullRequestPickerOpen(true);
                     }}
                     onOpenMultiRunLauncher={() => {
                       if (projectKey !== activeProjectId) {
-                        setActiveProject(projectKey);
+                        setActiveProjectIdOnly(projectKey);
                       }
                       openMultiRunLauncher();
                     }}

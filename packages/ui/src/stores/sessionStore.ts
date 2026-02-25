@@ -77,6 +77,7 @@ const readSessionSelectionMap = (): SessionSelectionMap => {
 };
 
 let sessionSelectionCache: SessionSelectionMap | null = null;
+let loadSessionsRequestSeq = 0;
 
 const getSessionSelectionMap = (): SessionSelectionMap => {
     if (!sessionSelectionCache) {
@@ -377,6 +378,8 @@ export const useSessionStore = create<SessionStore>()(
                 availableWorktreesByProject: new Map(),
 
                 loadSessions: async () => {
+                    const requestSeq = ++loadSessionsRequestSeq;
+                    const isLatestRequest = () => requestSeq === loadSessionsRequestSeq;
                     set({ isLoading: true, error: null });
                     try {
                         const directoryStore = useDirectoryStore.getState();
@@ -557,6 +560,9 @@ export const useSessionStore = create<SessionStore>()(
                         };
 
                         if (projectEntries.length === 0) {
+                            if (!isLatestRequest()) {
+                                return;
+                            }
                             set({
                                 sessions: [],
                                 sessionsByDirectory: new Map(),
@@ -718,7 +724,10 @@ export const useSessionStore = create<SessionStore>()(
                         const directoryChanged = (activeDirectory ?? null) !== (stateSnapshot.lastLoadedDirectory ?? null);
 
                         let nextCurrentId = stateSnapshot.currentSessionId;
-                        if (!nextCurrentId || !validSessionIds.has(nextCurrentId) || directoryChanged) {
+                        const currentSessionInActiveDirectory = Boolean(
+                            nextCurrentId && activeDirectorySessions.some((session) => session.id === nextCurrentId)
+                        );
+                        if (!nextCurrentId || !validSessionIds.has(nextCurrentId) || (directoryChanged && !currentSessionInActiveDirectory)) {
                             nextCurrentId = activeDirectorySessions[0]?.id ?? mergedSessions[0]?.id ?? null;
                         }
 
@@ -743,6 +752,10 @@ export const useSessionStore = create<SessionStore>()(
                             }
                             return activeDirectory ?? null;
                         })();
+
+                        if (!isLatestRequest()) {
+                            return;
+                        }
 
                         try {
                             opencodeClient.setDirectory(resolvedDirectoryForCurrent ?? undefined);
@@ -772,6 +785,9 @@ export const useSessionStore = create<SessionStore>()(
                             storeSessionForDirectory(resolvedDirectoryForCurrent, nextCurrentId);
                         }
                     } catch (error) {
+                        if (!isLatestRequest()) {
+                            return;
+                        }
                         set({
                             error: error instanceof Error ? error.message : "Failed to load sessions",
                             isLoading: false,
