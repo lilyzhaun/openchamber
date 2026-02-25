@@ -88,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, isMobile, children }) 
     return (
         <aside
             className={cn(
-                'relative flex h-full overflow-hidden border-r border-border',
+                'relative flex h-full overflow-hidden border-r border-border/40',
                 isDesktopApp
                     ? 'bg-[color:var(--sidebar-overlay-strong)] backdrop-blur supports-[backdrop-filter]:bg-[color:var(--sidebar-overlay-soft)]'
                     : 'bg-sidebar',
