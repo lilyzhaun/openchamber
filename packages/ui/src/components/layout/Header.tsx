@@ -886,7 +886,7 @@ export const Header: React.FC<HeaderProps> = ({
           className={cn(
             'relative flex h-8 items-center gap-2 px-3 rounded-lg typography-ui-label font-medium transition-colors',
             isActive
-              ? 'app-region-no-drag bg-interactive-selection text-interactive-selection-foreground shadow-sm'
+              ? 'app-region-no-drag bg-interactive-selection text-interactive-selection-foreground shadow-none'
               : 'app-region-no-drag text-muted-foreground hover:bg-interactive-hover/50 hover:text-foreground',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
             isChatTab && !isMobile && 'min-w-[100px] justify-center'

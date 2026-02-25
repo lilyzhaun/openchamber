@@ -659,7 +659,7 @@ export const MainLayout: React.FC = () => {
                         )}
                         aria-hidden={!mobileLeftDrawerOpen}
                     >
-                        <div className="h-full overflow-hidden flex bg-sidebar shadow-xl drawer-safe-area">
+                        <div className="h-full overflow-hidden flex bg-sidebar shadow-none drawer-safe-area">
                             <div onPointerDownCapture={(e) => e.stopPropagation()}>
                               <NavRail className="shrink-0" mobile />
                             </div>
@@ -710,7 +710,7 @@ export const MainLayout: React.FC = () => {
                         )}
                         aria-hidden={!isRightSidebarOpen}
                     >
-                        <div className="h-full overflow-hidden flex flex-col bg-background shadow-xl drawer-safe-area">
+                        <div className="h-full overflow-hidden flex flex-col bg-background shadow-none drawer-safe-area">
                             <ErrorBoundary>
                                 <GitView mode="sidebar" />
                             </ErrorBoundary>
