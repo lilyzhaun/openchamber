@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useDrawerSwipe } from '@/hooks/useDrawerSwipe';
+import { useI18n } from '@/contexts/useI18n';
 
 interface MobileSessionStatusBarProps {
   onSessionSwitch?: (sessionId: string) => void;
@@ -1057,6 +1058,7 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   onSessionSwitch,
   cornerRadius,
 }) => {
+  const { t } = useI18n();
   const sessions = useSessionStore((state) => state.sessions);
   const currentSessionId = useSessionStore((state) => state.currentSessionId);
   const sessionStatus = useSessionStore((state) => state.sessionStatus);
@@ -1087,7 +1089,7 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const currentSession = sessions.find((s) => s.id === currentSessionId);
   const currentSessionTitle = currentSession
     ? getSessionTitle(currentSession)
-    : '← Swipe here to open sidebars →';
+    : t('mobileSessionStatus.swipeHint');
 
   // Calculate current session's child indicators
   const currentSessionWithStatus = sortedSessions.find((s) => s.id === currentSessionId);
@@ -1147,19 +1149,19 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
         if (result.success && result.path) {
           const added = addProject(result.path, { id: result.projectId });
           if (!added) {
-            toast.error('Failed to add project', {
-              description: 'Please select a valid directory.',
+            toast.error(t('session.toast.addProjectFailed'), {
+              description: t('session.toast.selectValidDirectory'),
             });
           }
         } else if (result.error && result.error !== 'Directory selection cancelled') {
-          toast.error('Failed to select directory', {
+          toast.error(t('session.toast.selectDirectoryFailed'), {
             description: result.error,
           });
         }
       })
       .catch((error) => {
         console.error('Failed to select directory:', error);
-        toast.error('Failed to select directory');
+        toast.error(t('session.toast.selectDirectoryFailed'));
       });
   };
 

@@ -26,6 +26,7 @@ import { useFileSystemAccess } from '@/hooks/useFileSystemAccess';
 import { isDesktopLocalOriginActive, isTauriShell } from '@/lib/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { sessionEvents } from '@/lib/sessionEvents';
+import { useI18n } from '@/contexts/useI18n';
 
 const renderToastDescription = (text?: string) =>
     text ? <span className="text-foreground/80 dark:text-foreground/70">{text}</span> : undefined;
@@ -49,6 +50,7 @@ type DeleteDialogState = {
 };
 
 export const SessionDialogs: React.FC = () => {
+    const { t } = useI18n();
     const [isDirectoryDialogOpen, setIsDirectoryDialogOpen] = React.useState(false);
     const [hasShownInitialDirectoryPrompt, setHasShownInitialDirectoryPrompt] = React.useState(false);
     const [deleteDialog, setDeleteDialog] = React.useState<DeleteDialogState | null>(null);
@@ -139,7 +141,7 @@ export const SessionDialogs: React.FC = () => {
                 .then(async (result) => {
                     if (!result.success || !result.path) {
                         if (result.error && result.error !== 'Directory selection cancelled') {
-                            toast.error('Failed to select directory', {
+                            toast.error(t('session.toast.selectDirectoryFailed'), {
                                 description: result.error,
                             });
                         }
@@ -148,22 +150,22 @@ export const SessionDialogs: React.FC = () => {
 
                     const accessResult = await startAccessing(result.path);
                     if (!accessResult.success) {
-                        toast.error('Failed to open directory', {
-                            description: accessResult.error || 'Desktop could not grant file access.',
+                        toast.error(t('session.dialogs.openDirectoryFailed'), {
+                            description: accessResult.error || t('session.dialogs.desktopAccessDenied'),
                         });
                         return;
                     }
 
                     const added = addProject(result.path, { id: result.projectId });
                     if (!added) {
-                        toast.error('Failed to add project', {
-                            description: 'Please select a valid directory path.',
+                        toast.error(t('session.toast.addProjectFailed'), {
+                            description: t('session.toast.selectValidDirectory'),
                         });
                     }
                 })
                 .catch((error) => {
                     console.error('Desktop: Error selecting directory:', error);
-                    toast.error('Failed to select directory');
+                    toast.error(t('session.toast.selectDirectoryFailed'));
                 });
             return;
         }
@@ -176,6 +178,7 @@ export const SessionDialogs: React.FC = () => {
         projects.length,
         requestAccess,
         startAccessing,
+        t,
     ]);
 
     const openDeleteDialog = React.useCallback((payload: { sessions: Session[]; dateLabel?: string; mode?: 'session' | 'worktree'; worktree?: WorktreeMetadata | null }) => {
@@ -206,9 +209,9 @@ export const SessionDialogs: React.FC = () => {
             const target = payload.sessions[0];
             const success = await deleteSession(target.id);
             if (success) {
-                toast.success('Session deleted');
+                toast.success(t('session.toast.deletedSingle'));
             } else {
-                toast.error('Failed to delete session');
+                toast.error(t('session.toast.deleteSingleFailed'));
             }
             return;
         }
@@ -218,21 +221,21 @@ export const SessionDialogs: React.FC = () => {
 
         if (deletedIds.length > 0) {
             const successDescription = failedIds.length > 0
-                ? `${failedIds.length} session${failedIds.length === 1 ? '' : 's'} could not be deleted.`
+                ? t('session.dialogs.deleteFailedCount', { count: failedIds.length, suffix: failedIds.length === 1 ? '' : 's' })
                 : payload.dateLabel
-                    ? `Removed all sessions from ${payload.dateLabel}.`
+                    ? t('session.dialogs.removedAllFromDate', { dateLabel: payload.dateLabel })
                     : undefined;
-            toast.success(`Deleted ${deletedIds.length} session${deletedIds.length === 1 ? '' : 's'}`, {
+            toast.success(t('session.toast.deletedMany', { count: deletedIds.length, suffix: deletedIds.length === 1 ? '' : 's' }), {
                 description: renderToastDescription(successDescription),
             });
         }
 
         if (failedIds.length > 0) {
-            toast.error(`Failed to delete ${failedIds.length} session${failedIds.length === 1 ? '' : 's'}`, {
-                description: renderToastDescription('Please try again in a moment.'),
+            toast.error(t('session.toast.deleteManyFailed', { count: failedIds.length, suffix: failedIds.length === 1 ? '' : 's' }), {
+                description: renderToastDescription(t('session.dialogs.tryAgainLater')),
             });
         }
-    }, [deleteSession, deleteSessions]);
+    }, [deleteSession, deleteSessions, t]);
 
     React.useEffect(() => {
         return sessionEvents.onDeleteRequest((payload) => {
@@ -387,12 +390,12 @@ export const SessionDialogs: React.FC = () => {
             );
             return true;
         } catch (error) {
-            toast.error('Failed to remove worktree', {
-                description: renderToastDescription(error instanceof Error ? error.message : 'Please try again.'),
+            toast.error(t('session.dialogs.removeWorktreeFailed'), {
+                description: renderToastDescription(error instanceof Error ? error.message : t('session.dialogs.tryAgain')),
             });
             return false;
         }
-    }, [canRemoveRemoteBranches, deleteDialogShouldRemoveRemote, getProjectRefForWorktree]);
+    }, [canRemoveRemoteBranches, deleteDialogShouldRemoveRemote, getProjectRefForWorktree, t]);
 
     const handleConfirmDelete = React.useCallback(async () => {
         if (!deleteDialog) {
@@ -412,8 +415,10 @@ export const SessionDialogs: React.FC = () => {
                     return;
                 }
                 const shouldRemoveRemote = deleteDialogShouldRemoveRemote && canRemoveRemoteBranches;
-                const archiveNote = shouldRemoveRemote ? 'Worktree and remote branch removed.' : 'Worktree removed.';
-                toast.success('Worktree removed', {
+                const archiveNote = shouldRemoveRemote
+                    ? t('session.dialogs.worktreeAndRemoteRemoved')
+                    : t('session.dialogs.worktreeRemoved');
+                toast.success(t('session.dialogs.worktreeRemoved'), {
                     description: renderToastDescription(archiveNote),
                 });
                 closeDeleteDialog();
@@ -431,19 +436,19 @@ export const SessionDialogs: React.FC = () => {
                     deleteLocalBranch,
                 });
                 if (!success) {
-                    toast.error('Failed to delete session');
+                    toast.error(t('session.toast.deleteSingleFailed'));
                     setIsProcessingDelete(false);
                     return;
                 }
                 const archiveNote = !isWorktreeDelete && shouldArchive
-                    ? removeRemoteBranch
-                        ? 'Worktree and remote branch removed.'
-                        : 'Attached worktree archived.'
-                    : undefined;
-                toast.success('Session deleted', {
+                        ? removeRemoteBranch
+                            ? t('session.dialogs.worktreeAndRemoteRemoved')
+                            : t('session.dialogs.attachedWorktreeArchived')
+                        : undefined;
+                toast.success(t('session.toast.deletedSingle'), {
                     description: renderToastDescription(archiveNote),
                     action: {
-                        label: 'OK',
+                        label: t('session.dialogs.ok'),
                         onClick: () => { },
                     },
                 });
@@ -467,28 +472,28 @@ export const SessionDialogs: React.FC = () => {
                 if (deletedIds.length > 0) {
                     const archiveNote = !isWorktreeDelete && shouldArchive
                         ? removeRemoteBranch
-                            ? 'Archived worktrees and removed remote branches.'
-                            : 'Attached worktrees archived.'
+                            ? t('session.dialogs.archivedWorktreesAndRemovedRemotes')
+                            : t('session.dialogs.attachedWorktreesArchived')
                         : undefined;
                     const successDescription =
                         failedIds.length > 0
-                            ? `${failedIds.length} session${failedIds.length === 1 ? '' : 's'} could not be deleted.`
+                            ? t('session.dialogs.deleteFailedCount', { count: failedIds.length, suffix: failedIds.length === 1 ? '' : 's' })
                             : deleteDialog.dateLabel
-                                ? `Removed all sessions from ${deleteDialog.dateLabel}.`
+                                ? t('session.dialogs.removedAllFromDate', { dateLabel: deleteDialog.dateLabel })
                                 : undefined;
                     const combinedDescription = [successDescription, archiveNote].filter(Boolean).join(' ');
-                    toast.success(`Deleted ${deletedIds.length} session${deletedIds.length === 1 ? '' : 's'}`, {
+                    toast.success(t('session.toast.deletedMany', { count: deletedIds.length, suffix: deletedIds.length === 1 ? '' : 's' }), {
                         description: renderToastDescription(combinedDescription || undefined),
                         action: {
-                            label: 'OK',
+                            label: t('session.dialogs.ok'),
                             onClick: () => { },
                         },
                     });
                 }
 
                 if (failedIds.length > 0) {
-                    toast.error(`Failed to delete ${failedIds.length} session${failedIds.length === 1 ? '' : 's'}`, {
-                        description: renderToastDescription('Please try again in a moment.'),
+                    toast.error(t('session.toast.deleteManyFailed', { count: failedIds.length, suffix: failedIds.length === 1 ? '' : 's' }), {
+                        description: renderToastDescription(t('session.dialogs.tryAgainLater')),
                     });
                     if (deletedIds.length === 0) {
                         setIsProcessingDelete(false);
@@ -520,16 +525,23 @@ export const SessionDialogs: React.FC = () => {
         canRemoveRemoteBranches,
         removeSelectedWorktree,
         loadSessions,
+        t,
     ]);
 
     const targetWorktree = deleteDialog?.worktree ?? deleteDialogSummaries[0]?.metadata ?? null;
     const deleteDialogDescription = deleteDialog
         ? deleteDialog.mode === 'worktree'
             ? deleteDialog.sessions.length === 0
-                ? 'This removes the selected worktree.'
-                : `This removes the selected worktree and ${deleteDialog.sessions.length === 1 ? '1 linked session' : `${deleteDialog.sessions.length} linked sessions`}.`
-            : `This action permanently removes ${deleteDialog.sessions.length === 1 ? '1 session' : `${deleteDialog.sessions.length} sessions`}${deleteDialog.dateLabel ? ` from ${deleteDialog.dateLabel}` : ''
-            }.`
+                ? t('session.dialogs.removeSelectedWorktree')
+                : t('session.dialogs.removeWorktreeAndLinkedSessions', {
+                    count: deleteDialog.sessions.length,
+                    suffix: deleteDialog.sessions.length === 1 ? '' : 's',
+                  })
+            : t('session.dialogs.removeSessionsPermanently', {
+                count: deleteDialog.sessions.length,
+                suffix: deleteDialog.sessions.length === 1 ? '' : 's',
+                datePart: deleteDialog.dateLabel ? t('session.dialogs.fromDatePart', { dateLabel: deleteDialog.dateLabel }) : '',
+              })
         : '';
 
     const deleteDialogBody = deleteDialog ? (
@@ -541,7 +553,7 @@ export const SessionDialogs: React.FC = () => {
                     {isWorktreeDelete && (
                         <div className="flex items-center gap-2">
                             <span className="typography-meta font-medium text-foreground">
-                                {deleteDialog.sessions.length === 1 ? 'Linked session' : 'Linked sessions'}
+                                {deleteDialog.sessions.length === 1 ? t('session.dialogs.linkedSession') : t('session.dialogs.linkedSessions')}
                             </span>
                             <span className="typography-micro text-muted-foreground/70">
                                 {deleteDialog.sessions.length}
@@ -562,7 +574,7 @@ export const SessionDialogs: React.FC = () => {
                                     •
                                 </span>
                                 <span className="truncate">
-                                    {session.title || 'Untitled Session'}
+                                    {session.title || t('session.dialogs.untitledSession')}
                                 </span>
                             </li>
                         ))}
@@ -572,7 +584,7 @@ export const SessionDialogs: React.FC = () => {
                                     ? 'px-2.5 py-1 text-xs text-muted-foreground/70'
                                     : 'typography-micro text-muted-foreground/70'
                             )}>
-                                +{deleteDialog.sessions.length - 5} more
+                                {t('session.dialogs.moreItems', { count: deleteDialog.sessions.length - 5 })}
                             </li>
                         )}
                     </ul>
@@ -583,23 +595,23 @@ export const SessionDialogs: React.FC = () => {
                 <div className="space-y-2 rounded-lg bg-muted/30 p-3">
                     <div className="flex items-center gap-2">
                         <RiGitBranchLine className="h-4 w-4 text-muted-foreground" />
-                        <span className="typography-meta font-medium text-foreground">Worktree</span>
+                        <span className="typography-meta font-medium text-foreground">{t('session.dialogs.worktree')}</span>
                         {targetWorktree?.label ? (
                             <span className="typography-micro text-muted-foreground/70">{targetWorktree.label}</span>
                         ) : null}
                     </div>
                     <p className="typography-micro text-muted-foreground/80 break-all">
-                        {targetWorktree ? formatPathForDisplay(targetWorktree.path, homeDirectory) : 'Worktree path unavailable.'}
+                        {targetWorktree ? formatPathForDisplay(targetWorktree.path, homeDirectory) : t('session.dialogs.worktreePathUnavailable')}
                     </p>
                     {hasDirtyWorktrees && (
-                        <p className="typography-micro text-status-warning">Uncommitted changes will be discarded.</p>
+                        <p className="typography-micro text-status-warning">{t('session.dialogs.uncommittedChangesDiscarded')}</p>
                     )}
 
                 </div>
             ) : (
                 <div className="rounded-xl border border-border/40 bg-sidebar/60 p-3">
                     <p className="typography-meta text-muted-foreground/80">
-                        Worktree directories stay intact. Subsessions linked to the selected sessions will also be removed.
+                        {t('session.dialogs.worktreeDirectoriesStayIntact')}
                     </p>
                 </div>
             )}
@@ -629,10 +641,10 @@ export const SessionDialogs: React.FC = () => {
                 ) : (
                     <RiCheckboxBlankLine className="size-4" />
                 )}
-                Delete remote branch
+                {t('session.dialogs.deleteRemoteBranch')}
             </button>
         ) : (
-            <span className="text-xs text-muted-foreground/70">Remote branch info unavailable</span>
+            <span className="text-xs text-muted-foreground/70">{t('session.dialogs.remoteBranchInfoUnavailable')}</span>
         )
     ) : null;
 
@@ -658,7 +670,7 @@ export const SessionDialogs: React.FC = () => {
             ) : (
                 <RiCheckboxBlankLine className="size-4" />
             )}
-            Delete local branch
+            {t('session.dialogs.deleteLocalBranch')}
         </button>
     ) : null;
 
@@ -670,10 +682,10 @@ export const SessionDialogs: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
                 <Button variant="ghost" onClick={closeDeleteDialog} disabled={isProcessingDelete}>
-                    Cancel
+                    {t('session.common.cancel')}
                 </Button>
                 <Button variant="destructive" onClick={handleConfirmDelete} disabled={isProcessingDelete}>
-                    {isProcessingDelete ? 'Deleting…' : 'Delete worktree'}
+                    {isProcessingDelete ? t('session.dialogs.deleting') : t('session.dialogs.deleteWorktreeAction')}
                 </Button>
             </div>
         </div>
@@ -686,28 +698,28 @@ export const SessionDialogs: React.FC = () => {
                 aria-pressed={!showDeletionDialog}
             >
                 {!showDeletionDialog ? <RiCheckboxLine className="size-4 text-primary" /> : <RiCheckboxBlankLine className="size-4" />}
-                Never ask
+                {t('session.common.neverAsk')}
             </button>
             <div className="flex items-center gap-2">
                 <Button variant="ghost" onClick={closeDeleteDialog} disabled={isProcessingDelete}>
-                    Cancel
+                    {t('session.common.cancel')}
                 </Button>
                 <Button variant="destructive" onClick={handleConfirmDelete} disabled={isProcessingDelete}>
                     {isProcessingDelete
-                        ? 'Deleting…'
+                        ? t('session.dialogs.deleting')
                         : deleteDialog?.sessions.length === 1
-                            ? 'Delete session'
-                            : 'Delete sessions'}
+                            ? t('session.dialogs.deleteSessionAction')
+                            : t('session.dialogs.deleteSessionsAction')}
                 </Button>
             </div>
         </div>
     );
 
     const deleteDialogTitle = isWorktreeDelete
-        ? 'Delete worktree'
+        ? t('session.dialogs.deleteWorktreeTitle')
         : deleteDialog?.sessions.length === 1
-            ? 'Delete session'
-            : 'Delete sessions';
+            ? t('session.dialogs.deleteSessionTitle')
+            : t('session.dialogs.deleteSessionsTitle');
 
     return (
         <>

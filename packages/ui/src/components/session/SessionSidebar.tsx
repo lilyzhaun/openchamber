@@ -99,6 +99,7 @@ import { ProjectNotesTodoPanel } from './ProjectNotesTodoPanel';
 import { BranchPickerDialog } from './BranchPickerDialog';
 import { useSessionFoldersStore } from '@/stores/useSessionFoldersStore';
 import { SessionFolderItem } from './SessionFolderItem';
+import { useI18n } from '@/contexts/useI18n';
 
 const ATTENTION_DIAMOND_INDICES = new Set([1, 3, 4, 5, 7]);
 
@@ -117,7 +118,9 @@ const SESSION_PREFETCH_HOVER_DELAY_MS = 180;
 const SESSION_PREFETCH_CONCURRENCY = 1;
 const SESSION_PREFETCH_PENDING_LIMIT = 6;
 
-const formatDateLabel = (value: string | number) => {
+type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+
+const formatDateLabel = (value: string | number, locale: 'en' | 'zh-CN', t: TranslateFn) => {
   const targetDate = new Date(value);
   const today = new Date();
   const isSameDay = (a: Date, b: Date) =>
@@ -129,21 +132,25 @@ const formatDateLabel = (value: string | number) => {
   yesterday.setDate(today.getDate() - 1);
 
   if (isSameDay(targetDate, today)) {
-    return 'Today';
+    return t('session.date.today');
   }
   if (isSameDay(targetDate, yesterday)) {
-    return 'Yesterday';
+    return t('session.date.yesterday');
   }
-  const formatted = targetDate.toLocaleDateString('en-US', {
+  const formatted = targetDate.toLocaleDateString(locale === 'zh-CN' ? 'zh-CN' : 'en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
-  return formatted.replace(',', '');
+  return locale === 'en' ? formatted.replace(',', '') : formatted;
 };
 
 /** Returns relative time if updated today, otherwise falls back to formatDateLabel using updated time. */
-const formatSessionDateLabel = (updatedMs: number): string => {
+const formatSessionDateLabel = (
+  updatedMs: number,
+  locale: 'en' | 'zh-CN',
+  t: TranslateFn
+): string => {
   const today = new Date();
   const updatedDate = new Date(updatedMs);
   const isSameDay = (a: Date, b: Date) =>
@@ -153,12 +160,12 @@ const formatSessionDateLabel = (updatedMs: number): string => {
 
   if (isSameDay(updatedDate, today)) {
     const diff = Date.now() - updatedMs;
-    if (diff < 60_000) return 'Just now';
-    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}min ago`;
-    return `${Math.floor(diff / 3_600_000)}h ago`;
+    if (diff < 60_000) return t('session.date.justNow');
+    if (diff < 3_600_000) return t('session.date.minutesAgo', { count: Math.floor(diff / 60_000) });
+    return t('session.date.hoursAgo', { count: Math.floor(diff / 3_600_000) });
   }
 
-  return formatDateLabel(updatedMs);
+  return formatDateLabel(updatedMs, locale, t);
 };
 
 const normalizePath = (value?: string | null) => {
@@ -452,6 +459,7 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
   showCreateButtons = true,
   hideHeader = false,
 }) => {
+  const { t } = useI18n();
   const {
     attributes,
     listeners,
@@ -521,7 +529,7 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                 onChange={(event) => onRenameValueChange(event.target.value)}
                 className="flex-1 min-w-0 bg-transparent typography-ui-label outline-none placeholder:text-muted-foreground"
                 autoFocus
-                placeholder="Rename project"
+                placeholder={t('session.project.renamePlaceholder')}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') {
                     event.stopPropagation();
@@ -582,7 +590,7 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                     'inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:text-foreground',
                     mobileVariant ? 'opacity-70' : 'opacity-0 group-hover/project:opacity-100',
                   )}
-                  aria-label="Project menu"
+                  aria-label={t('session.project.menuAria')}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <RiMore2Line className="h-3.5 w-3.5" />
@@ -592,43 +600,43 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                 {showCreateButtons && isRepo && !hideDirectoryControls && settingsAutoCreateWorktree && onNewSession && (
                   <DropdownMenuItem onClick={onNewSession}>
                     <RiAddLine className="mr-1.5 h-4 w-4" />
-                    New Session
+                    {t('session.project.newSession')}
                   </DropdownMenuItem>
                 )}
                 {showCreateButtons && isRepo && !hideDirectoryControls && !settingsAutoCreateWorktree && onNewWorktreeSession && (
                   <DropdownMenuItem onClick={onNewWorktreeSession}>
                     <RiGitBranchLine className="mr-1.5 h-4 w-4" />
-                    New Session in Worktree
+                    {t('session.project.newSessionInWorktree')}
                   </DropdownMenuItem>
                 )}
                 {showCreateButtons && isRepo && !hideDirectoryControls && onNewSessionFromGitHubIssue && (
                   <DropdownMenuItem onClick={onNewSessionFromGitHubIssue}>
                     <RiGithubLine className="mr-1.5 h-4 w-4" />
-                    New session from GitHub issue
+                    {t('session.project.newFromIssue')}
                   </DropdownMenuItem>
                 )}
                 {showCreateButtons && isRepo && !hideDirectoryControls && onNewSessionFromGitHubPR && (
                   <DropdownMenuItem onClick={onNewSessionFromGitHubPR}>
                     <RiGitPullRequestLine className="mr-1.5 h-4 w-4" />
-                    New session from GitHub PR
+                    {t('session.project.newFromPr')}
                   </DropdownMenuItem>
                 )}
                 {showCreateButtons && isRepo && !hideDirectoryControls && (
                   <DropdownMenuItem onClick={onOpenMultiRunLauncher}>
                     <ArrowsMerge className="mr-1.5 h-4 w-4" />
-                    New Multi-Run
+                    {t('session.project.newMultiRun')}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={onRenameStart}>
                   <RiPencilAiLine className="mr-1.5 h-4 w-4" />
-                  Rename
+                  {t('session.common.rename')}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={onClose}
                   className="text-destructive focus:text-destructive"
                 >
                   <RiCloseLine className="mr-1.5 h-4 w-4" />
-                  Close Project
+                  {t('session.project.closeProject')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -647,13 +655,13 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                     'inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:text-foreground hover:bg-interactive-hover/50 flex-shrink-0',
                     mobileVariant ? 'opacity-70' : 'opacity-100',
                   )}
-                  aria-label="New session in worktree"
+                  aria-label={t('session.project.newSessionInWorktree')}
                 >
                   <RiGitBranchLine className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
-                <p>New session in worktree</p>
+                <p>{t('session.project.newSessionInWorktree')}</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -667,13 +675,13 @@ const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                     onNewSession();
                   }}
                   className="inline-flex h-6 w-6 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 flex-shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                  aria-label="New session"
+                  aria-label={t('session.project.newSession')}
                 >
                   <RiAddLine className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
-                <p>New session</p>
+                <p>{t('session.project.newSession')}</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -741,6 +749,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   hideProjectSelector = true,
   showOnlyMainWorkspace = false,
 }) => {
+  const { t } = useI18n();
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editTitle, setEditTitle] = React.useState('');
   const [editingProjectId, setEditingProjectId] = React.useState<string | null>(null);
@@ -859,6 +868,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
   const renameProject = useProjectsStore((state) => state.renameProject);
 
   const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
+  const appLanguage = useUIStore((state) => state.appLanguage);
   const deviceInfo = useDeviceInfo();
   const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
   const openMultiRunLauncher = useUIStore((state) => state.openMultiRunLauncher);
@@ -1246,8 +1256,8 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
 
   const emptyState = (
     <div className="py-6 text-center text-muted-foreground">
-      <p className="typography-ui-label font-semibold">No sessions yet</p>
-      <p className="typography-meta mt-1">Create your first session to start coding.</p>
+      <p className="typography-ui-label font-semibold">{t('session.empty.title')}</p>
+      <p className="typography-meta mt-1">{t('session.empty.subtitle')}</p>
     </div>
   );
 
@@ -1331,21 +1341,21 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
     async (session: Session) => {
       const result = await shareSession(session.id);
       if (result && result.share?.url) {
-        toast.success('Session shared', {
-          description: 'You can copy the link from the menu.',
+        toast.success(t('session.toast.shared'), {
+          description: t('session.toast.sharedDescription'),
         });
       } else {
-        toast.error('Unable to share session');
+        toast.error(t('session.toast.unableToShare'));
       }
     },
-    [shareSession],
+    [shareSession, t],
   );
 
   const handleCopyShareUrl = React.useCallback((url: string, sessionId: string) => {
     void copyTextToClipboard(url)
       .then((result) => {
         if (!result.ok) {
-          toast.error('Failed to copy URL');
+          toast.error(t('session.toast.copyUrlFailed'));
           return;
         }
         setCopiedSessionId(sessionId);
@@ -1358,20 +1368,20 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         }, 2000);
       })
       .catch(() => {
-        toast.error('Failed to copy URL');
+        toast.error(t('session.toast.copyUrlFailed'));
       });
-  }, []);
+  }, [t]);
 
   const handleUnshareSession = React.useCallback(
     async (sessionId: string) => {
       const result = await unshareSession(sessionId);
       if (result) {
-        toast.success('Session unshared');
+        toast.success(t('session.toast.unshared'));
       } else {
-        toast.error('Unable to unshare session');
+        toast.error(t('session.toast.unableToUnshare'));
       }
     },
-    [unshareSession],
+    [unshareSession, t],
   );
 
   const collectDescendants = React.useCallback(
@@ -1399,9 +1409,9 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       if (descendants.length === 0) {
         const success = await deleteSession(session.id);
         if (success) {
-          toast.success('Session deleted');
+          toast.success(t('session.toast.deletedSingle'));
         } else {
-          toast.error('Failed to delete session');
+          toast.error(t('session.toast.deleteSingleFailed'));
         }
         return;
       }
@@ -1409,13 +1419,13 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       const ids = [session.id, ...descendants.map((s) => s.id)];
       const { deletedIds, failedIds } = await deleteSessions(ids);
       if (deletedIds.length > 0) {
-        toast.success(`Deleted ${deletedIds.length} session${deletedIds.length === 1 ? '' : 's'}`);
+        toast.success(t('session.toast.deletedMany', { count: deletedIds.length, suffix: deletedIds.length === 1 ? '' : 's' }));
       }
       if (failedIds.length > 0) {
-        toast.error(`Failed to delete ${failedIds.length} session${failedIds.length === 1 ? '' : 's'}`);
+        toast.error(t('session.toast.deleteManyFailed', { count: failedIds.length, suffix: failedIds.length === 1 ? '' : 's' }));
       }
     },
-    [collectDescendants, deleteSession, deleteSessions],
+    [collectDescendants, deleteSession, deleteSessions, t],
   );
 
   const handleDeleteSession = React.useCallback(
@@ -1456,21 +1466,21 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         if (result.success && result.path) {
           const added = addProject(result.path, { id: result.projectId });
           if (!added) {
-            toast.error('Failed to add project', {
-              description: 'Please select a valid directory.',
+            toast.error(t('session.toast.addProjectFailed'), {
+              description: t('session.toast.selectValidDirectory'),
             });
           }
         } else if (result.error && result.error !== 'Directory selection cancelled') {
-          toast.error('Failed to select directory', {
+          toast.error(t('session.toast.selectDirectoryFailed'), {
             description: result.error,
           });
         }
       })
       .catch((error) => {
         console.error('Desktop: Error selecting directory:', error);
-        toast.error('Failed to select directory');
+        toast.error(t('session.toast.selectDirectoryFailed'));
       });
-  }, [addProject, tauriIpcAvailable]);
+  }, [addProject, tauriIpcAvailable, t]);
 
   const toggleParent = React.useCallback((sessionId: string) => {
     setExpandedParents((prev) => {
@@ -1497,12 +1507,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         toggleFolderCollapse(parentId);
       }
 
-      const newFolder = createFolder(scopeKey, 'New folder', parentId);
+      const newFolder = createFolder(scopeKey, t('session.folder.newDefaultName'), parentId);
       setRenamingFolderId(newFolder.id);
       setRenameFolderDraft(newFolder.name);
       return newFolder;
     },
-    [collapsedFolderIds, toggleFolderCollapse, createFolder],
+    [collapsedFolderIds, toggleFolderCollapse, createFolder, t],
   );
 
   const buildNode = React.useCallback(
@@ -1611,8 +1621,8 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       const groups: SessionGroup[] = [{
         id: 'root',
         label: (projectIsRepo && projectRootBranch && projectRootBranch !== 'HEAD')
-          ? `project root: ${projectRootBranch}`
-          : 'project root',
+          ? t('session.group.projectRootWithBranch', { branch: projectRootBranch })
+          : t('session.group.projectRoot'),
         branch: projectRootBranch ?? null,
         description: normalizedProjectRoot ? formatPathForDisplay(normalizedProjectRoot, homeDirectory) : null,
         isMain: true,
@@ -1673,7 +1683,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
 
       return groups;
     },
-    [homeDirectory, worktreeMetadata, pinnedSessionIds, gitDirectories]
+    [homeDirectory, worktreeMetadata, pinnedSessionIds, gitDirectories, t]
   );
 
   const toggleGroupSessionLimit = React.useCallback((groupId: string) => {
@@ -2176,7 +2186,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       const isMissingDirectory = directoryState === 'missing';
       const memoryState = sessionMemoryState.get(session.id);
       const isActive = currentSessionId === session.id;
-      const sessionTitle = session.title || 'Untitled Session';
+      const sessionTitle = session.title || t('session.untitled');
       const hasChildren = node.children.length > 0;
       const isPinnedSession = pinnedSessionIds.has(session.id);
       const isExpanded = expandedParents.has(session.id);
@@ -2217,7 +2227,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                   onChange={(event) => setEditTitle(event.target.value)}
                   className="flex-1 min-w-0 bg-transparent typography-ui-label outline-none placeholder:text-muted-foreground"
                   autoFocus
-                  placeholder="Rename session"
+                  placeholder={t('session.renameSessionPlaceholder')}
                   onKeyDown={(event) => {
                     if (event.key === 'Escape') {
                       event.stopPropagation();
@@ -2253,18 +2263,24 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     )}
                   </span>
                 ) : null}
-                <span className="flex-shrink-0">{formatSessionDateLabel(session.time?.updated || session.time?.created || Date.now())}</span>
+                <span className="flex-shrink-0">{formatSessionDateLabel(session.time?.updated || session.time?.created || Date.now(), appLanguage, t)}</span>
                 {session.share ? (
                   <RiShare2Line className="h-3 w-3 text-[color:var(--status-info)] flex-shrink-0" />
                 ) : null}
                 {(sessionSummary?.files ?? 0) > 0 ? (
                   <span className="flex-shrink-0">
-                    · {sessionSummary!.files} {sessionSummary!.files === 1 ? 'file' : 'files'} changed
+                    · {t('session.summary.filesChanged', {
+                      count: sessionSummary!.files ?? 0,
+                      label: (sessionSummary!.files ?? 0) === 1 ? t('session.common.fileSingular') : t('session.common.filePlural'),
+                    })}
                   </span>
                 ) : null}
                 {hasChildren ? (
                   <span className="truncate">
-                    {node.children.length} {node.children.length === 1 ? 'task' : 'tasks'}
+                    {t('session.summary.tasksCount', {
+                      count: node.children.length,
+                      label: node.children.length === 1 ? t('session.common.taskSingular') : t('session.common.taskPlural'),
+                    })}
                   </span>
                 ) : null}
               </div>
@@ -2322,7 +2338,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                       {isStreaming ? (
                         <GridLoader size="xs" className="text-primary" />
                       ) : (
-                        <span className="grid grid-cols-3 gap-[1px] text-[var(--status-info)]" aria-label="Unread updates" title="Unread updates">
+                        <span className="grid grid-cols-3 gap-[1px] text-[var(--status-info)]" aria-label={t('session.unreadUpdates')} title={t('session.unreadUpdates')}>
                           {Array.from({ length: 9 }, (_, i) => (
                             ATTENTION_DIAMOND_INDICES.has(i) ? (
                               <span
@@ -2339,7 +2355,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     </span>
                   ) : null}
                   {isPinnedSession ? (
-                    <RiPushpinLine className="h-3 w-3 flex-shrink-0 text-primary" aria-label="Pinned session" />
+                    <RiPushpinLine className="h-3 w-3 flex-shrink-0 text-primary" aria-label={t('session.pinned')} />
                   ) : null}
                   <div className="block min-w-0 flex-1 truncate typography-ui-label font-normal text-foreground">
                     {sessionTitle}
@@ -2348,8 +2364,8 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                   {pendingPermissionCount > 0 ? (
                     <span
                       className="inline-flex items-center gap-1 rounded bg-destructive/10 px-1 py-0.5 text-[0.7rem] text-destructive flex-shrink-0"
-                      title="Permission required"
-                      aria-label="Permission required"
+                      title={t('session.permissionRequired')}
+                      aria-label={t('session.permissionRequired')}
                     >
                       <RiShieldLine className="h-3 w-3" />
                       <span className="leading-none">{pendingPermissionCount}</span>
@@ -2375,7 +2391,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                         }
                       }}
                       className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 flex-shrink-0 rounded-sm"
-                      aria-label={isExpanded ? 'Collapse subsessions' : 'Expand subsessions'}
+                      aria-label={isExpanded ? t('session.collapseSubsessions') : t('session.expandSubsessions')}
                     >
                       {isExpanded ? (
                         <RiArrowDownSLine className="h-3 w-3" />
@@ -2384,24 +2400,30 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                       )}
                     </span>
                   ) : null}
-                  <span className="flex-shrink-0">{formatSessionDateLabel(session.time?.updated || session.time?.created || Date.now())}</span>
+                  <span className="flex-shrink-0">{formatSessionDateLabel(session.time?.updated || session.time?.created || Date.now(), appLanguage, t)}</span>
                   {session.share ? (
                     <RiShare2Line className="h-3 w-3 text-[color:var(--status-info)] flex-shrink-0" />
                   ) : null}
                   {(sessionSummary?.files ?? 0) > 0 ? (
                     <span className="flex-shrink-0">
-                      · {sessionSummary!.files} {sessionSummary!.files === 1 ? 'file' : 'files'} changed
+                      · {t('session.summary.filesChanged', {
+                        count: sessionSummary!.files ?? 0,
+                        label: (sessionSummary!.files ?? 0) === 1 ? t('session.common.fileSingular') : t('session.common.filePlural'),
+                      })}
                     </span>
                   ) : null}
                   {hasChildren ? (
                     <span className="truncate">
-                      {node.children.length} {node.children.length === 1 ? 'task' : 'tasks'}
+                      {t('session.summary.tasksCount', {
+                        count: node.children.length,
+                        label: node.children.length === 1 ? t('session.common.taskSingular') : t('session.common.taskPlural'),
+                      })}
                     </span>
                   ) : null}
                   {isMissingDirectory ? (
                     <span className="inline-flex items-center gap-0.5 text-status-warning flex-shrink-0">
                       <RiErrorWarningLine className="h-3 w-3" />
-                      Missing
+                      {t('session.directoryMissing')}
                     </span>
                   ) : null}
                 </div>
@@ -2420,7 +2442,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                         'inline-flex h-3.5 w-[18px] items-center justify-center rounded-md text-muted-foreground transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                         mobileVariant ? 'opacity-70' : 'opacity-0 group-hover:opacity-100',
                       )}
-                      aria-label="Session menu"
+                      aria-label={t('session.menuAria')}
                       onClick={(event) => event.stopPropagation()}
                       onKeyDown={(event) => event.stopPropagation()}
                     >
@@ -2444,7 +2466,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                       className="[&>svg]:mr-1"
                     >
                       <RiPencilAiLine className="mr-1 h-4 w-4" />
-                      Rename
+                      {t('session.common.rename')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => togglePinnedSession(session.id)} className="[&>svg]:mr-1">
                       {isPinnedSession ? (
@@ -2452,12 +2474,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                       ) : (
                         <RiPushpinLine className="mr-1 h-4 w-4" />
                       )}
-                      {isPinnedSession ? 'Unpin session' : 'Pin session'}
+                      {isPinnedSession ? t('session.unpin') : t('session.pin')}
                     </DropdownMenuItem>
                     {!session.share ? (
                       <DropdownMenuItem onClick={() => handleShareSession(session)} className="[&>svg]:mr-1">
                         <RiShare2Line className="mr-1 h-4 w-4" />
-                        Share
+                        {t('session.share')}
                       </DropdownMenuItem>
                     ) : (
                       <>
@@ -2472,18 +2494,18 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                           {copiedSessionId === session.id ? (
                             <>
                               <RiCheckLine className="mr-1 h-4 w-4" style={{ color: 'var(--status-success)' }} />
-                              Copied
+                              {t('session.copied')}
                             </>
                           ) : (
                             <>
                               <RiFileCopyLine className="mr-1 h-4 w-4" />
-                              Copy link
+                              {t('session.copyLink')}
                             </>
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleUnshareSession(session.id)} className="[&>svg]:mr-1">
                           <RiLinkUnlinkM className="mr-1 h-4 w-4" />
-                          Unshare
+                          {t('session.unshare')}
                         </DropdownMenuItem>
                       </>
                     )}
@@ -2497,12 +2519,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                           <DropdownMenuSub>
                             <DropdownMenuSubTrigger className="[&>svg]:mr-1">
                               <RiFolderLine className="h-4 w-4" />
-                              Move to folder
+                              {t('session.moveToFolder')}
                             </DropdownMenuSubTrigger>
                             <DropdownMenuSubContent className="min-w-[180px]">
                               {scopeFolders.length === 0 ? (
                                 <DropdownMenuItem disabled className="text-muted-foreground">
-                                  No folders yet
+                                  {t('session.noFoldersYet')}
                                 </DropdownMenuItem>
                               ) : (
                                 scopeFolders.map((folder) => (
@@ -2534,7 +2556,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                                   }}
                               >
                                 <RiAddLine className="mr-1 h-4 w-4" />
-                                New folder...
+                                {t('session.newFolder')}
                               </DropdownMenuItem>
                               {currentFolderId ? (
                                 <DropdownMenuItem
@@ -2544,7 +2566,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                                   className="text-destructive focus:text-destructive"
                                 >
                                   <RiCloseLine className="mr-1 h-4 w-4" />
-                                  Remove from folder
+                                  {t('session.removeFromFolder')}
                                 </DropdownMenuItem>
                               ) : null}
                             </DropdownMenuSubContent>
@@ -2558,7 +2580,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                       onClick={() => handleDeleteSession(session)}
                     >
                       <RiDeleteBinLine className="mr-1 h-4 w-4" />
-                      Remove
+                      {t('session.common.remove')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -2605,6 +2627,8 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       removeSessionFromFolder,
       createFolderAndStartRename,
       notifyOnSubtasks,
+      appLanguage,
+      t,
     ],
   );
 
@@ -2762,7 +2786,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
               {visibleSessions.map((node) => renderSessionNode(node, 0, group.directory, projectId))}
               {totalSessions === 0 && scopeFolders.length === 0 ? (
                 <div className="py-1 text-left typography-micro text-muted-foreground">
-                  No sessions in this workspace yet.
+                  {t('session.empty.workspace')}
                 </div>
               ) : null}
               {remainingCount > 0 && !isExpanded ? (
@@ -2771,7 +2795,10 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                   onClick={() => toggleGroupSessionLimit(groupKey)}
                   className="mt-0.5 flex items-center justify-start rounded-md px-1.5 py-0.5 text-left text-xs text-muted-foreground/70 leading-tight hover:text-foreground hover:underline"
                 >
-                  Show {remainingCount} more {remainingCount === 1 ? 'session' : 'sessions'}
+                  {t('session.showMoreSessions', {
+                    count: remainingCount,
+                    label: remainingCount === 1 ? t('session.common.sessionSingular') : t('session.common.sessionPlural'),
+                  })}
                 </button>
               ) : null}
               {isExpanded && totalSessions > maxVisible ? (
@@ -2780,7 +2807,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                   onClick={() => toggleGroupSessionLimit(groupKey)}
                   className="mt-0.5 flex items-center justify-start rounded-md px-1.5 py-0.5 text-left text-xs text-muted-foreground/70 leading-tight hover:text-foreground hover:underline"
                 >
-                  Show fewer sessions
+                  {t('session.showFewerSessions')}
                 </button>
               ) : null}
               </SessionFolderDndScope>
@@ -2823,7 +2850,11 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                 });
               }
             } : undefined}
-            aria-label={!hideGroupLabel ? (isCollapsed ? `Expand ${group.label}` : `Collapse ${group.label}`) : undefined}
+            aria-label={!hideGroupLabel ? (
+              isCollapsed
+                ? t('session.group.expandLabel', { label: group.label })
+                : t('session.group.collapseLabel', { label: group.label })
+            ) : undefined}
           >
             {!hideGroupLabel ? (
               <div className={cn(
@@ -2874,13 +2905,13 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                             });
                           }}
                           className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                          aria-label={`Delete ${group.label}`}
+                          aria-label={t('session.group.deleteLabel', { label: group.label })}
                         >
                           <RiDeleteBinLine className="h-4 w-4" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" sideOffset={4}>
-                        <p>Delete worktree</p>
+                        <p>{t('session.group.deleteWorktree')}</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -2905,13 +2936,13 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                           openNewSessionDraft({ directoryOverride: group.directory });
                         }}
                         className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                        aria-label={`New session in ${group.label}`}
+                        aria-label={t('session.group.newSessionInLabel', { label: group.label })}
                       >
                         <RiAddLine className="h-4 w-4" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={4}>
-                      <p>New session</p>
+                      <p>{t('session.project.newSession')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -2931,7 +2962,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                 {visibleSessions.map((node) => renderSessionNode(node, 0, group.directory, projectId))}
                 {totalSessions === 0 && scopeFolders.length === 0 ? (
                   <div className="py-1 text-left typography-micro text-muted-foreground">
-                    No sessions in this workspace yet.
+                    {t('session.empty.workspace')}
                   </div>
                 ) : null}
                 {remainingCount > 0 && !isExpanded ? (
@@ -2940,7 +2971,10 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     onClick={() => toggleGroupSessionLimit(groupKey)}
                     className="mt-0.5 flex items-center justify-start rounded-md px-1.5 py-0.5 text-left text-xs text-muted-foreground/70 leading-tight hover:text-foreground hover:underline"
                   >
-                    Show {remainingCount} more {remainingCount === 1 ? 'session' : 'sessions'}
+                    {t('session.showMoreSessions', {
+                      count: remainingCount,
+                      label: remainingCount === 1 ? t('session.common.sessionSingular') : t('session.common.sessionPlural'),
+                    })}
                   </button>
                 ) : null}
                 {isExpanded && totalSessions > maxVisible ? (
@@ -2949,7 +2983,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     onClick={() => toggleGroupSessionLimit(groupKey)}
                     className="mt-0.5 flex items-center justify-start rounded-md px-1.5 py-0.5 text-left text-xs text-muted-foreground/70 leading-tight hover:text-foreground hover:underline"
                   >
-                    Show fewer sessions
+                    {t('session.showFewerSessions')}
                   </button>
                 ) : null}
               </SessionFolderDndScope>
@@ -2983,6 +3017,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       renamingFolderId,
       renameFolderDraft,
       pinnedSessionIds,
+      t,
     ]
   );
 
@@ -3028,7 +3063,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                         || formatDirectoryName(activeProjectForHeader.normalizedPath, homeDirectory)
                         || activeProjectForHeader.normalizedPath,
                       )
-                      : 'Projects'}
+                      : t('session.projects')}
                   </span>
                   <RiArrowDownSLine className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                 </button>
@@ -3060,7 +3095,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     className="gap-2"
                   >
                     <RiPencilAiLine className="h-4 w-4" />
-                    Rename project
+                    {t('session.project.rename')}
                   </DropdownMenuItem>
                 ) : (
                   <div className="px-2 py-1.5">
@@ -3075,7 +3110,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                         value={projectRenameDraft}
                         onChange={(event) => setProjectRenameDraft(event.target.value)}
                         className="h-7 flex-1 rounded border border-border bg-transparent px-2 typography-ui-label text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                        placeholder="Rename project"
+                        placeholder={t('session.project.renamePlaceholder')}
                         autoFocus
                         onKeyDown={(event) => {
                           if (event.key === 'Escape') {
@@ -3111,7 +3146,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                   className="text-destructive focus:text-destructive gap-2"
                 >
                   <RiCloseLine className="h-4 w-4" />
-                  Close project
+                  {t('session.project.closeProject')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -3119,8 +3154,8 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
               type="button"
               onClick={handleOpenDirectoryDialog}
               className={addProjectButtonClass}
-              aria-label="Add project"
-              title="Add project"
+              aria-label={t('session.project.addProject')}
+              title={t('session.project.addProject')}
             >
               <RiFolderAddLine className={headerActionIconClass} />
             </button>
@@ -3154,12 +3189,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                       openNewSessionDraft({ directoryOverride: newWorktreePath });
                     }}
                     className={headerActionButtonClass}
-                    aria-label="New worktree"
+                    aria-label={t('session.project.newSessionInWorktree')}
                   >
                     <RiNodeTree className={headerActionIconClass} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={4}><p>New worktree</p></TooltipContent>
+                <TooltipContent side="bottom" sideOffset={4}><p>{t('session.project.newSessionInWorktree')}</p></TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -3167,12 +3202,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     type="button"
                     onClick={() => setIssuePickerOpen(true)}
                     className={headerActionButtonClass}
-                    aria-label="New from issue"
+                    aria-label={t('session.project.newFromIssue')}
                   >
                     <RiGithubLine className={headerActionIconClass} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={4}><p>New from issue</p></TooltipContent>
+                <TooltipContent side="bottom" sideOffset={4}><p>{t('session.project.newFromIssue')}</p></TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -3180,12 +3215,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     type="button"
                     onClick={() => setPullRequestPickerOpen(true)}
                     className={headerActionButtonClass}
-                    aria-label="New from PR"
+                    aria-label={t('session.project.newFromPr')}
                   >
                     <RiGitPullRequestLine className={headerActionIconClass} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={4}><p>New from PR</p></TooltipContent>
+                <TooltipContent side="bottom" sideOffset={4}><p>{t('session.project.newFromPr')}</p></TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -3193,12 +3228,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                     type="button"
                     onClick={openMultiRunLauncher}
                     className={headerActionButtonClass}
-                    aria-label="New multi-run"
+                    aria-label={t('session.project.newMultiRun')}
                   >
                     <ArrowsMerge className={headerActionIconClass} />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={4}><p>New multi-run</p></TooltipContent>
+                <TooltipContent side="bottom" sideOffset={4}><p>{t('session.project.newMultiRun')}</p></TooltipContent>
               </Tooltip>
                 </>
               ) : null}
@@ -3209,12 +3244,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                       type="button"
                       onClick={() => setIsBranchPickerOpen(true)}
                       className={headerActionButtonClass}
-                      aria-label="Manage branches"
+                      aria-label={t('session.project.manageBranches')}
                     >
                       <RiGitRepositoryLine className={headerActionIconClass} />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" sideOffset={4}><p>Manage branches</p></TooltipContent>
+                  <TooltipContent side="bottom" sideOffset={4}><p>{t('session.project.manageBranches')}</p></TooltipContent>
                 </Tooltip>
               ) : null}
               {useMobileNotesPanel ? (
@@ -3224,12 +3259,12 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                       type="button"
                       onClick={() => setProjectNotesPanelOpen(true)}
                       className={headerActionButtonClass}
-                      aria-label="Project notes and todos"
+                      aria-label={t('session.project.notesAndTodos')}
                     >
                       <RiStickyNoteLine className={headerActionIconClass} />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" sideOffset={4}><p>Project notes</p></TooltipContent>
+                  <TooltipContent side="bottom" sideOffset={4}><p>{t('session.mobile.projectNotesTitle')}</p></TooltipContent>
                 </Tooltip>
               ) : (
                 <DropdownMenu open={projectNotesPanelOpen} onOpenChange={setProjectNotesPanelOpen} modal={false}>
@@ -3239,13 +3274,13 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                         <button
                           type="button"
                           className={headerActionButtonClass}
-                          aria-label="Project notes and todos"
+                          aria-label={t('session.project.notesAndTodos')}
                         >
                           <RiStickyNoteLine className={headerActionIconClass} />
                         </button>
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={4}><p>Project notes</p></TooltipContent>
+                    <TooltipContent side="bottom" sideOffset={4}><p>{t('session.mobile.projectNotesTitle')}</p></TooltipContent>
                   </Tooltip>
                   <DropdownMenuContent align="start" className="w-[340px] p-0">
                     <ProjectNotesTodoPanel
@@ -3287,7 +3322,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
               if (!group) {
                 return (
                   <div className="py-1 text-left typography-micro text-muted-foreground">
-                    No sessions yet.
+                    {t('session.empty.title')}
                   </div>
                 );
               }
@@ -3423,7 +3458,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                           </DndContext>
                         ) : (
                           <div className="py-1 text-left typography-micro text-muted-foreground">
-                            No sessions yet.
+                            {t('session.empty.title')}
                           </div>
                         )}
                       </div>
@@ -3467,7 +3502,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
         <MobileOverlayPanel
           open={projectNotesPanelOpen}
           onClose={() => setProjectNotesPanelOpen(false)}
-          title="Project notes"
+          title={t('session.mobile.projectNotesTitle')}
         >
           <ProjectNotesTodoPanel
             projectRef={activeProjectRefForHeader}
@@ -3482,11 +3517,17 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       <Dialog open={Boolean(deleteSessionConfirm)} onOpenChange={(open) => { if (!open) setDeleteSessionConfirm(null); }}>
         <DialogContent showCloseButton={false} className="max-w-sm gap-5">
           <DialogHeader>
-            <DialogTitle>Delete session?</DialogTitle>
+            <DialogTitle>{t('session.deleteSession.title')}</DialogTitle>
             <DialogDescription>
               {deleteSessionConfirm && deleteSessionConfirm.descendantCount > 0
-                ? `"${deleteSessionConfirm.session.title || 'Untitled Session'}" and its ${deleteSessionConfirm.descendantCount} sub-task${deleteSessionConfirm.descendantCount === 1 ? '' : 's'} will be permanently deleted.`
-                : `"${deleteSessionConfirm?.session.title || 'Untitled Session'}" will be permanently deleted.`}
+                ? t('session.deleteSession.withDescendants', {
+                  title: deleteSessionConfirm.session.title || t('session.untitled'),
+                  count: deleteSessionConfirm.descendantCount,
+                  suffix: deleteSessionConfirm.descendantCount === 1 ? '' : 's',
+                })
+                : t('session.deleteSession.single', {
+                  title: deleteSessionConfirm?.session.title || t('session.untitled'),
+                })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="w-full sm:items-center sm:justify-between">
@@ -3497,7 +3538,7 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
               aria-pressed={!showDeletionDialog}
             >
               {!showDeletionDialog ? <RiCheckboxLine className="h-4 w-4 text-primary" /> : <RiCheckboxBlankLine className="h-4 w-4" />}
-              Never ask
+              {t('session.common.neverAsk')}
             </button>
             <div className="flex items-center gap-2">
               <button
@@ -3505,14 +3546,14 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
                 onClick={() => setDeleteSessionConfirm(null)}
                 className="inline-flex h-8 items-center justify-center rounded-md border border-border px-3 typography-ui-label text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
-                Cancel
+                {t('session.common.cancel')}
               </button>
               <button
                 type="button"
                 onClick={() => void confirmDeleteSession()}
                 className="inline-flex h-8 items-center justify-center rounded-md bg-destructive px-3 typography-ui-label text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
               >
-                Delete
+                {t('session.common.delete')}
               </button>
             </div>
           </DialogFooter>
@@ -3523,11 +3564,22 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
       <Dialog open={Boolean(deleteFolderConfirm)} onOpenChange={(open) => { if (!open) setDeleteFolderConfirm(null); }}>
         <DialogContent showCloseButton={false} className="max-w-sm gap-5">
           <DialogHeader>
-            <DialogTitle>Delete folder?</DialogTitle>
+            <DialogTitle>{t('session.deleteFolder.title')}</DialogTitle>
             <DialogDescription>
               {deleteFolderConfirm && (deleteFolderConfirm.subFolderCount > 0 || deleteFolderConfirm.sessionCount > 0)
-                ? `"${deleteFolderConfirm.folderName}" will be deleted${deleteFolderConfirm.subFolderCount > 0 ? ` along with ${deleteFolderConfirm.subFolderCount} sub-folder${deleteFolderConfirm.subFolderCount === 1 ? '' : 's'}` : ''}. Sessions inside will not be deleted.`
-                : `"${deleteFolderConfirm?.folderName}" will be permanently deleted.`}
+                ? t('session.deleteFolder.withDetails', {
+                  name: deleteFolderConfirm.folderName,
+                  subFolderDetail:
+                    deleteFolderConfirm.subFolderCount > 0
+                      ? t('session.deleteFolder.subFoldersDetail', {
+                        count: deleteFolderConfirm.subFolderCount,
+                        suffix: deleteFolderConfirm.subFolderCount === 1 ? '' : 's',
+                      })
+                      : '',
+                })
+                : t('session.deleteFolder.single', {
+                  name: deleteFolderConfirm?.folderName ?? '',
+                })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -3536,14 +3588,14 @@ export const SessionSidebar: React.FC<SessionSidebarProps> = ({
               onClick={() => setDeleteFolderConfirm(null)}
               className="inline-flex h-8 items-center justify-center rounded-md border border-border px-3 typography-ui-label text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
-              Cancel
+              {t('session.common.cancel')}
             </button>
             <button
               type="button"
               onClick={confirmDeleteFolder}
               className="inline-flex h-8 items-center justify-center rounded-md bg-destructive px-3 typography-ui-label text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
             >
-              Delete
+              {t('session.common.delete')}
             </button>
           </DialogFooter>
         </DialogContent>
