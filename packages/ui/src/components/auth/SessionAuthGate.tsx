@@ -6,6 +6,7 @@ import { isDesktopShell, isVSCodeRuntime } from '@/lib/desktop';
 import { syncDesktopSettings, initializeAppearancePreferences } from '@/lib/persistence';
 import { applyPersistedDirectoryPreferences } from '@/lib/directoryPersistence';
 import { DesktopHostSwitcherInline } from '@/components/desktop/DesktopHostSwitcher';
+import { useI18n } from '@/contexts/useI18n';
 
 const STATUS_CHECK_ENDPOINT = '/auth/session';
 
@@ -61,7 +62,7 @@ const AuthShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </div>
 );
 
-const LoadingScreen: React.FC<{ message?: string }> = ({ message = 'Preparing workspace…' }) => (
+const LoadingScreen: React.FC<{ message: string }> = ({ message }) => (
   <AuthShell>
     <div className="w-full max-w-sm rounded-3xl border border-border/40 bg-card/90 px-6 py-5 text-center shadow-none backdrop-blur">
       <p className="typography-ui-label text-muted-foreground">{message}</p>
@@ -70,6 +71,7 @@ const LoadingScreen: React.FC<{ message?: string }> = ({ message = 'Preparing wo
 );
 
 const ErrorScreen: React.FC<ErrorScreenProps> = ({ onRetry, errorType = 'network', retryAfter }) => {
+  const { t } = useI18n();
   const isRateLimit = errorType === 'rate-limit';
   const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 1;
 
@@ -78,16 +80,16 @@ const ErrorScreen: React.FC<ErrorScreenProps> = ({ onRetry, errorType = 'network
       <div className="flex flex-col items-center gap-6 text-center">
         <div className="space-y-2">
           <h1 className="typography-ui-header font-semibold text-destructive">
-            {isRateLimit ? 'Too many attempts' : 'Unable to reach server'}
+            {isRateLimit ? t('auth.error.tooManyAttemptsTitle') : t('auth.error.unableToReachServerTitle')}
           </h1>
           <p className="typography-meta text-muted-foreground max-w-xs">
             {isRateLimit
-              ? `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before trying again.`
-              : "We couldn't verify the UI session. Check that the service is running and try again."}
+              ? t('auth.error.rateLimitDesc', { minutes, suffix: minutes > 1 ? 's' : '' })
+              : t('auth.error.networkDesc')}
           </p>
         </div>
         <Button type="button" onClick={onRetry} className="w-full max-w-xs">
-          Retry
+          {t('auth.common.retry')}
         </Button>
       </div>
     </AuthShell>
@@ -107,6 +109,7 @@ interface ErrorScreenProps {
 }
 
 export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) => {
+  const { t } = useI18n();
   const vscodeRuntime = React.useMemo(() => isVSCodeRuntime(), []);
   const skipAuth = vscodeRuntime;
   const showHostSwitcher = React.useMemo(() => isDesktopShell() && !vscodeRuntime, [vscodeRuntime]);
@@ -126,7 +129,6 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
       return;
     }
 
-    // 检查 cookie 是否存在
     const cookies = document.cookie;
     const hasAccessToken = cookies.includes('oc_ui_session=');
     const hasRefreshToken = cookies.includes('oc_ui_refresh=');
@@ -235,7 +237,6 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
       const response = await submitPassword(password);
       if (response.ok) {
         console.log('[Frontend Auth] Login successful');
-        // 检查登录后 cookie 是否被设置
         const cookies = document.cookie;
         const hasAccessToken = cookies.includes('oc_ui_session=');
         const hasRefreshToken = cookies.includes('oc_ui_refresh=');
@@ -249,7 +250,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
 
       if (response.status === 401) {
         console.warn('[Frontend Auth] Login failed: Invalid password');
-        setErrorMessage('Incorrect password. Try again.');
+        setErrorMessage(t('auth.error.incorrectPassword'));
         setIsTunnelLocked(false);
         setState('locked');
         return;
@@ -265,12 +266,12 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
       }
 
       console.error('[Frontend Auth] Login failed: Unexpected response', response.status);
-      setErrorMessage('Unexpected response from server.');
+      setErrorMessage(t('auth.error.unexpectedResponse'));
       setIsTunnelLocked(false);
       setState('error');
     } catch (error) {
       console.warn('Failed to submit UI password:', error);
-      setErrorMessage('Network error. Check connection and retry.');
+      setErrorMessage(t('auth.error.networkShort'));
       setIsTunnelLocked(false);
       setState('error');
     } finally {
@@ -279,7 +280,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
   };
 
   if (state === 'pending') {
-    return <LoadingScreen />;
+    return <LoadingScreen message={t('auth.loading.preparingWorkspace')} />;
   }
 
   if (state === 'error') {
@@ -296,12 +297,12 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
         <div className="flex flex-col items-center gap-6 w-full max-w-xs">
           <div className="flex flex-col items-center gap-1 text-center">
             <h1 className="text-xl font-semibold text-foreground">
-              {isTunnelLocked ? 'Tunnel access required' : 'Unlock OpenChamber'}
+              {isTunnelLocked ? t('auth.locked.tunnelTitle') : t('auth.locked.title')}
             </h1>
             <p className="typography-meta text-muted-foreground">
               {isTunnelLocked
-                ? 'Open this tunnel using the one-time connect link from the desktop app.'
-                : 'This session is password-protected.'}
+                ? t('auth.locked.tunnelSubtitle')
+                : t('auth.locked.subtitle')}
             </p>
           </div>
 
@@ -315,7 +316,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
                     ref={passwordInputRef}
                     type="password"
                     autoComplete="current-password"
-                    placeholder="Enter password"
+                    placeholder={t('auth.locked.passwordPlaceholder')}
                     value={password}
                     onChange={(event) => {
                       setPassword(event.target.value);
@@ -333,7 +334,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
                   type="submit"
                   size="icon"
                   disabled={!password || isSubmitting}
-                  aria-label={isSubmitting ? 'Unlocking' : 'Unlock'}
+                  aria-label={isSubmitting ? t('auth.locked.unlockingAria') : t('auth.locked.unlockAria')}
                 >
                   {isSubmitting ? (
                     <RiLoader4Line className="h-4 w-4 animate-spin" />
@@ -354,7 +355,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
             <div className="w-full">
               <DesktopHostSwitcherInline />
               <p className="mt-1 text-center typography-micro text-muted-foreground">
-                Use Local if remote is unreachable.
+                {t('auth.locked.useLocalHint')}
               </p>
             </div>
           )}

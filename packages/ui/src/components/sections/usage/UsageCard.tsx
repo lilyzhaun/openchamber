@@ -5,6 +5,7 @@ import { UsageProgressBar } from './UsageProgressBar';
 import { PaceIndicator } from './PaceIndicator';
 import { useQuotaStore } from '@/stores/useQuotaStore';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useI18n } from '@/contexts/useI18n';
 
 interface UsageCardProps {
   title: string;
@@ -23,9 +24,10 @@ export const UsageCard: React.FC<UsageCardProps> = ({
   toggleEnabled = false,
   onToggle,
 }) => {
+  const { t } = useI18n();
   const displayMode = useQuotaStore((state) => state.displayMode);
   const displayPercent = displayMode === 'remaining' ? window.remainingPercent : window.usedPercent;
-  const barLabel = displayMode === 'remaining' ? 'remaining' : 'used';
+  const barLabel = displayMode === 'remaining' ? t('usage.card.barLabel.remaining') : t('usage.card.barLabel.used');
   const percentLabel = window.valueLabel ?? formatPercent(displayPercent);
   const resetLabel = window.resetAfterFormatted ?? window.resetAtFormatted ?? '';
   const windowLabel = formatWindowLabel(title);
@@ -50,7 +52,7 @@ export const UsageCard: React.FC<UsageCardProps> = ({
             <Checkbox
               checked={toggleEnabled}
               onChange={(checked) => onToggle?.(checked)}
-              ariaLabel="Show in dropdown"
+              ariaLabel={t('usage.card.showInDropdownAria')}
             />
           )}
           <div className="min-w-0 flex flex-col">
@@ -74,7 +76,7 @@ export const UsageCard: React.FC<UsageCardProps> = ({
         />
         <div className="mt-1 flex items-center justify-between">
           <span className="typography-micro text-muted-foreground">
-            {resetLabel ? `Resets ${resetLabel}` : ''}
+            {resetLabel ? t('usage.card.resets', { time: resetLabel }) : ''}
           </span>
           <span className="typography-micro text-muted-foreground">
             {barLabel}
