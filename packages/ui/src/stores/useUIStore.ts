@@ -4,6 +4,7 @@ import type { SidebarSection } from '@/constants/sidebar';
 import { getSafeStorage } from './utils/safeStorage';
 import { SEMANTIC_TYPOGRAPHY, getTypographyVariable, type SemanticTypographyKey } from '@/lib/typography';
 import type { ShortcutCombo } from '@/lib/shortcuts';
+import type { AppLanguage } from '@/lib/i18n/locales';
 
 export type MainTab = 'chat' | 'plan' | 'git' | 'diff' | 'terminal' | 'files';
 export type RightSidebarTab = 'git' | 'files';
@@ -185,6 +186,7 @@ interface UIStore {
   padding: number;
   cornerRadius: number;
   inputBarOffset: number;
+  appLanguage: AppLanguage;
 
   favoriteModels: Array<{ providerID: string; modelID: string }>;
   hiddenModels: Array<{ providerID: string; modelID: string }>;
@@ -289,6 +291,7 @@ interface UIStore {
   setPadding: (size: number) => void;
   setCornerRadius: (radius: number) => void;
   setInputBarOffset: (offset: number) => void;
+  setAppLanguage: (language: AppLanguage) => void;
   setKeyboardOpen: (open: boolean) => void;
   applyTypography: () => void;
   applyPadding: () => void;
@@ -392,6 +395,7 @@ export const useUIStore = create<UIStore>()(
         padding: 100,
         cornerRadius: 12,
         inputBarOffset: 0,
+        appLanguage: 'en',
         favoriteModels: [],
         hiddenModels: [],
         recentModels: [],
@@ -1005,6 +1009,10 @@ export const useUIStore = create<UIStore>()(
           set({ inputBarOffset: offset });
         },
 
+        setAppLanguage: (language) => {
+          set({ appLanguage: language });
+        },
+
         setKeyboardOpen: (open) => {
           set({ isKeyboardOpen: open });
         },
@@ -1372,6 +1380,7 @@ export const useUIStore = create<UIStore>()(
           terminalFontSize: state.terminalFontSize,
           padding: state.padding,
           cornerRadius: state.cornerRadius,
+          appLanguage: state.appLanguage,
           favoriteModels: state.favoriteModels,
           hiddenModels: state.hiddenModels,
           recentModels: state.recentModels,

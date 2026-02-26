@@ -116,6 +116,7 @@ export type DesktopSettings = {
   padding?: number;
   cornerRadius?: number;
   inputBarOffset?: number;
+  appLanguage?: 'en' | 'zh-CN';
 
   favoriteModels?: Array<{ providerID: string; modelID: string }>;
   recentModels?: Array<{ providerID: string; modelID: string }>;

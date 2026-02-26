@@ -49,6 +49,7 @@ import { useLongPress } from '@/hooks/useLongPress';
 import { formatShortcutForDisplay, getEffectiveShortcutCombo } from '@/lib/shortcuts';
 import { sessionEvents } from '@/lib/sessionEvents';
 import type { ProjectEntry } from '@/lib/api/types';
+import { useI18n } from '@/contexts/useI18n';
 
 const normalize = (value: string): string => {
   if (!value) return '';
@@ -257,6 +258,7 @@ const ProjectTile: React.FC<{
   onEdit: () => void;
   onClose: () => void;
 }> = ({ project, isActive, hasStreaming, hasUnread, label, expanded, projectTextVisible, onClick, onEdit, onClose }) => {
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [iconImageFailed, setIconImageFailed] = React.useState(false);
   const ProjectIcon = project.icon ? PROJECT_ICON_MAP[project.icon] : null;
@@ -395,12 +397,12 @@ const ProjectTile: React.FC<{
     )}
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
-        <span className="sr-only">Project options</span>
+        <span className="sr-only">{t('nav.projectOptionsSr')}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="right" sideOffset={4} className="min-w-[160px]">
         <DropdownMenuItem onClick={onEdit} className="gap-2">
           <RiPencilLine className="h-4 w-4" />
-          Edit project
+          {t('nav.editProject')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -408,7 +410,7 @@ const ProjectTile: React.FC<{
           className="text-destructive focus:text-destructive gap-2"
         >
           <RiCloseLine className="h-4 w-4" />
-          Close project
+          {t('nav.closeProject')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -458,6 +460,7 @@ interface NavRailProps {
 }
 
 export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
+  const { t } = useI18n();
   const projects = useProjectsStore((s) => s.projects);
   const activeProjectId = useProjectsStore((s) => s.activeProjectId);
   const setActiveProjectIdOnly = useProjectsStore((s) => s.setActiveProjectIdOnly);
@@ -740,7 +743,7 @@ export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
           className,
         )}
         style={{ width: expanded ? NAV_RAIL_EXPANDED_WIDTH : NAV_RAIL_WIDTH }}
-        aria-label="Project navigation"
+        aria-label={t('nav.projectNavigationAria')}
       >
         {/* Projects list */}
         <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden scrollbar-none">
@@ -786,9 +789,9 @@ export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
               <NavRailActionButton
                 onClick={handleAddProject}
                 disabled={navRailInteractionBlocked}
-                ariaLabel="Add project"
+                ariaLabel={t('nav.addProject')}
                 icon={<RiFolderAddLine className={navRailActionIconClass} />}
-                tooltipLabel="Add project"
+                tooltipLabel={t('nav.addProject')}
                 buttonClassName={navRailActionButtonClass}
                 showExpandedContent={showExpandedContent}
                 actionTextVisible={actionTextVisible}
@@ -805,9 +808,9 @@ export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
             <NavRailActionButton
               onClick={() => setUpdateDialogOpen(true)}
               disabled={navRailInteractionBlocked}
-              ariaLabel="Update available"
+              ariaLabel={t('nav.updateAvailable')}
               icon={<RiDownloadLine className={navRailActionIconClass} />}
-              tooltipLabel="Update available"
+              tooltipLabel={t('nav.updateAvailable')}
               buttonClassName={navRailActionButtonClass}
               showExpandedContent={showExpandedContent}
               actionTextVisible={actionTextVisible}
@@ -818,9 +821,9 @@ export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
             <NavRailActionButton
               onClick={() => setAboutDialogOpen(true)}
               disabled={navRailInteractionBlocked}
-              ariaLabel="About"
+              ariaLabel={t('nav.about')}
               icon={<RiInformationLine className={navRailActionIconClass} />}
-              tooltipLabel="About OpenChamber"
+              tooltipLabel={t('nav.aboutOpenChamber')}
               buttonClassName={navRailActionButtonClass}
               showExpandedContent={showExpandedContent}
               actionTextVisible={actionTextVisible}
@@ -831,9 +834,9 @@ export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
             <NavRailActionButton
               onClick={toggleHelpDialog}
               disabled={navRailInteractionBlocked}
-              ariaLabel="Keyboard shortcuts"
+              ariaLabel={t('nav.keyboardShortcuts')}
               icon={<RiQuestionLine className={navRailActionIconClass} />}
-              tooltipLabel="Shortcuts"
+              tooltipLabel={t('nav.shortcuts')}
               shortcutHint={shortcutLabel('open_help')}
               showExpandedShortcutHint={false}
               buttonClassName={navRailActionButtonClass}
@@ -845,9 +848,9 @@ export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
           <NavRailActionButton
             onClick={() => setSettingsDialogOpen(true)}
             disabled={navRailInteractionBlocked}
-            ariaLabel="Settings"
+            ariaLabel={t('nav.settings')}
             icon={<RiSettings3Line className={navRailActionIconClass} />}
-            tooltipLabel="Settings"
+            tooltipLabel={t('nav.settings')}
             shortcutHint={shortcutLabel('open_settings')}
             showExpandedShortcutHint={false}
             buttonClassName={navRailActionButtonClass}
@@ -860,12 +863,12 @@ export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
             <NavRailActionButton
               onClick={toggleNavRail}
               disabled={navRailInteractionBlocked}
-              ariaLabel={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+              ariaLabel={expanded ? t('nav.collapseSidebarAria') : t('nav.expandSidebarAria')}
               icon={expanded
                 ? <RiMenuFoldLine className={navRailActionIconClass} />
                 : <RiMenuUnfoldLine className={navRailActionIconClass} />
               }
-              tooltipLabel={expanded ? 'Collapse' : 'Expand'}
+              tooltipLabel={expanded ? t('nav.collapse') : t('nav.expand')}
               shortcutHint={shortcutLabel('toggle_nav_rail')}
               showExpandedShortcutHint={false}
               buttonClassName={navRailActionButtonClass}

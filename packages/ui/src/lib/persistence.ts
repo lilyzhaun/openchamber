@@ -378,6 +378,11 @@ const applyDesktopUiPreferences = (settings: DesktopSettings) => {
   if (typeof settings.inputBarOffset === 'number' && Number.isFinite(settings.inputBarOffset) && settings.inputBarOffset !== store.inputBarOffset) {
     store.setInputBarOffset(settings.inputBarOffset);
   }
+  if (typeof settings.appLanguage === 'string' && (settings.appLanguage === 'en' || settings.appLanguage === 'zh-CN')) {
+    if (settings.appLanguage !== store.appLanguage) {
+      store.setAppLanguage(settings.appLanguage);
+    }
+  }
 
   if (Array.isArray(settings.favoriteModels)) {
     const current = store.favoriteModels;
@@ -734,6 +739,9 @@ const sanitizeWebSettings = (payload: unknown): DesktopSettings | null => {
   }
   if (typeof candidate.inputBarOffset === 'number' && Number.isFinite(candidate.inputBarOffset)) {
     result.inputBarOffset = candidate.inputBarOffset;
+  }
+  if (candidate.appLanguage === 'en' || candidate.appLanguage === 'zh-CN') {
+    result.appLanguage = candidate.appLanguage;
   }
 
   const favoriteModels = sanitizeModelRefs(candidate.favoriteModels, 64);

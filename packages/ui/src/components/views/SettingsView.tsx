@@ -55,6 +55,7 @@ import { AboutSettings } from '@/components/sections/openchamber/AboutSettings';
 import { McpIcon } from '@/components/icons/McpIcon';
 import { useDeviceInfo } from '@/lib/device';
 import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop';
+import { useI18n } from '@/contexts/useI18n';
 import { reloadOpenCodeConfiguration } from '@/stores/useAgentsStore';
 import {
   SETTINGS_PAGE_METADATA,
@@ -161,12 +162,13 @@ function getSettingsNavIcon(slug: SettingsPageSlug): React.ComponentType<{ class
 }
 
 const SettingsHome: React.FC<{ onOpen: (slug: SettingsPageSlug) => void }> = ({ onOpen }) => {
+  const { t } = useI18n();
   return (
     <div className="h-full overflow-auto">
       <div className="mx-auto w-full max-w-3xl px-6 py-6 space-y-6">
         <div className="space-y-1">
-          <h1 className="typography-ui-header font-semibold text-foreground">Settings</h1>
-          <p className="typography-ui text-muted-foreground">Jump to common pages.</p>
+          <h1 className="typography-ui-header font-semibold text-foreground">{t('settings.home.title')}</h1>
+          <p className="typography-ui text-muted-foreground">{t('settings.home.subtitle')}</p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -178,8 +180,8 @@ const SettingsHome: React.FC<{ onOpen: (slug: SettingsPageSlug) => void }> = ({ 
               'hover:bg-[var(--interactive-hover)] transition-colors'
             )}
           >
-            <div className="typography-ui-label text-foreground">Providers</div>
-            <div className="typography-micro text-muted-foreground/70">Connect models + credentials</div>
+            <div className="typography-ui-label text-foreground">{t('settings.home.providers.title')}</div>
+            <div className="typography-micro text-muted-foreground/70">{t('settings.home.providers.desc')}</div>
           </button>
 
           <button
@@ -190,8 +192,8 @@ const SettingsHome: React.FC<{ onOpen: (slug: SettingsPageSlug) => void }> = ({ 
               'hover:bg-[var(--interactive-hover)] transition-colors'
             )}
           >
-            <div className="typography-ui-label text-foreground">Agents</div>
-            <div className="typography-micro text-muted-foreground/70">Prompts, tools, permissions</div>
+            <div className="typography-ui-label text-foreground">{t('settings.home.agents.title')}</div>
+            <div className="typography-micro text-muted-foreground/70">{t('settings.home.agents.desc')}</div>
           </button>
 
           <button
@@ -202,8 +204,8 @@ const SettingsHome: React.FC<{ onOpen: (slug: SettingsPageSlug) => void }> = ({ 
               'hover:bg-[var(--interactive-hover)] transition-colors'
             )}
           >
-            <div className="typography-ui-label text-foreground">Skills Catalog</div>
-            <div className="typography-micro text-muted-foreground/70">Install skills from catalogs</div>
+            <div className="typography-ui-label text-foreground">{t('settings.home.skillsCatalog.title')}</div>
+            <div className="typography-micro text-muted-foreground/70">{t('settings.home.skillsCatalog.desc')}</div>
           </button>
 
           <button
@@ -214,8 +216,8 @@ const SettingsHome: React.FC<{ onOpen: (slug: SettingsPageSlug) => void }> = ({ 
               'hover:bg-[var(--interactive-hover)] transition-colors'
             )}
           >
-            <div className="typography-ui-label text-foreground">MCP</div>
-            <div className="typography-micro text-muted-foreground/70">Configure MCP servers + connections</div>
+            <div className="typography-ui-label text-foreground">{t('settings.home.mcp.title')}</div>
+            <div className="typography-micro text-muted-foreground/70">{t('settings.home.mcp.desc')}</div>
           </button>
 
           <button
@@ -226,8 +228,8 @@ const SettingsHome: React.FC<{ onOpen: (slug: SettingsPageSlug) => void }> = ({ 
               'hover:bg-[var(--interactive-hover)] transition-colors'
             )}
           >
-            <div className="typography-ui-label text-foreground">Usage</div>
-            <div className="typography-micro text-muted-foreground/70">Quota + spend visibility</div>
+            <div className="typography-ui-label text-foreground">{t('settings.home.usage.title')}</div>
+            <div className="typography-micro text-muted-foreground/70">{t('settings.home.usage.desc')}</div>
           </button>
         </div>
       </div>

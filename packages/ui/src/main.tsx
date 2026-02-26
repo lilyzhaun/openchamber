@@ -6,6 +6,7 @@ import App from './App.tsx'
 import { SessionAuthGate } from './components/auth/SessionAuthGate'
 import { ThemeSystemProvider } from './contexts/ThemeSystemContext'
 import { ThemeProvider } from './components/providers/ThemeProvider'
+import { I18nProvider } from './contexts/i18n-provider'
 import './lib/debug'
 import { syncDesktopSettings, initializeAppearancePreferences } from './lib/persistence'
 import { startAppearanceAutoSave } from './lib/appearanceAutoSave'
@@ -92,9 +93,11 @@ createRoot(rootElement).render(
   <StrictMode>
     <ThemeSystemProvider>
       <ThemeProvider>
-        <SessionAuthGate>
-          <App apis={runtimeAPIs} />
-        </SessionAuthGate>
+        <I18nProvider>
+          <SessionAuthGate>
+            <App apis={runtimeAPIs} />
+          </SessionAuthGate>
+        </I18nProvider>
       </ThemeProvider>
     </ThemeSystemProvider>
   </StrictMode>,
