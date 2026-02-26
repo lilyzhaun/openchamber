@@ -284,7 +284,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileRateLimitsOpen, setIsMobileRateLimitsOpen] = React.useState(false);
   const [isDesktopServicesOpen, setIsDesktopServicesOpen] = React.useState(false);
   const [isUsageRefreshSpinning, setIsUsageRefreshSpinning] = React.useState(false);
-  const [currentInstanceLabel, setCurrentInstanceLabel] = React.useState('Local');
+  const [currentInstanceLabel, setCurrentInstanceLabel] = React.useState(t('header.instance.local'));
   const [desktopServicesTab, setDesktopServicesTab] = React.useState<'instance' | 'usage' | 'mcp'>(
     isDesktopApp ? 'instance' : 'usage'
   );
@@ -309,7 +309,7 @@ export const Header: React.FC<HeaderProps> = ({
       const localOrigin = window.__OPENCHAMBER_LOCAL_ORIGIN__ || window.location.origin;
 
       if (locationMatchesHost(currentHref, localOrigin)) {
-        setCurrentInstanceLabel('Local');
+        setCurrentInstanceLabel(t('header.instance.local'));
         return;
       }
 
@@ -322,11 +322,11 @@ export const Header: React.FC<HeaderProps> = ({
         return;
       }
 
-      setCurrentInstanceLabel('Instance');
+      setCurrentInstanceLabel(t('header.instance.remote'));
     } catch {
-      setCurrentInstanceLabel('Local');
+      setCurrentInstanceLabel(t('header.instance.local'));
     }
-  }, [isDesktopApp]);
+  }, [isDesktopApp, t]);
 
   useEffect(() => {
     void refreshCurrentInstanceLabel();
@@ -815,7 +815,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
     base.push(
       { value: 'usage', label: t('header.usageTab'), icon: RiTimerLine },
-      { value: 'mcp', label: 'MCP', icon: McpIcon as unknown as RemixiconComponentType }
+                          { value: 'mcp', label: t('header.mcpTab'), icon: McpIcon as unknown as RemixiconComponentType }
     );
     return base;
   }, [isDesktopApp, t]);
@@ -1051,8 +1051,8 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     aria-label={isDesktopApp
-                      ? `Open instance, usage and MCP (current: ${currentInstanceLabel})`
-                      : `Open ${t('header.services')}, ${t('header.usageTab')} and MCP`}
+                      ? t('header.openServicesDesktopAria', { instance: currentInstanceLabel })
+                      : t('header.openServicesAria')}
                     className={cn(
                       desktopHeaderIconButtonClass,
                       isDesktopApp
@@ -1068,8 +1068,8 @@ export const Header: React.FC<HeaderProps> = ({
               <TooltipContent>
                 <p>
                   {isDesktopApp
-                    ? `Current instance: ${currentInstanceLabel}`
-                    : t('header.services')} ({shortcutLabel('toggle_services_menu')}; next tab {shortcutLabel('cycle_services_tab')})
+                    ? t('header.currentInstanceTooltip', { instance: currentInstanceLabel })
+                    : t('header.services')} ({shortcutLabel('toggle_services_menu')}; {t('header.nextTabHint')} {shortcutLabel('cycle_services_tab')})
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -1303,7 +1303,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Terminal panel ({shortcutLabel('toggle_terminal')})</p>
+            <p>{t('header.terminalPanelTooltip', { shortcut: shortcutLabel('toggle_terminal') })}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -1319,7 +1319,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Right sidebar ({shortcutLabel('toggle_right_sidebar')})</p>
+            <p>{t('header.rightSidebarTooltip', { shortcut: shortcutLabel('toggle_right_sidebar') })}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -1333,13 +1333,13 @@ export const Header: React.FC<HeaderProps> = ({
                     desktopHeaderIconButtonClass,
                     'h-7 w-7 p-0 overflow-hidden rounded-full border border-border/60 bg-muted/80'
                   )}
-                  title={githubLogin ? `GitHub: ${githubLogin}` : 'GitHub connected'}
+                  title={githubLogin ? t('header.githubTitleWithLogin', { login: githubLogin }) : t('header.githubConnected')}
                   disabled={isSwitchingGitHubAccount}
                 >
                   {githubAvatarUrl ? (
                     <img
                       src={githubAvatarUrl}
-                      alt={githubLogin ? `${githubLogin} avatar` : 'GitHub avatar'}
+                      alt={githubLogin ? t('header.githubAvatarAltWithLogin', { login: githubLogin }) : t('header.githubAvatarAlt')}
                       className="h-full w-full object-cover"
                       loading="lazy"
                       referrerPolicy="no-referrer"
@@ -1351,7 +1351,7 @@ export const Header: React.FC<HeaderProps> = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel className="typography-ui-header font-semibold text-foreground">
-                  GitHub Accounts
+                  {t('header.githubAccounts')}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {githubAccounts.map((account) => {
@@ -1371,7 +1371,7 @@ export const Header: React.FC<HeaderProps> = ({
                       {accountUser?.avatarUrl ? (
                         <img
                           src={accountUser.avatarUrl}
-                          alt={accountUser.login ? `${accountUser.login} avatar` : 'GitHub avatar'}
+                          alt={accountUser.login ? t('header.githubAvatarAltWithLogin', { login: accountUser.login }) : t('header.githubAvatarAlt')}
                           className="h-6 w-6 rounded-full border border-border/60 bg-muted object-cover"
                           loading="lazy"
                           referrerPolicy="no-referrer"
@@ -1383,7 +1383,7 @@ export const Header: React.FC<HeaderProps> = ({
                       )}
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span className="typography-ui-label text-foreground truncate">
-                          {accountUser?.name?.trim() || accountUser?.login || 'GitHub'}
+                          {accountUser?.name?.trim() || accountUser?.login || t('header.github')}
                         </span>
                         {accountUser?.login ? (
                           <span className="typography-micro text-muted-foreground truncate font-mono">
@@ -1402,12 +1402,12 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <div
               className="app-region-no-drag flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/80"
-              title={githubLogin ? `GitHub: ${githubLogin}` : 'GitHub connected'}
+              title={githubLogin ? t('header.githubTitleWithLogin', { login: githubLogin }) : t('header.githubConnected')}
             >
               {githubAvatarUrl ? (
                 <img
                   src={githubAvatarUrl}
-                  alt={githubLogin ? `${githubLogin} avatar` : 'GitHub avatar'}
+                  alt={githubLogin ? t('header.githubAvatarAltWithLogin', { login: githubLogin }) : t('header.githubAvatarAlt')}
                   className="h-full w-full object-cover"
                   loading="lazy"
                   referrerPolicy="no-referrer"
@@ -1434,7 +1434,7 @@ export const Header: React.FC<HeaderProps> = ({
               mobileHeaderIconButtonClass,
               leftDrawerOpen && 'bg-interactive-selection text-interactive-selection-foreground'
             )}
-            aria-label={leftDrawerOpen ? 'Close sessions' : 'Open sessions'}
+            aria-label={leftDrawerOpen ? t('header.closeSessionsAria') : t('header.openSessionsAria')}
           >
             <RiLayoutLeftLine className="h-5 w-5" />
           </button>
@@ -1582,7 +1582,7 @@ export const Header: React.FC<HeaderProps> = ({
                         }}
                         tabs={[
                           { value: 'usage', label: t('header.usageTab'), icon: RiTimerLine },
-                          { value: 'mcp', label: 'MCP', icon: RiCommandLine },
+                          { value: 'mcp', label: t('header.mcpTab'), icon: RiCommandLine },
                         ]}
                         className="rounded-md"
                       />
@@ -1818,13 +1818,13 @@ export const Header: React.FC<HeaderProps> = ({
                       'relative',
                       rightDrawerOpen && 'bg-interactive-selection text-interactive-selection-foreground'
                     )}
-                    aria-label={rightDrawerOpen ? 'Close git sidebar' : 'Open git sidebar'}
+                    aria-label={rightDrawerOpen ? t('header.closeGitSidebarAria') : t('header.openGitSidebarAria')}
                   >
                     <RiLayoutRightLine className="h-5 w-5" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{rightDrawerOpen ? 'Close git sidebar' : 'Open git sidebar'}</p>
+                  <p>{rightDrawerOpen ? t('header.closeGitSidebarAria') : t('header.openGitSidebarAria')}</p>
                 </TooltipContent>
               </Tooltip>
             ) : null}

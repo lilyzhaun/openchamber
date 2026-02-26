@@ -101,6 +101,27 @@ const pageOrder: SettingsPageSlug[] = [
   'tunnel',
 ];
 
+const settingsPageTitleKeyBySlug: Record<SettingsPageSlug, string> = {
+  home: 'settings.pages.home',
+  projects: 'settings.pages.projects',
+  'remote-instances': 'settings.pages.remoteInstances',
+  providers: 'settings.pages.providers',
+  usage: 'settings.pages.usage',
+  agents: 'settings.pages.agents',
+  commands: 'settings.pages.commands',
+  mcp: 'settings.pages.mcp',
+  'skills.installed': 'settings.pages.skillsInstalled',
+  'skills.catalog': 'settings.pages.skillsCatalog',
+  git: 'settings.pages.git',
+  appearance: 'settings.pages.appearance',
+  chat: 'settings.pages.chat',
+  shortcuts: 'settings.pages.shortcuts',
+  sessions: 'settings.pages.sessions',
+  notifications: 'settings.pages.notifications',
+  voice: 'settings.pages.voice',
+  tunnel: 'settings.pages.tunnel',
+};
+
 function buildRuntimeContext(isDesktop: boolean): SettingsRuntimeContext {
   const isVSCode = isVSCodeRuntime();
   const isWeb = !isDesktop && isWebRuntime();
@@ -238,6 +259,7 @@ const SettingsHome: React.FC<{ onOpen: (slug: SettingsPageSlug) => void }> = ({ 
 };
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile, isWindowed }) => {
+  const { t } = useI18n();
   const deviceInfo = useDeviceInfo();
   const isMobile = forceMobile ?? deviceInfo.isMobile;
 
@@ -362,6 +384,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     return getSettingsPageMeta(settingsSlug);
   }, [settingsSlug]);
 
+  const getPageTitle = React.useCallback((slug: SettingsPageSlug) => {
+    const key = settingsPageTitleKeyBySlug[slug];
+    return t(key);
+  }, [t]);
+
   // Collapse main nav to icon rail when active page has its own sidebar
   const isNavCollapsed = !isMobile && activePageMeta?.kind === 'split';
 
@@ -379,12 +406,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     return (
       <div className="flex h-full items-center justify-center px-6">
         <div className="max-w-md text-center">
-          <div className="typography-ui-header font-semibold text-foreground">Not available</div>
-          <p className="typography-ui text-muted-foreground mt-1">This settings page is not available in this runtime.</p>
+          <div className="typography-ui-header font-semibold text-foreground">{t('settings.unavailable.title')}</div>
+          <p className="typography-ui text-muted-foreground mt-1">{t('settings.unavailable.description')}</p>
         </div>
       </div>
     );
-  }, []);
+  }, [t]);
 
   const renderPageSidebar = React.useCallback((slug: SettingsPageSlug, opts: { onItemSelect?: () => void }) => {
     switch (slug) {
@@ -517,10 +544,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                           collapsed ? 'opacity-0' : 'opacity-100'
                         )}
                       >
-                        <span className="typography-ui-label font-normal truncate">{page.title}</span>
+                        <span className="typography-ui-label font-normal truncate">{getPageTitle(page.slug)}</span>
                         {(page.slug === 'voice' || page.slug === 'tunnel') && (
                           <span className="shrink-0 typography-micro px-1 rounded leading-none pb-px text-[var(--status-warning)] bg-[var(--status-warning)]/10">
-                            beta
+                            {t('settings.common.beta')}
                           </span>
                         )}
                       </span>
@@ -528,7 +555,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                   </TooltipTrigger>
                   {collapsed && (
                     <TooltipContent side="right" sideOffset={8}>
-                      {page.title}
+                      {getPageTitle(page.slug)}
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -555,14 +582,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                       'text-sm font-semibold text-sidebar-foreground/90',
                       'hover:text-sidebar-foreground hover:bg-interactive-hover',
                     )}
-                    onClick={() => void reloadOpenCodeConfiguration({ message: 'Restarting OpenCode…', mode: 'projects', scopes: ['all'] })}
+                    onClick={() => void reloadOpenCodeConfiguration({ message: t('settings.actions.restartingOpenCode'), mode: 'projects', scopes: ['all'] })}
                   >
                     <RiRestartLine className="h-4 w-4 shrink-0" />
-                    <span>Reload OpenCode</span>
+                    <span>{t('settings.actions.reloadOpenCode')}</span>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Restart OpenCode and reload its configuration.
+                  {t('settings.actions.reloadOpenCodeTooltip')}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -660,7 +687,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
           <button
             type="button"
             onClick={showBackButton ? handleBack : onClose}
-            aria-label={showBackButton ? 'Back to Settings' : 'Close settings'}
+            aria-label={showBackButton ? t('settings.common.backToSettings') : t('settings.common.closeSettings')}
             className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <RiArrowLeftSLine className="h-5 w-5" />
@@ -668,15 +695,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
 
           <div className="min-w-0 flex-1 typography-ui-label font-medium text-foreground truncate">
             {mobileStage === 'nav'
-              ? 'Settings'
-              : (activePageMeta?.title ?? 'Settings')}
+              ? t('settings.home.title')
+              : (activePageMeta ? getPageTitle(activePageMeta.slug) : t('settings.home.title'))}
           </div>
 
           {mobileStage === 'page-content' && activePageMeta?.kind === 'split' && (
             <button
               type="button"
               onClick={handleOpenPageSidebar}
-              aria-label="Open section list"
+              aria-label={t('settings.common.openSectionList')}
               className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <RiListUnordered className="h-5 w-5" />
@@ -687,8 +714,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close settings"
-              title={`Close Settings (${shortcutKey}+,)`}
+              aria-label={t('settings.common.closeSettings')}
+              title={t('settings.common.closeSettingsWithShortcut', { shortcut: `${shortcutKey}+,` })}
               className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <RiCloseLine className="h-5 w-5" />
@@ -702,7 +729,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
               <button
                 type="button"
                 onClick={handleBack}
-                aria-label="Back"
+                aria-label={t('settings.common.back')}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <RiArrowLeftSLine className="h-5 w-5" />
@@ -715,8 +742,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close settings"
-            title={`Close Settings (${shortcutKey}+,)`}
+            aria-label={t('settings.common.closeSettings')}
+            title={t('settings.common.closeSettingsWithShortcut', { shortcut: `${shortcutKey}+,` })}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md p-0.5 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <RiCloseLine className="h-5 w-5" />
@@ -756,7 +783,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                   onPointerDown={handlePointerDown}
                   role="separator"
                   aria-orientation="vertical"
-                  aria-label="Resize settings navigation"
+                  aria-label={t('settings.common.resizeNavigationAria')}
                 />
               )}
               <ErrorBoundary>
@@ -772,4 +799,4 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       </div>
     </div>
   );
-};
+  };
