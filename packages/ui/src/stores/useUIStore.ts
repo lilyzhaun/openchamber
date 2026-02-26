@@ -395,7 +395,7 @@ export const useUIStore = create<UIStore>()(
         padding: 100,
         cornerRadius: 12,
         inputBarOffset: 0,
-        appLanguage: 'en',
+        appLanguage: 'zh-CN',
         favoriteModels: [],
         hiddenModels: [],
         recentModels: [],
@@ -1282,7 +1282,7 @@ export const useUIStore = create<UIStore>()(
       {
         name: 'ui-store',
         storage: createJSONStorage(() => getSafeStorage()),
-        version: 5,
+        version: 6,
         migrate: (persistedState, version) => {
           if (!persistedState || typeof persistedState !== 'object') {
             return persistedState;
@@ -1342,6 +1342,12 @@ export const useUIStore = create<UIStore>()(
                 }
               }
               state.shortcutOverrides = cleaned;
+            }
+          }
+
+          if (version < 6) {
+            if (state.appLanguage === 'en' || typeof state.appLanguage !== 'string') {
+              state.appLanguage = 'zh-CN';
             }
           }
 
