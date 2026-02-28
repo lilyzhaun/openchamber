@@ -6,6 +6,7 @@ import { useSessionStore } from "@/stores/useSessionStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { WorkingPlaceholder } from "./message/parts/WorkingPlaceholder";
 import { isVSCodeRuntime } from "@/lib/desktop";
+import { PixelOfficePanel } from "@/components/pixel-office/PixelOffice";
 
 const statusConfig: Record<TodoStatus, { textClassName: string }> = {
   in_progress: {
@@ -80,6 +81,8 @@ export const StatusRow: React.FC<StatusRowProps> = ({
   );
   const loadTodos = useTodoStore((state) => state.loadTodos);
   const { isMobile } = useUIStore();
+  const isPixelOfficeOpen = useUIStore((state) => state.isPixelOfficeOpen);
+  const setPixelOfficeOpen = useUIStore((state) => state.setPixelOfficeOpen);
   const isCompact = isMobile || isVSCodeRuntime();
 
   // Load todos when session changes
@@ -131,24 +134,41 @@ export const StatusRow: React.FC<StatusRowProps> = ({
     isWorking ||
     Boolean(wasAborted) ||
     Boolean(showAbortStatus) ||
-    hasActiveTodos;
+    hasActiveTodos ||
+    isPixelOfficeOpen;
 
   // Close popover when clicking outside
   const popoverRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    if (!isExpanded) return;
+    if (!isExpanded && !isPixelOfficeOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setIsExpanded(false);
+        setPixelOfficeOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isExpanded]);
+  }, [isExpanded, isPixelOfficeOpen, setPixelOfficeOpen]);
 
-  const toggleExpanded = () => setIsExpanded((prev) => !prev);
+  React.useEffect(() => {
+    if (!isPixelOfficeOpen) {
+      return;
+    }
+    setIsExpanded(false);
+  }, [isPixelOfficeOpen]);
+
+  const toggleExpanded = () => {
+    setIsExpanded((prev) => {
+      const next = !prev;
+      if (next) {
+        setPixelOfficeOpen(false);
+      }
+      return next;
+    });
+  };
 
   // Abort button for mobile/vscode
   const abortButton = showAbort && onAbort ? (
@@ -250,6 +270,22 @@ export const StatusRow: React.FC<StatusRowProps> = ({
               </div>
             </div>
           )}
+
+          {isPixelOfficeOpen && (
+            <div
+              style={{ maxWidth: "calc(100cqw - 4ch)" }}
+              className={cn(
+                "absolute right-0 bottom-full mb-1 z-50",
+                "w-max min-w-[200px]",
+                "rounded-xl border border-border bg-background shadow-none",
+                "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2",
+                "duration-150"
+              )}
+            >
+              <PixelOfficePanel />
+            </div>
+          )}
+
         </div>
       </div>
     </div>

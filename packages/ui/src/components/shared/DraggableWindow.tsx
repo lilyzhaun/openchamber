@@ -108,8 +108,8 @@ export const DraggableWindow: React.FC<DraggableWindowProps> = ({
         left: 0,
         top: 0,
         transform: `translate(${position.x}px, ${position.y}px)`,
-        width: '180px',
-        height: '200px',
+        width: '248px',
+        height: '300px',
         zIndex: 50,
         willChange: 'transform',
       }}
@@ -187,7 +187,7 @@ export const DraggableWindow: React.FC<DraggableWindowProps> = ({
             ×
           </button>
         </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: '6px' }}>
           {children}
         </div>
       </div>

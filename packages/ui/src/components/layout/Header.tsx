@@ -155,6 +155,8 @@ export const Header: React.FC<HeaderProps> = ({
   const activeMainTab = useUIStore((state) => state.activeMainTab);
   const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
   const shortcutOverrides = useUIStore((state) => state.shortcutOverrides);
+  const isPixelOfficeOpen = useUIStore((state) => state.isPixelOfficeOpen);
+  const setPixelOfficeOpen = useUIStore((state) => state.setPixelOfficeOpen);
 
   const { getCurrentModel } = useConfigStore();
   const runtimeApis = useRuntimeAPIs();
@@ -1539,27 +1541,41 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
 
-            {/* Pixel Office toggle */}
-            <Tooltip delayDuration={500}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={t('header.pixelOfficeAria')}
-                  onClick={() => useUIStore.getState().togglePixelOffice()}
-                  className={mobileHeaderIconButtonClass}
-                >
-                  <RiGamepadLine className="h-5 w-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('header.pixelOfficeTooltip')}</p>
-              </TooltipContent>
-            </Tooltip>
+            <div className="relative">
+              <Tooltip delayDuration={500}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={t('header.pixelOfficeAria')}
+                    onClick={() => {
+                      const nextOpen = !isPixelOfficeOpen;
+                      setPixelOfficeOpen(nextOpen);
+                      if (nextOpen) {
+                        setIsMobileRateLimitsOpen(false);
+                      }
+                    }}
+                    className={cn(
+                      mobileHeaderIconButtonClass,
+                      isPixelOfficeOpen && 'bg-interactive-selection text-interactive-selection-foreground',
+                    )}
+                  >
+                    <RiGamepadLine className="h-5 w-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('header.pixelOfficeTooltip')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+
             {/* Mobile Services Menu (Usage + MCP) */}
             <DropdownMenu
               open={isMobileRateLimitsOpen}
               onOpenChange={(open) => {
                 setIsMobileRateLimitsOpen(open);
+                if (open) {
+                  setPixelOfficeOpen(false);
+                }
                 if (open && quotaResults.length === 0) {
                   fetchAllQuotas();
                 }

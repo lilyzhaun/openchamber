@@ -1,270 +1,215 @@
 import React from 'react';
-import { DraggableWindow } from '@/components/shared/DraggableWindow';
-import { usePixelOfficeState } from '@/hooks/usePixelOfficeState';
-import type { PixelOfficeState } from '@/hooks/usePixelOfficeState';
-import { useUIStore } from '@/stores/useUIStore';
+
 import { useI18n } from '@/contexts/useI18n';
+import type { OfficeZone, RealAgentCard } from '@/hooks/usePixelOfficeState';
+import { usePixelOfficeState } from '@/hooks/usePixelOfficeState';
 
-// Pixel art character rendered with CSS divs
-const PixelCharacter: React.FC<{ pose: PixelOfficeState['agentPose'] }> = ({ pose }) => {
-  const baseStyle: React.CSSProperties = {
-    imageRendering: 'pixelated',
-    position: 'relative',
-    width: 48,
-    height: 56,
-    margin: '0 auto',
-  };
+const SPRITE_SIZE = 12;
 
-  // Simple pixel art using div blocks
-  // Each pose shows a different arrangement
-  const headColor = 'var(--primary-base)';
-  const bodyColor = 'var(--interactive-selection)';
-  const accentColor = 'var(--status-info)';
+interface ZoneLayout {
+  anchors: Array<{ x: number; y: number }>;
+}
 
-  const pixel = (
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    color: string,
-  ): React.CSSProperties => ({
-    position: 'absolute',
-    left: x,
-    top: y,
-    width: w,
-    height: h,
-    backgroundColor: color,
-  });
-
-  const renderPose = () => {
-    switch (pose) {
-      case 'typing':
-        return (
-          <>
-            {/* Head */}
-            <div style={pixel(16, 0, 16, 16, headColor)} />
-            {/* Eyes */}
-            <div style={pixel(18, 4, 4, 4, 'var(--surface-elevated)')} />
-            <div style={pixel(26, 4, 4, 4, 'var(--surface-elevated)')} />
-            {/* Body */}
-            <div style={pixel(12, 18, 24, 20, bodyColor)} />
-            {/* Arms - extended forward for typing */}
-            <div style={pixel(4, 22, 8, 4, bodyColor)} />
-            <div style={pixel(36, 22, 8, 4, bodyColor)} />
-            {/* Keyboard/desk */}
-            <div style={pixel(0, 38, 48, 6, accentColor)} />
-            {/* Legs */}
-            <div style={pixel(14, 40, 8, 14, bodyColor)} />
-            <div style={pixel(26, 40, 8, 14, bodyColor)} />
-          </>
-        );
-
-      case 'reading':
-        return (
-          <>
-            {/* Head - tilted slightly */}
-            <div style={pixel(18, 0, 16, 16, headColor)} />
-            {/* Eyes - looking down */}
-            <div style={pixel(20, 6, 4, 4, 'var(--surface-elevated)')} />
-            <div style={pixel(28, 6, 4, 4, 'var(--surface-elevated)')} />
-            {/* Body */}
-            <div style={pixel(14, 18, 24, 20, bodyColor)} />
-            {/* Arms - holding book */}
-            <div style={pixel(8, 24, 6, 4, bodyColor)} />
-            <div style={pixel(38, 24, 6, 4, bodyColor)} />
-            {/* Book */}
-            <div style={pixel(10, 28, 28, 8, accentColor)} />
-            <div style={pixel(24, 28, 2, 8, 'var(--surface-elevated)')} />
-            {/* Legs */}
-            <div style={pixel(16, 40, 8, 14, bodyColor)} />
-            <div style={pixel(28, 40, 8, 14, bodyColor)} />
-          </>
-        );
-
-      case 'thinking':
-        return (
-          <>
-            {/* Head */}
-            <div style={pixel(16, 2, 16, 16, headColor)} />
-            {/* Eyes - looking up */}
-            <div style={pixel(18, 4, 4, 4, 'var(--surface-elevated)')} />
-            <div style={pixel(26, 4, 4, 4, 'var(--surface-elevated)')} />
-            {/* Body */}
-            <div style={pixel(12, 20, 24, 20, bodyColor)} />
-            {/* Arm - hand on chin */}
-            <div style={pixel(4, 24, 8, 4, bodyColor)} />
-            <div style={pixel(4, 14, 4, 10, bodyColor)} />
-            <div style={pixel(36, 28, 8, 4, bodyColor)} />
-            {/* Thought bubbles */}
-            <div style={pixel(40, 2, 4, 4, 'var(--surface-muted-foreground)')} />
-            <div style={pixel(42, 8, 6, 6, 'var(--surface-muted-foreground)')} />
-            {/* Legs */}
-            <div style={pixel(14, 42, 8, 12, bodyColor)} />
-            <div style={pixel(26, 42, 8, 12, bodyColor)} />
-          </>
-        );
-
-      case 'coffee':
-        return (
-          <>
-            {/* Head */}
-            <div style={pixel(16, 0, 16, 16, headColor)} />
-            {/* Eyes - happy/closed */}
-            <div style={pixel(18, 6, 4, 2, 'var(--surface-elevated)')} />
-            <div style={pixel(26, 6, 4, 2, 'var(--surface-elevated)')} />
-            {/* Smile */}
-            <div style={pixel(20, 10, 8, 2, 'var(--surface-elevated)')} />
-            {/* Body */}
-            <div style={pixel(12, 18, 24, 20, bodyColor)} />
-            {/* Arms - holding cup */}
-            <div style={pixel(36, 22, 8, 4, bodyColor)} />
-            {/* Coffee cup */}
-            <div style={pixel(38, 16, 8, 6, 'var(--status-warning)')} />
-            {/* Steam */}
-            <div style={pixel(40, 10, 2, 4, 'var(--surface-muted-foreground)')} />
-            <div style={pixel(44, 8, 2, 4, 'var(--surface-muted-foreground)')} />
-            <div style={pixel(4, 26, 8, 4, bodyColor)} />
-            {/* Legs */}
-            <div style={pixel(14, 40, 8, 14, bodyColor)} />
-            <div style={pixel(26, 40, 8, 14, bodyColor)} />
-          </>
-        );
-
-      default: // idle
-        return (
-          <>
-            {/* Head */}
-            <div style={pixel(16, 0, 16, 16, headColor)} />
-            {/* Eyes */}
-            <div style={pixel(18, 4, 4, 4, 'var(--surface-elevated)')} />
-            <div style={pixel(26, 4, 4, 4, 'var(--surface-elevated)')} />
-            {/* Body */}
-            <div style={pixel(12, 18, 24, 20, bodyColor)} />
-            {/* Arms - relaxed */}
-            <div style={pixel(4, 22, 8, 4, bodyColor)} />
-            <div style={pixel(36, 22, 8, 4, bodyColor)} />
-            {/* Legs */}
-            <div style={pixel(14, 40, 8, 14, bodyColor)} />
-            <div style={pixel(26, 40, 8, 14, bodyColor)} />
-          </>
-        );
-    }
-  };
-
-  return <div style={baseStyle}>{renderPose()}</div>;
+const ZONES: Record<OfficeZone, ZoneLayout> = {
+  desk: { anchors: [{ x: 20, y: 104 }, { x: 36, y: 104 }, { x: 52, y: 104 }] },
+  bookshelf: { anchors: [{ x: 92, y: 70 }, { x: 108, y: 70 }, { x: 124, y: 70 }] },
+  commons: { anchors: [{ x: 94, y: 116 }, { x: 110, y: 116 }, { x: 126, y: 116 }] },
 };
 
-// Speech bubble component
-const SpeechBubble: React.FC<{ text: string }> = ({ text }) => (
-  <div
-    style={{
-      position: 'relative',
-      backgroundColor: 'var(--surface-elevated)',
-      border: '2px solid var(--interactive-border)',
-      borderRadius: 2,
-      padding: '2px 6px',
-      marginTop: 4,
-      maxWidth: '100%',
-      textAlign: 'center',
-    }}
-  >
-    {/* Arrow */}
+const AgentSprite: React.FC<{ card: RealAgentCard; isWorking: boolean; x: number; y: number }> = ({ card, isWorking, x, y }) => {
+  const movement = isWorking || card.isLead ? 'pixelOfficeStep 1s steps(2, end) infinite' : 'none';
+
+  return (
     <div
       style={{
         position: 'absolute',
-        top: -6,
-        left: '50%',
-        marginLeft: -4,
-        width: 0,
-        height: 0,
-        borderLeft: '4px solid transparent',
-        borderRight: '4px solid transparent',
-        borderBottom: '4px solid var(--interactive-border)',
-      }}
-    />
-    <span
-      className="typography-micro"
-      style={{
-        color: 'var(--surface-foreground)',
-        fontSize: 9,
-        lineHeight: 1.2,
-        wordBreak: 'break-all',
-        display: 'block',
+        left: x,
+        top: y,
+        transform: 'translate(-50%, -100%)',
+        transition: 'left 320ms ease, top 320ms ease',
       }}
     >
-      {text}
-    </span>
-  </div>
-);
+      <div
+        aria-hidden
+        style={{
+          width: SPRITE_SIZE,
+          height: SPRITE_SIZE + 8,
+          position: 'relative',
+          imageRendering: 'pixelated',
+          animation: movement,
+          transformOrigin: 'bottom center',
+        }}
+      >
+        <div style={{ position: 'absolute', left: 3, top: 0, width: 6, height: 5, backgroundColor: `var(${card.colorVar})` }} />
+        <div style={{ position: 'absolute', left: 2, top: 6, width: 8, height: 7, backgroundColor: `var(${card.colorVar})` }} />
+        <div style={{ position: 'absolute', left: 1, top: 13, width: 3, height: 7, backgroundColor: `var(${card.colorVar})` }} />
+        <div style={{ position: 'absolute', left: 8, top: 13, width: 3, height: 7, backgroundColor: `var(${card.colorVar})` }} />
+        {card.isLead && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 4,
+              top: -3,
+              width: 4,
+              height: 2,
+              backgroundColor: 'var(--status-success)',
+              boxShadow: '0 0 0 1px var(--surface-background)',
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
 
-export const PixelOffice: React.FC = () => {
+const OfficeScene: React.FC<{ cards: RealAgentCard[]; isWorking: boolean }> = ({ cards, isWorking }) => {
+  const positioned = React.useMemo(() => {
+    const zoneUsage: Record<OfficeZone, number> = {
+      desk: 0,
+      bookshelf: 0,
+      commons: 0,
+    };
+
+    return cards.map((card) => {
+      const zone = ZONES[card.zone];
+      const index = zoneUsage[card.zone];
+      const anchor = zone.anchors[index] ?? zone.anchors[zone.anchors.length - 1];
+      zoneUsage[card.zone] = index + 1;
+      return {
+        card,
+        x: anchor.x,
+        y: anchor.y,
+      };
+    });
+  }, [cards]);
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        height: 132,
+        width: '100%',
+        border: '1px solid var(--interactive-border)',
+        backgroundColor: 'var(--surface-muted)',
+        imageRendering: 'pixelated',
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 56, height: 2, backgroundColor: 'var(--interactive-border)' }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 96, height: 2, backgroundColor: 'var(--interactive-border)' }} />
+
+      <div style={{ position: 'absolute', left: 8, top: 88, width: 56, height: 16, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-elevated)' }} />
+      <div style={{ position: 'absolute', left: 14, top: 72, width: 18, height: 12, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-background)' }} />
+      <div style={{ position: 'absolute', left: 36, top: 72, width: 18, height: 12, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-background)' }} />
+
+      <div style={{ position: 'absolute', left: 82, top: 14, width: 54, height: 58, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-elevated)' }} />
+      <div style={{ position: 'absolute', left: 82, top: 32, width: 54, height: 1, backgroundColor: 'var(--interactive-border)' }} />
+      <div style={{ position: 'absolute', left: 82, top: 50, width: 54, height: 1, backgroundColor: 'var(--interactive-border)' }} />
+      <div style={{ position: 'absolute', left: 88, top: 18, width: 3, height: 10, backgroundColor: 'var(--status-info)' }} />
+      <div style={{ position: 'absolute', left: 94, top: 18, width: 3, height: 10, backgroundColor: 'var(--primary-base)' }} />
+      <div style={{ position: 'absolute', left: 100, top: 18, width: 3, height: 10, backgroundColor: 'var(--status-warning)' }} />
+      <div style={{ position: 'absolute', left: 106, top: 18, width: 3, height: 10, backgroundColor: 'var(--status-success)' }} />
+
+      <div style={{ position: 'absolute', left: 84, top: 102, width: 18, height: 10, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-elevated)' }} />
+      <div style={{ position: 'absolute', left: 110, top: 102, width: 18, height: 10, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-elevated)' }} />
+      <div style={{ position: 'absolute', left: 96, top: 108, width: 20, height: 8, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-background)' }} />
+
+      {positioned.map(({ card, x, y }) => (
+        <AgentSprite key={card.slotId} card={card} isWorking={isWorking} x={x} y={y} />
+      ))}
+    </div>
+  );
+};
+
+const AgentCards: React.FC<{ cards: RealAgentCard[] }> = ({ cards }) => {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 36, overflowY: 'auto' }}>
+      {cards.slice(0, 2).map((card) => (
+        <div
+          key={card.slotId}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 4,
+            padding: '1px 4px',
+            border: '1px solid var(--interactive-border)',
+            backgroundColor: card.isLead ? 'var(--interactive-selection)' : 'var(--surface-elevated)',
+            color: card.isLead ? 'var(--interactive-selection-foreground)' : 'var(--surface-foreground)',
+          }}
+        >
+          <span className="typography-micro" style={{ fontSize: 8 }}>
+            @{card.agentName}
+          </span>
+          <span className="typography-micro" style={{ fontSize: 8, opacity: 0.82 }}>
+            {card.activityLabel}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export const PixelOfficePanel: React.FC = () => {
   const { t } = useI18n();
-  const isOpen = useUIStore((state) => state.isPixelOfficeOpen);
-  const togglePixelOffice = useUIStore((state) => state.togglePixelOffice);
   const state = usePixelOfficeState();
 
   return (
-    <DraggableWindow
-      open={isOpen}
-      onClose={togglePixelOffice}
-      title={t('pixelOffice.title')}
+    <div
+      style={{
+        width: '200px',
+      }}
     >
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          padding: 8,
-          backgroundColor: 'var(--surface-elevated)',
           gap: 4,
+          padding: '3px',
+          backgroundColor: 'var(--surface-elevated)',
         }}
       >
-        {/* Activity indicator dot */}
-        {state.isWorking && (
+        <OfficeScene cards={state.cards} isWorking={state.isWorking} />
+
+        {state.speechBubble && (
           <div
             style={{
-              position: 'absolute',
-              top: 6,
-              right: 6,
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              backgroundColor: 'var(--status-success)',
-              animation: 'pulse 1.5s ease-in-out infinite',
+              border: '1px solid var(--interactive-border)',
+              backgroundColor: 'var(--surface-background)',
+              padding: '3px 5px',
             }}
-          />
+          >
+            <div className="typography-micro" style={{ fontSize: 8, color: 'var(--surface-foreground)', lineHeight: 1.15 }}>
+              {state.speechBubble}
+            </div>
+          </div>
         )}
 
-        {/* Pixel character */}
-        <PixelCharacter pose={state.agentPose} />
-
-        {/* Speech bubble */}
-        {state.speechBubble && <SpeechBubble text={state.speechBubble} />}
-
-        {/* Pose label */}
-        <span
+        <div
           className="typography-micro"
           style={{
-            color: 'var(--surface-muted-foreground)',
-            fontSize: 9,
-            marginTop: 2,
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
+            display: 'grid',
+            gridTemplateColumns: '1fr',
+            gap: 2,
+            fontSize: 8,
           }}
         >
-          {t(`pixelOffice.pose.${state.agentPose}`)}
-        </span>
+          <span style={{ color: 'var(--surface-muted-foreground)' }}>
+            {t('pixelOffice.zoneLabel')}: {t(`pixelOffice.zone.${state.leadZone}`)}
+          </span>
+        </div>
+
+        <AgentCards cards={state.cards} />
       </div>
 
-      {/* Pulse animation keyframes */}
       <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
+        @keyframes pixelOfficeStep {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-1px); }
         }
       `}</style>
-    </DraggableWindow>
+    </div>
   );
 };
+
+export const PixelOffice = PixelOfficePanel;
