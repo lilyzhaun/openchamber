@@ -15,6 +15,7 @@ import { SessionSidebar } from '@/components/session/SessionSidebar';
 import { SessionDialogs } from '@/components/session/SessionDialogs';
 import { DiffWorkerProvider } from '@/contexts/DiffWorkerProvider';
 import { MultiRunLauncher } from '@/components/multirun';
+import { PixelOffice } from '@/components/pixel-office/PixelOffice';
 import { DrawerProvider } from '@/contexts/DrawerContext';
 
 import { useUIStore } from '@/stores/useUIStore';
@@ -756,6 +757,8 @@ export const MainLayout: React.FC = () => {
                             <ErrorBoundary><SettingsView onClose={() => setSettingsDialogOpen(false)} /></ErrorBoundary>
                         </div>
                     )}
+                    {/* Pixel Office floating window */}
+                    <PixelOffice />
                 </DrawerProvider>
             ) : (
                 <>

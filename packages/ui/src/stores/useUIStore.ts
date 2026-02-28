@@ -229,6 +229,7 @@ interface UIStore {
   showMobileSessionStatusBar: boolean;
   isMobileSessionStatusBarCollapsed: boolean;
   viewPagerPage: 'left' | 'center' | 'right';
+  isPixelOfficeOpen: boolean;
 
   isExpandedInput: boolean;
 
@@ -336,6 +337,8 @@ interface UIStore {
   setShortcutOverride: (actionId: string, combo: ShortcutCombo) => void;
   clearShortcutOverride: (actionId: string) => void;
   resetAllShortcutOverrides: () => void;
+  setPixelOfficeOpen: (open: boolean) => void;
+  togglePixelOffice: () => void;
 }
 
 
@@ -435,6 +438,7 @@ export const useUIStore = create<UIStore>()(
         isMobileSessionStatusBarCollapsed: false,
         isExpandedInput: false,
         shortcutOverrides: {},
+        isPixelOfficeOpen: false,
 
         setTheme: (theme) => {
           set({ theme });
@@ -1278,11 +1282,19 @@ export const useUIStore = create<UIStore>()(
         setExpandedInput: (value) => {
           set({ isExpandedInput: value });
         },
+
+        setPixelOfficeOpen: (open) => {
+          set({ isPixelOfficeOpen: open });
+        },
+
+        togglePixelOffice: () => {
+          set((state) => ({ isPixelOfficeOpen: !state.isPixelOfficeOpen }));
+        },
       }),
       {
         name: 'ui-store',
         storage: createJSONStorage(() => getSafeStorage()),
-        version: 6,
+        version: 7,
         migrate: (persistedState, version) => {
           if (!persistedState || typeof persistedState !== 'object') {
             return persistedState;
@@ -1412,6 +1424,7 @@ export const useUIStore = create<UIStore>()(
           showMobileSessionStatusBar: state.showMobileSessionStatusBar,
           isMobileSessionStatusBarCollapsed: state.isMobileSessionStatusBarCollapsed,
           shortcutOverrides: state.shortcutOverrides,
+          isPixelOfficeOpen: state.isPixelOfficeOpen,
         })
       }
     ),

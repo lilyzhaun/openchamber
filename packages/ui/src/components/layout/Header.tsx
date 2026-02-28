@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { AnimatedTabs } from '@/components/ui/animated-tabs';
 
-import { RiArrowLeftSLine, RiChat4Line, RiCheckLine, RiCloseLine, RiCommandLine, RiFileTextLine, RiFolder6Line, RiGithubFill, RiLayoutLeftLine, RiLayoutRightLine, RiPlayListAddLine, RiRefreshLine, RiServerLine, RiStackLine, RiTerminalBoxLine, RiTimerLine, type RemixiconComponentType } from '@remixicon/react';
+import { RiArrowLeftSLine, RiChat4Line, RiCheckLine, RiCloseLine, RiCommandLine, RiFileTextLine, RiFolder6Line, RiGamepadLine, RiGithubFill, RiLayoutLeftLine, RiLayoutRightLine, RiPlayListAddLine, RiRefreshLine, RiServerLine, RiStackLine, RiTerminalBoxLine, RiTimerLine, type RemixiconComponentType } from '@remixicon/react';
 import { DiffIcon } from '@/components/icons/DiffIcon';
 import { useUIStore, type MainTab } from '@/stores/useUIStore';
 import { useConfigStore } from '@/stores/useConfigStore';
@@ -1538,6 +1538,23 @@ export const Header: React.FC<HeaderProps> = ({
               />
             )}
 
+
+            {/* Pixel Office toggle */}
+            <Tooltip delayDuration={500}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t('header.pixelOfficeAria')}
+                  onClick={() => useUIStore.getState().togglePixelOffice()}
+                  className={mobileHeaderIconButtonClass}
+                >
+                  <RiGamepadLine className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('header.pixelOfficeTooltip')}</p>
+              </TooltipContent>
+            </Tooltip>
             {/* Mobile Services Menu (Usage + MCP) */}
             <DropdownMenu
               open={isMobileRateLimitsOpen}
