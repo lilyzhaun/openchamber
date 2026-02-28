@@ -145,13 +145,12 @@ export const StatusRow: React.FC<StatusRowProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setIsExpanded(false);
-        setPixelOfficeOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isExpanded, isPixelOfficeOpen, setPixelOfficeOpen]);
+  }, [isExpanded, isPixelOfficeOpen]);
 
   React.useEffect(() => {
     if (!isPixelOfficeOpen) {
@@ -282,7 +281,12 @@ export const StatusRow: React.FC<StatusRowProps> = ({
                 "duration-150"
               )}
             >
-              <PixelOfficePanel />
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                <span className="typography-ui-label text-muted-foreground">Pixel Office</span>
+              </div>
+              <div className="px-3 py-2 max-h-[200px] overflow-y-auto">
+                <PixelOfficePanel />
+              </div>
             </div>
           )}
 

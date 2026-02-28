@@ -5,19 +5,98 @@ import type { OfficeZone, RealAgentCard } from '@/hooks/usePixelOfficeState';
 import { usePixelOfficeState } from '@/hooks/usePixelOfficeState';
 
 const SPRITE_SIZE = 12;
+const PIXEL_AGENTS_SCENE = 'https://raw.githubusercontent.com/pablodelucca/pixel-agents/main/webview-ui/public/Screenshot.jpg';
+
+const PIXEL_AGENTS_CHARACTERS = [
+  'https://raw.githubusercontent.com/pablodelucca/pixel-agents/main/webview-ui/public/assets/characters/char_0.png',
+  'https://raw.githubusercontent.com/pablodelucca/pixel-agents/main/webview-ui/public/assets/characters/char_1.png',
+  'https://raw.githubusercontent.com/pablodelucca/pixel-agents/main/webview-ui/public/assets/characters/char_2.png',
+  'https://raw.githubusercontent.com/pablodelucca/pixel-agents/main/webview-ui/public/assets/characters/char_3.png',
+  'https://raw.githubusercontent.com/pablodelucca/pixel-agents/main/webview-ui/public/assets/characters/char_4.png',
+  'https://raw.githubusercontent.com/pablodelucca/pixel-agents/main/webview-ui/public/assets/characters/char_5.png',
+];
+
+type AgentAction = 'coding' | 'researching' | 'executing' | 'collaborating' | 'troubleshooting' | 'idle';
 
 interface ZoneLayout {
   anchors: Array<{ x: number; y: number }>;
 }
 
 const ZONES: Record<OfficeZone, ZoneLayout> = {
-  desk: { anchors: [{ x: 20, y: 104 }, { x: 36, y: 104 }, { x: 52, y: 104 }] },
-  bookshelf: { anchors: [{ x: 92, y: 70 }, { x: 108, y: 70 }, { x: 124, y: 70 }] },
-  commons: { anchors: [{ x: 94, y: 116 }, { x: 110, y: 116 }, { x: 126, y: 116 }] },
+  desk: { anchors: [{ x: 32, y: 44 }, { x: 48, y: 58 }, { x: 58, y: 72 }] },
+  bookshelf: { anchors: [{ x: 16, y: 132 }, { x: 32, y: 136 }, { x: 48, y: 136 }] },
+  commons: { anchors: [{ x: 96, y: 46 }, { x: 96, y: 130 }, { x: 118, y: 130 }] },
+};
+
+const spriteIndexFromName = (name: string): number => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) {
+    hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % PIXEL_AGENTS_CHARACTERS.length;
+};
+
+const ACTION_LABEL: Record<AgentAction, string> = {
+  coding: '编码',
+  researching: '查阅',
+  executing: '执行',
+  collaborating: '协作',
+  troubleshooting: '重试',
+  idle: '空闲',
+};
+
+const TOOL_ACTION_MAP: Record<string, AgentAction> = {
+  write: 'coding',
+  edit: 'coding',
+  multiedit: 'coding',
+  apply_patch: 'coding',
+  read: 'researching',
+  grep: 'researching',
+  glob: 'researching',
+  list: 'researching',
+  webfetch: 'researching',
+  websearch: 'researching',
+  codesearch: 'researching',
+  bash: 'executing',
+};
+
+const resolveAgentAction = (card: RealAgentCard): AgentAction => {
+  const toolName = card.activity.toolName?.toLowerCase() ?? null;
+  if (toolName && TOOL_ACTION_MAP[toolName]) {
+    return TOOL_ACTION_MAP[toolName];
+  }
+
+  const status = `${card.activity.activity} ${card.activity.statusText ?? ''}`.toLowerCase();
+  if (status.includes('retry')) return 'troubleshooting';
+  if (status.includes('busy') || status.includes('working')) return 'collaborating';
+  if (status.includes('idle')) return 'idle';
+
+  return card.activity.source === 'fallback' ? 'idle' : 'collaborating';
+};
+
+const actionAnimation = (action: AgentAction, isWorking: boolean, isLead: boolean): string => {
+  if (!isWorking && action === 'idle' && !isLead) return 'pixelOfficeIdle 2.4s ease-in-out infinite';
+  switch (action) {
+    case 'coding':
+      return 'pixelOfficeType 0.8s steps(2, end) infinite';
+    case 'researching':
+      return 'pixelOfficeRead 1.4s ease-in-out infinite';
+    case 'executing':
+      return 'pixelOfficeExecute 1.1s ease-in-out infinite';
+    case 'collaborating':
+      return 'pixelOfficeTalk 1.2s ease-in-out infinite';
+    case 'troubleshooting':
+      return 'pixelOfficeRetry 0.7s steps(2, end) infinite';
+    case 'idle':
+    default:
+      return 'pixelOfficeIdle 2.4s ease-in-out infinite';
+  }
 };
 
 const AgentSprite: React.FC<{ card: RealAgentCard; isWorking: boolean; x: number; y: number }> = ({ card, isWorking, x, y }) => {
-  const movement = isWorking || card.isLead ? 'pixelOfficeStep 1s steps(2, end) infinite' : 'none';
+  const action = resolveAgentAction(card);
+  const movement = actionAnimation(action, isWorking, card.isLead);
+  const sprite = PIXEL_AGENTS_CHARACTERS[spriteIndexFromName(card.agentName)];
 
   return (
     <div
@@ -29,21 +108,58 @@ const AgentSprite: React.FC<{ card: RealAgentCard; isWorking: boolean; x: number
         transition: 'left 320ms ease, top 320ms ease',
       }}
     >
-      <div
-        aria-hidden
-        style={{
-          width: SPRITE_SIZE,
-          height: SPRITE_SIZE + 8,
-          position: 'relative',
-          imageRendering: 'pixelated',
-          animation: movement,
-          transformOrigin: 'bottom center',
-        }}
-      >
-        <div style={{ position: 'absolute', left: 3, top: 0, width: 6, height: 5, backgroundColor: `var(${card.colorVar})` }} />
-        <div style={{ position: 'absolute', left: 2, top: 6, width: 8, height: 7, backgroundColor: `var(${card.colorVar})` }} />
-        <div style={{ position: 'absolute', left: 1, top: 13, width: 3, height: 7, backgroundColor: `var(${card.colorVar})` }} />
-        <div style={{ position: 'absolute', left: 8, top: 13, width: 3, height: 7, backgroundColor: `var(${card.colorVar})` }} />
+        <div
+          aria-hidden
+          style={{
+            width: SPRITE_SIZE,
+            height: SPRITE_SIZE + 12,
+            position: 'relative',
+            imageRendering: 'pixelated',
+            animation: movement,
+            transformOrigin: 'bottom center',
+          }}
+        >
+        <div
+          style={{
+            position: 'absolute',
+            left: 1,
+            top: 21,
+            width: 8,
+            height: 2,
+            backgroundColor: 'rgba(0,0,0,0.28)',
+            filter: 'blur(0.5px)',
+          }}
+        />
+
+        <img
+          src={sprite}
+          alt=""
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: -4,
+            top: -4,
+            width: 20,
+            height: 24,
+            imageRendering: 'pixelated',
+            objectFit: 'cover',
+            filter: card.isLead ? 'drop-shadow(0 0 1px var(--status-success))' : 'none',
+          }}
+        />
+
+        {action === 'researching' && (
+          <div style={{ position: 'absolute', left: -4, top: 9, width: 3, height: 4, backgroundColor: 'var(--status-info)', border: '1px solid var(--interactive-border)' }} />
+        )}
+        {action === 'executing' && (
+          <div style={{ position: 'absolute', left: 12, top: 9, width: 3, height: 3, backgroundColor: 'var(--status-success)', boxShadow: '0 0 0 1px var(--interactive-border)' }} />
+        )}
+        {action === 'troubleshooting' && (
+          <div style={{ position: 'absolute', left: 12, top: 2, width: 2, height: 2, backgroundColor: 'var(--status-warning)' }} />
+        )}
+        {action === 'collaborating' && (
+          <div style={{ position: 'absolute', left: -3, top: 2, width: 2, height: 2, backgroundColor: 'var(--primary-base)' }} />
+        )}
+
         {card.isLead && (
           <div
             style={{
@@ -57,6 +173,25 @@ const AgentSprite: React.FC<{ card: RealAgentCard; isWorking: boolean; x: number
             }}
           />
         )}
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: -13,
+          transform: 'translateX(-50%)',
+          fontSize: 6,
+          lineHeight: 1,
+          color: 'var(--surface-foreground)',
+          padding: '1px 3px',
+          border: '1px solid var(--interactive-border)',
+          backgroundColor: 'color-mix(in oklab, var(--surface-background) 86%, white)',
+          whiteSpace: 'nowrap',
+          borderRadius: 999,
+        }}
+      >
+        {ACTION_LABEL[action]}
       </div>
     </div>
   );
@@ -87,32 +222,30 @@ const OfficeScene: React.FC<{ cards: RealAgentCard[]; isWorking: boolean }> = ({
     <div
       style={{
         position: 'relative',
-        height: 132,
+        height: 164,
         width: '100%',
         border: '1px solid var(--interactive-border)',
-        backgroundColor: 'var(--surface-muted)',
+        backgroundColor: 'var(--surface-background)',
+        backgroundImage: `url(${PIXEL_AGENTS_SCENE})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         imageRendering: 'pixelated',
         overflow: 'hidden',
       }}
     >
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 56, height: 2, backgroundColor: 'var(--interactive-border)' }} />
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 96, height: 2, backgroundColor: 'var(--interactive-border)' }} />
+      <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(8, 12, 24, 0.16)' }} />
 
-      <div style={{ position: 'absolute', left: 8, top: 88, width: 56, height: 16, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-elevated)' }} />
-      <div style={{ position: 'absolute', left: 14, top: 72, width: 18, height: 12, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-background)' }} />
-      <div style={{ position: 'absolute', left: 36, top: 72, width: 18, height: 12, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-background)' }} />
-
-      <div style={{ position: 'absolute', left: 82, top: 14, width: 54, height: 58, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-elevated)' }} />
-      <div style={{ position: 'absolute', left: 82, top: 32, width: 54, height: 1, backgroundColor: 'var(--interactive-border)' }} />
-      <div style={{ position: 'absolute', left: 82, top: 50, width: 54, height: 1, backgroundColor: 'var(--interactive-border)' }} />
-      <div style={{ position: 'absolute', left: 88, top: 18, width: 3, height: 10, backgroundColor: 'var(--status-info)' }} />
-      <div style={{ position: 'absolute', left: 94, top: 18, width: 3, height: 10, backgroundColor: 'var(--primary-base)' }} />
-      <div style={{ position: 'absolute', left: 100, top: 18, width: 3, height: 10, backgroundColor: 'var(--status-warning)' }} />
-      <div style={{ position: 'absolute', left: 106, top: 18, width: 3, height: 10, backgroundColor: 'var(--status-success)' }} />
-
-      <div style={{ position: 'absolute', left: 84, top: 102, width: 18, height: 10, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-elevated)' }} />
-      <div style={{ position: 'absolute', left: 110, top: 102, width: 18, height: 10, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-elevated)' }} />
-      <div style={{ position: 'absolute', left: 96, top: 108, width: 20, height: 8, border: '1px solid var(--interactive-border)', backgroundColor: 'var(--surface-background)' }} />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage:
+            'linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)',
+          backgroundSize: '8px 8px',
+          opacity: 0.25,
+          pointerEvents: 'none',
+        }}
+      />
 
       {positioned.map(({ card, x, y }) => (
         <AgentSprite key={card.slotId} card={card} isWorking={isWorking} x={x} y={y} />
@@ -142,7 +275,7 @@ const AgentCards: React.FC<{ cards: RealAgentCard[] }> = ({ cards }) => {
             @{card.agentName}
           </span>
           <span className="typography-micro" style={{ fontSize: 8, opacity: 0.82 }}>
-            {card.activityLabel}
+            {ACTION_LABEL[resolveAgentAction(card)]}
           </span>
         </div>
       ))}
@@ -157,7 +290,7 @@ export const PixelOfficePanel: React.FC = () => {
   return (
     <div
       style={{
-        width: '200px',
+        width: '100%',
       }}
     >
       <div
@@ -165,8 +298,6 @@ export const PixelOfficePanel: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: 4,
-          padding: '3px',
-          backgroundColor: 'var(--surface-elevated)',
         }}
       >
         <OfficeScene cards={state.cards} isWorking={state.isWorking} />
@@ -204,6 +335,41 @@ export const PixelOfficePanel: React.FC = () => {
 
       <style>{`
         @keyframes pixelOfficeStep {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-1px); }
+        }
+
+        @keyframes pixelOfficeType {
+          0%, 100% { transform: translateY(0); }
+          25% { transform: translate(-1px, -1px); }
+          50% { transform: translate(0, -1px); }
+          75% { transform: translate(1px, -1px); }
+        }
+
+        @keyframes pixelOfficeRead {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-1px) rotate(-1deg); }
+        }
+
+        @keyframes pixelOfficeExecute {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-1px) scale(1.02); }
+        }
+
+        @keyframes pixelOfficeTalk {
+          0%, 100% { transform: translateY(0) translateX(0); }
+          33% { transform: translateY(-1px) translateX(-1px); }
+          66% { transform: translateY(-1px) translateX(1px); }
+        }
+
+        @keyframes pixelOfficeRetry {
+          0%, 100% { transform: translateY(0) translateX(0); }
+          25% { transform: translateY(-1px) translateX(-1px); }
+          50% { transform: translateY(0) translateX(1px); }
+          75% { transform: translateY(-1px) translateX(-1px); }
+        }
+
+        @keyframes pixelOfficeIdle {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-1px); }
         }
