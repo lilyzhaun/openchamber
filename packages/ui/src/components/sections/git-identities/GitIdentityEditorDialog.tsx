@@ -25,6 +25,7 @@ import {
   RiLock2Line,
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/contexts/useI18n';
 
 const PROFILE_COLORS = [
   { key: 'keyword', label: 'Green', cssVar: 'var(--syntax-keyword)' },
@@ -57,6 +58,7 @@ export const GitIdentityEditorDialog: React.FC<GitIdentityEditorDialogProps> = (
   profileId,
   importData,
 }) => {
+  const { t } = useI18n();
   const {
     getProfileById,
     createProfile,
@@ -131,11 +133,11 @@ export const GitIdentityEditorDialog: React.FC<GitIdentityEditorDialogProps> = (
 
   const handleSave = async () => {
     if (!userName.trim() || !userEmail.trim()) {
-      toast.error('User name and email are required');
+      toast.error(t('settings.gitIdentityEditorDialog.userNameAndEmailRequired'));
       return;
     }
     if (authType === 'token' && !host.trim()) {
-      toast.error('Host is required for token-based authentication');
+      toast.error(t('settings.gitIdentityEditorDialog.hostRequiredForTokenAuth'));
       return;
     }
 
@@ -162,14 +164,14 @@ export const GitIdentityEditorDialog: React.FC<GitIdentityEditorDialogProps> = (
       }
 
       if (success) {
-        toast.success(isNewProfile ? 'Profile created' : 'Profile updated');
+        toast.success(isNewProfile ? t('settings.gitIdentityEditorDialog.profileCreated') : t('settings.gitIdentityEditorDialog.profileUpdated'));
         onOpenChange(false);
       } else {
-        toast.error(isNewProfile ? 'Failed to create profile' : 'Failed to update profile');
+        toast.error(isNewProfile ? t('settings.gitIdentityEditorDialog.failedCreateProfile') : t('settings.gitIdentityEditorDialog.failedUpdateProfile'));
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      toast.error('An error occurred while saving');
+      toast.error(t('settings.gitIdentityEditorDialog.errorWhileSaving'));
     } finally {
       setIsSaving(false);
     }
@@ -181,15 +183,15 @@ export const GitIdentityEditorDialog: React.FC<GitIdentityEditorDialogProps> = (
     try {
       const success = await deleteProfile(profileId);
       if (success) {
-        toast.success('Profile deleted');
+        toast.success(t('settings.gitIdentityEditorDialog.profileDeleted'));
         setIsDeleteDialogOpen(false);
         onOpenChange(false);
       } else {
-        toast.error('Failed to delete profile');
+        toast.error(t('settings.gitIdentityEditorDialog.failedDeleteProfile'));
       }
     } catch (error) {
       console.error('Error deleting profile:', error);
-      toast.error('An error occurred while deleting');
+      toast.error(t('settings.gitIdentityEditorDialog.errorWhileDeleting'));
     } finally {
       setIsDeleting(false);
     }
@@ -232,7 +234,7 @@ export const GitIdentityEditorDialog: React.FC<GitIdentityEditorDialogProps> = (
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Work Profile, Personal, etc."
+                    placeholder={t('settings.gitIdentityEditorDialog.profileNamePlaceholder')}
                     className="h-8"
                   />
                 </div>
@@ -309,7 +311,7 @@ export const GitIdentityEditorDialog: React.FC<GitIdentityEditorDialogProps> = (
                 <Input
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder={t('settings.gitIdentityEditorDialog.userNamePlaceholder')}
                   required={!isGlobalProfile}
                   readOnly={isGlobalProfile}
                   disabled={isGlobalProfile}
@@ -334,7 +336,7 @@ export const GitIdentityEditorDialog: React.FC<GitIdentityEditorDialogProps> = (
                   type="email"
                   value={userEmail}
                   onChange={(e) => setUserEmail(e.target.value)}
-                  placeholder="john@example.com"
+                  placeholder={t('settings.gitIdentityEditorDialog.emailPlaceholder')}
                   required={!isGlobalProfile}
                   readOnly={isGlobalProfile}
                   disabled={isGlobalProfile}
@@ -417,7 +419,7 @@ export const GitIdentityEditorDialog: React.FC<GitIdentityEditorDialogProps> = (
                       <Input
                         value={host}
                         onChange={(e) => setHost(e.target.value)}
-                        placeholder="github.com"
+                        placeholder={t('settings.gitIdentityEditorDialog.hostPlaceholder')}
                         required
                         className="h-8 font-mono text-xs"
                       />

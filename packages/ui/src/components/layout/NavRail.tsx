@@ -637,19 +637,19 @@ export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
         if (result.success && result.path) {
           const added = addProject(result.path, { id: result.projectId });
           if (!added) {
-            toast.error('Failed to add project', {
-              description: 'Please select a valid directory.',
+            toast.error(t('layout.nav.failedToAddProject'), {
+              description: t('layout.nav.selectValidDirectory'),
             });
           }
         } else if (result.error && result.error !== 'Directory selection cancelled') {
-          toast.error('Failed to select directory', { description: result.error });
+          toast.error(t('layout.nav.failedToSelectDirectory'), { description: result.error });
         }
       })
       .catch((error) => {
         console.error('Failed to select directory:', error);
-        toast.error('Failed to select directory');
+        toast.error(t('layout.nav.failedToSelectDirectory'));
       });
-  }, [addProject, tauriIpcAvailable]);
+  }, [addProject, tauriIpcAvailable, t]);
 
   const handleEditProject = React.useCallback(
     (projectId: string) => {

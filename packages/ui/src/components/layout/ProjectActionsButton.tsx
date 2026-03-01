@@ -33,6 +33,7 @@ import {
   resolveProjectActionDesktopForwardUrl,
   toProjectActionRunKey,
 } from '@/lib/projectActions';
+import { useI18n } from '@/contexts/useI18n';
 
 type RunningEntry = {
   key: string;
@@ -160,6 +161,7 @@ export const ProjectActionsButton = ({
   compact = false,
   allowMobile = false,
 }: ProjectActionsButtonProps) => {
+  const { t } = useI18n();
   const { terminal, runtime } = useRuntimeAPIs();
   const { isMobile } = useDeviceInfo();
   const isDesktopShellApp = React.useMemo(() => isDesktopShell(), []);
@@ -334,7 +336,7 @@ export const ProjectActionsButton = ({
       if (maybeUrl) {
         watch.openedUrl = true;
         void openExternal(maybeUrl);
-        toast.success('Opened URL from action output');
+        toast.success(t('layout.projectActions.openedUrlFromOutput'));
       }
       urlWatchByRunKeyRef.current[runKey] = watch;
     }
@@ -345,7 +347,7 @@ export const ProjectActionsButton = ({
       }
     }
 
-  }, [actions, openExternal, runningByKey, terminalSessions]);
+  }, [actions, openExternal, runningByKey, terminalSessions, t]);
 
   const normalizedDirectory = React.useMemo(() => {
     return normalizeProjectActionDirectory(directory || stableProjectRef?.path || '');
@@ -360,7 +362,7 @@ export const ProjectActionsButton = ({
 
   const getOrCreateActionTab = React.useCallback(async (action: OpenChamberProjectAction) => {
     if (!normalizedDirectory) {
-      throw new Error('No active directory');
+      throw new Error(t('layout.projectActions.noActiveDirectory'));
     }
 
     const key = toProjectActionRunKey(normalizedDirectory, action.id);
@@ -399,6 +401,7 @@ export const ProjectActionsButton = ({
     setActiveTab,
     setBottomTerminalOpen,
     setTabLabel,
+    t,
   ]);
 
   const runAction = React.useCallback(async (action: OpenChamberProjectAction) => {
@@ -407,7 +410,7 @@ export const ProjectActionsButton = ({
     }
 
     if (!normalizedDirectory) {
-      toast.error('No active directory for action');
+      toast.error(t('layout.projectActions.noActiveDirectoryForAction'));
       return;
     }
 
@@ -435,7 +438,7 @@ export const ProjectActionsButton = ({
       }
 
       if (!activeSessionId) {
-        throw new Error('Failed to create terminal session');
+        throw new Error(t('layout.projectActions.failedToCreateTerminalSession'));
       }
 
       if (createdSession) {
@@ -465,14 +468,14 @@ export const ProjectActionsButton = ({
 
       if (desktopForwardUrl) {
         void openExternal(desktopForwardUrl);
-        toast.success('Opened forwarded URL');
+        toast.success(t('layout.projectActions.openedForwardedUrl'));
       } else if (manualOpenUrl) {
         void openExternal(manualOpenUrl);
-        toast.success('Opened action URL');
+        toast.success(t('layout.projectActions.openedActionUrl'));
       } else if (hasCustomOpenUrl) {
-        toast.error('Invalid custom URL format');
+        toast.error(t('layout.projectActions.invalidCustomUrlFormat'));
       } else if (hasDesktopForwardSelection) {
-        toast.error('Selected desktop SSH forward is unavailable');
+        toast.error(t('layout.projectActions.desktopSshForwardUnavailable'));
       }
 
       urlWatchByRunKeyRef.current[key] = {
@@ -490,7 +493,7 @@ export const ProjectActionsButton = ({
         return next;
       });
       delete urlWatchByRunKeyRef.current[runKey];
-      toast.error(error instanceof Error ? error.message : 'Failed to run action');
+      toast.error(error instanceof Error ? error.message : t('layout.projectActions.failedToRunAction'));
     }
   }, [
     desktopSshInstances,
@@ -504,6 +507,7 @@ export const ProjectActionsButton = ({
     runtime.isVSCode,
     setConnecting,
     setTabSessionId,
+    t,
     terminal,
   ]);
 

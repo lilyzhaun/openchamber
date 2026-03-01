@@ -6,6 +6,7 @@ import { toast } from '@/components/ui';
 import { useSkillsStore, type SkillConfig, type SkillScope, type SupportingFile, type PendingFile } from '@/stores/useSkillsStore';
 import { RiAddLine, RiBookOpenLine, RiDeleteBinLine, RiFileLine, RiFolderLine, RiRobot2Line, RiUser3Line } from '@remixicon/react';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
+import { useI18n } from '@/contexts/useI18n';
 import {
   Select,
   SelectContent,
@@ -39,6 +40,7 @@ const SkillsCatalogStandalone: React.FC = () => (
 );
 
 const SkillsInstalledPage: React.FC = () => {
+  const { t } = useI18n();
   const { 
     selectedSkillName, 
     getSkillByName, 
@@ -132,22 +134,22 @@ const SkillsInstalledPage: React.FC = () => {
     const skillName = isNewSkill ? draftName.trim().replace(/\s+/g, '-').toLowerCase() : selectedSkillName?.trim();
 
     if (!skillName) {
-      toast.error('Skill name is required');
+      toast.error(t('settings.skillsPage.skillNameRequired'));
       return;
     }
 
     if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(skillName) || skillName.length > 64) {
-      toast.error('Skill name must be 1-64 lowercase alphanumeric characters with hyphens, cannot start or end with hyphen');
+      toast.error(t('settings.skillsPage.skillNameFormatInvalid'));
       return;
     }
 
     if (!description.trim()) {
-      toast.error('Description is required');
+      toast.error(t('settings.skillsPage.descriptionRequired'));
       return;
     }
 
     if (isNewSkill && skills.some((s) => s.name === skillName)) {
-      toast.error('A skill with this name already exists');
+      toast.error(t('settings.skillsPage.skillNameAlreadyExists'));
       return;
     }
 
@@ -180,13 +182,13 @@ const SkillsInstalledPage: React.FC = () => {
       }
 
       if (success) {
-        toast.success(isNewSkill ? 'Skill created successfully' : 'Skill updated successfully');
+        toast.success(isNewSkill ? t('settings.skillsPage.skillCreatedSuccessfully') : t('settings.skillsPage.skillUpdatedSuccessfully'));
       } else {
-        toast.error(isNewSkill ? 'Failed to create skill' : 'Failed to update skill');
+        toast.error(isNewSkill ? t('settings.skillsPage.failedCreateSkill') : t('settings.skillsPage.failedUpdateSkill'));
       }
     } catch (error) {
       console.error('Error saving skill:', error);
-      toast.error('An error occurred while saving');
+      toast.error(t('settings.skillsPage.errorWhileSaving'));
     } finally {
       setIsSaving(false);
     }
@@ -224,7 +226,7 @@ const SkillsInstalledPage: React.FC = () => {
       setNewFileContent(content || '');
       setOriginalFileContent(content || '');
     } catch {
-      toast.error('Failed to load file content');
+      toast.error(t('settings.skillsPage.failedLoadFileContent'));
       setNewFileContent('');
       setOriginalFileContent('');
     } finally {
@@ -234,7 +236,7 @@ const SkillsInstalledPage: React.FC = () => {
 
   const handleSaveFile = async () => {
     if (!newFileName.trim()) {
-      toast.error('File name is required');
+      toast.error(t('settings.skillsPage.fileNameRequired'));
       return;
     }
 
@@ -246,14 +248,14 @@ const SkillsInstalledPage: React.FC = () => {
         setPendingFiles(prev => prev.map(f => 
           f.path === editingFilePath ? { path: filePath, content: newFileContent } : f
         ));
-        toast.success(`File "${filePath}" updated`);
+        toast.success(t('settings.skillsPage.fileUpdated', { filePath }));
       } else {
         if (pendingFiles.some(f => f.path === filePath)) {
-          toast.error('A file with this name already exists');
+          toast.error(t('settings.skillsPage.fileNameAlreadyExists'));
           return;
         }
         setPendingFiles(prev => [...prev, { path: filePath, content: newFileContent }]);
-        toast.success(`File "${filePath}" added`);
+        toast.success(t('settings.skillsPage.fileAdded', { filePath }));
       }
       setIsFileDialogOpen(false);
       setEditingFilePath(null);
@@ -261,7 +263,7 @@ const SkillsInstalledPage: React.FC = () => {
     }
 
     if (!selectedSkillName) {
-      toast.error('No skill selected');
+      toast.error(t('settings.skillsPage.noSkillSelected'));
       return;
     }
 
@@ -284,7 +286,7 @@ const SkillsInstalledPage: React.FC = () => {
   const handleDeleteFile = (filePath: string) => {
     if (isNewSkill) {
       setPendingFiles(prev => prev.filter(f => f.path !== filePath));
-      toast.success(`File "${filePath}" removed`);
+      toast.success(t('settings.skillsPage.fileRemoved', { filePath }));
       return;
     }
 
@@ -305,14 +307,14 @@ const SkillsInstalledPage: React.FC = () => {
     const success = await deleteSupportingFile(selectedSkillName, deleteFilePath);
 
     if (success) {
-      toast.success(`File "${deleteFilePath}" deleted`);
+      toast.success(t('settings.skillsPage.fileDeleted', { filePath: deleteFilePath }));
       const detail = await getSkillDetail(selectedSkillName);
       if (detail) {
         setSupportingFiles(detail.sources.md.supportingFiles || []);
       }
       setDeleteFilePath(null);
     } else {
-      toast.error('Failed to delete file');
+      toast.error(t('settings.skillsPage.failedDeleteFile'));
     }
 
     setIsDeletingFile(false);
@@ -379,7 +381,7 @@ const SkillsInstalledPage: React.FC = () => {
                   <Input
                     value={draftName}
                     onChange={(e) => setDraftName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                    placeholder="skill-name"
+                    placeholder={t('settings.skillsPage.skillNamePlaceholder')}
                     className="h-7 w-40 px-2"
                   />
                   <Select
@@ -425,7 +427,7 @@ const SkillsInstalledPage: React.FC = () => {
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Brief description of what this skill does..."
+                  placeholder={t('settings.skillsPage.descriptionPlaceholder')}
                   rows={2}
                   className="w-full resize-none min-h-[60px] max-h-32 bg-transparent"
                 />
@@ -447,7 +449,7 @@ const SkillsInstalledPage: React.FC = () => {
             <Textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Step-by-step instructions, guidelines, or reference content..."
+              placeholder={t('settings.skillsPage.instructionsPlaceholder')}
               className="min-h-[220px] max-h-[60vh] font-mono typography-meta"
             />
           </section>
@@ -578,7 +580,7 @@ const SkillsInstalledPage: React.FC = () => {
                 <Input
                   value={newFileName}
                   onChange={(e) => setNewFileName(e.target.value)}
-                  placeholder="example.md or docs/reference.txt"
+                  placeholder={t('settings.skillsPage.filePathPlaceholder')}
                   className="text-foreground placeholder:text-muted-foreground focus-visible:ring-[var(--primary-base)]"
                   disabled={editingFilePath !== null}
                 />
@@ -595,7 +597,7 @@ const SkillsInstalledPage: React.FC = () => {
                 <Textarea
                   value={newFileContent}
                   onChange={(e) => setNewFileContent(e.target.value)}
-                  placeholder="File content..."
+                  placeholder={t('settings.skillsPage.fileContentPlaceholder')}
                   outerClassName="h-[45vh] min-h-[250px] max-h-[55vh]"
                   className="h-full min-h-0 font-mono typography-meta"
                 />

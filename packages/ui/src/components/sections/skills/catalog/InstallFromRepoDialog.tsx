@@ -29,6 +29,7 @@ import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
 import { useSkillsStore } from '@/stores/useSkillsStore';
 import { useGitIdentitiesStore } from '@/stores/useGitIdentitiesStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useI18n } from '@/contexts/useI18n';
 import { InstallConflictsDialog, type ConflictDecision, type SkillConflict } from './InstallConflictsDialog';
 import {
   SKILL_LOCATION_OPTIONS,
@@ -46,6 +47,7 @@ interface InstallFromRepoDialogProps {
 type IdentityOption = { id: string; name: string };
 
 export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ open, onOpenChange }) => {
+  const { t } = useI18n();
   const { scanRepo, installSkills, isScanning, isInstalling } = useSkillsCatalogStore();
   const installedSkills = useSkillsStore((s) => s.skills);
   const defaultGitIdentityId = useGitIdentitiesStore((s) => s.defaultGitIdentityId);
@@ -157,7 +159,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
   const handleScan = async () => {
     const trimmed = source.trim();
     if (!trimmed) {
-      toast.error('Repository source is required');
+      toast.error(t('settings.installFromRepoDialog.repositorySourceRequired'));
       return;
     }
 
@@ -170,7 +172,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
     if (!result.ok) {
       if (result.error?.kind === 'authRequired') {
         if (isVSCodeRuntime()) {
-          toast.error('Private repositories are not supported in VS Code yet');
+          toast.error(t('settings.installFromRepoDialog.privateReposNotSupportedInVSCode'));
           return;
         }
 
@@ -185,11 +187,11 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
               : ids[0].id;
           setGitIdentityId(preferred);
         }
-        toast.error('Authentication required. Select a Git identity and try scanning again.');
+        toast.error(t('settings.installFromRepoDialog.authRequiredTryScanningAgain'));
         return;
       }
 
-      toast.error(result.error?.message || 'Failed to scan repository');
+      toast.error(result.error?.message || t('settings.installFromRepoDialog.failedScanRepository'));
       return;
     }
 
@@ -206,12 +208,12 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
     setSelected(nextSelected);
 
     setIdentities([]);
-    toast.success(`Found ${nextItems.length} skill(s)`);
+    toast.success(t('settings.installFromRepoDialog.foundSkills', { count: nextItems.length }));
   };
 
   const doInstall = async (opts: { conflictDecisions?: Record<string, ConflictDecision> }) => {
     if (selectedDirs.length === 0) {
-      toast.error('Select at least one skill to install');
+      toast.error(t('settings.installFromRepoDialog.selectAtLeastOneSkill'));
       return;
     }
 
@@ -241,7 +243,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
     if (result.ok) {
       const installedCount = result.installed?.length || 0;
-      toast.success(installedCount > 0 ? `Installed ${installedCount} skill(s)` : 'Installation completed');
+      toast.success(installedCount > 0 ? t('settings.installFromRepoDialog.installedSkills', { count: installedCount }) : t('settings.installFromRepoDialog.installationCompleted'));
       onOpenChange(false);
       return;
     }
@@ -255,7 +257,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
     if (result.error?.kind === 'authRequired') {
       if (isVSCodeRuntime()) {
-        toast.error('Private repositories are not supported in VS Code yet');
+          toast.error(t('settings.installFromRepoDialog.privateReposNotSupportedInVSCode'));
         return;
       }
       const ids = (result.error.identities || []) as IdentityOption[];
@@ -269,11 +271,11 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
             : ids[0].id;
         setGitIdentityId(preferred);
       }
-      toast.error('Authentication required. Select a Git identity and try installing again.');
+      toast.error(t('settings.installFromRepoDialog.authRequiredTryInstallingAgain'));
       return;
     }
 
-    toast.error(result.error?.message || 'Failed to install skills');
+    toast.error(result.error?.message || t('settings.installFromRepoDialog.failedInstallSkills'));
   };
 
   return (
@@ -294,7 +296,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                 <Input
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  placeholder="owner/repo or git@github.com:owner/repo.git"
+                  placeholder={t('settings.installFromRepoDialog.repositoryPlaceholder')}
                   className="text-foreground placeholder:text-muted-foreground"
                 />
                 <Button
@@ -319,7 +321,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                 <Input
                   value={subpath}
                   onChange={(e) => setSubpath(e.target.value)}
-                  placeholder="e.g. skills"
+                  placeholder={t('settings.installFromRepoDialog.subpathPlaceholder')}
                   className="text-foreground placeholder:text-muted-foreground"
                 />
               </div>
@@ -369,7 +371,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                     disabled={projects.length === 1}
                   >
                     <SelectTrigger size="lg" className="w-full justify-between">
-                      <SelectValue placeholder="Choose project" />
+                      <SelectValue placeholder={t('settings.installFromRepoDialog.chooseProject')} />
                     </SelectTrigger>
                     <SelectContent align="start">
                       {projects.map((p) => (
@@ -424,7 +426,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search skills…"
+                    placeholder={t('settings.installFromRepoDialog.searchSkillsPlaceholder')}
                     className="max-w-sm"
                   />
                   <div className="flex items-center gap-2">

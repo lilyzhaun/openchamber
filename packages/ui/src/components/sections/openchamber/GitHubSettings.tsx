@@ -9,6 +9,7 @@ import { useDeviceInfo } from '@/lib/device';
 import { cn } from '@/lib/utils';
 import { RiGithubFill, RiInformationLine } from '@remixicon/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useI18n } from '@/contexts/useI18n';
 
 type GitHubUser = {
   login: string;
@@ -33,6 +34,7 @@ type DeviceFlowCompleteResponse =
   | { connected: false; status?: string; error?: string };
 
 export const GitHubSettings: React.FC = () => {
+  const { t } = useI18n();
   const { isMobile } = useDeviceInfo();
   const runtimeGitHub = getRegisteredRuntimeAPIs()?.github;
   const status = useGitHubAuthStore((state) => state.status);
@@ -120,7 +122,7 @@ export const GitHubSettings: React.FC = () => {
       void openExternal(url);
     } catch (error) {
       console.error('Failed to start GitHub connect:', error);
-      toast.error('Failed to start GitHub connect');
+      toast.error(t('settings.githubSettings.failedStartConnect'));
     } finally {
       setIsBusy(false);
     }
@@ -160,7 +162,7 @@ export const GitHubSettings: React.FC = () => {
         try {
           const result = await pollOnce(flow.deviceCode);
             if (result.connected) {
-              toast.success('GitHub connected');
+              toast.success(t('settings.githubSettings.connected'));
               setFlow(null);
               stopPolling();
               await refreshStatus(runtimeGitHub, { force: true });
@@ -206,11 +208,11 @@ export const GitHubSettings: React.FC = () => {
           throw new Error(response.statusText);
         }
       }
-      toast.success('GitHub disconnected');
+      toast.success(t('settings.githubSettings.disconnected'));
       await refreshStatus(runtimeGitHub, { force: true });
     } catch (error) {
       console.error('Failed to disconnect GitHub:', error);
-      toast.error('Failed to disconnect GitHub');
+      toast.error(t('settings.githubSettings.failedDisconnect'));
     } finally {
       setIsBusy(false);
     }
@@ -239,10 +241,10 @@ export const GitHubSettings: React.FC = () => {
           })();
 
       setStatus(payload);
-      toast.success('GitHub account switched');
+      toast.success(t('settings.githubSettings.accountSwitched'));
     } catch (error) {
       console.error('Failed to switch GitHub account:', error);
-      toast.error('Failed to switch GitHub account');
+      toast.error(t('settings.githubSettings.failedSwitchAccount'));
     } finally {
       setIsBusy(false);
     }

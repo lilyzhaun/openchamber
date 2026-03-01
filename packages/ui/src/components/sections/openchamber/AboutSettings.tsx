@@ -6,12 +6,14 @@ import { useDeviceInfo } from '@/lib/device';
 import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { ButtonSmall } from '@/components/ui/button-small';
+import { useI18n } from '@/contexts/useI18n';
 
 const GITHUB_URL = 'https://github.com/btriapitsyn/openchamber';
 
 const MIN_CHECKING_DURATION = 800; // ms
 
 export const AboutSettings: React.FC = () => {
+  const { t } = useI18n();
   const [updateDialogOpen, setUpdateDialogOpen] = React.useState(false);
   const [showChecking, setShowChecking] = React.useState(false);
   const updateStore = useUpdateStore();
@@ -32,7 +34,7 @@ export const AboutSettings: React.FC = () => {
         setShowChecking(false);
         // Show toast if check completed with no update available
         if (didInitiateCheck.current && !updateStore.available && !updateStore.error) {
-          toast.success('You are on the latest version');
+          toast.success(t('settings.aboutSettings.latestVersion'));
           didInitiateCheck.current = false;
         }
       }, MIN_CHECKING_DURATION);

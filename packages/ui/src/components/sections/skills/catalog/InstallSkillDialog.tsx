@@ -23,6 +23,7 @@ import type { SkillsCatalogItem } from '@/lib/api/types';
 import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { InstallConflictsDialog, type ConflictDecision, type SkillConflict } from './InstallConflictsDialog';
+import { useI18n } from '@/contexts/useI18n';
 import {
   SKILL_LOCATION_OPTIONS,
   locationLabel,
@@ -38,6 +39,7 @@ interface InstallSkillDialogProps {
 }
 
 export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, onOpenChange, item }) => {
+  const { t } = useI18n();
   const { installSkills, isInstalling } = useSkillsCatalogStore();
   const [scope, setScope] = React.useState<'user' | 'project'>('user');
   const [targetSource, setTargetSource] = React.useState<'opencode' | 'agents'>('opencode');
@@ -122,7 +124,7 @@ export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, on
     }, { directory: request.directoryOverride ?? null });
 
     if (result.ok) {
-      toast.success('Skill installed successfully');
+      toast.success(t('settings.installSkillDialog.skillInstalledSuccessfully'));
       onOpenChange(false);
       return;
     }
@@ -142,11 +144,11 @@ export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, on
     }
 
     if (result.error?.kind === 'authRequired') {
-      toast.error(result.error.message || 'Authentication required');
+      toast.error(result.error.message || t('settings.installSkillDialog.authenticationRequired'));
       return;
     }
 
-    toast.error(result.error?.message || 'Failed to install skill');
+    toast.error(result.error?.message || t('settings.installSkillDialog.failedInstallSkill'));
   };
 
   if (!item) {
@@ -209,7 +211,7 @@ export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, on
                     disabled={projects.length === 1}
                   >
                     <SelectTrigger className="w-fit">
-                      <SelectValue placeholder="Choose project" />
+                      <SelectValue placeholder={t('settings.installSkillDialog.chooseProject')} />
                     </SelectTrigger>
                     <SelectContent align="start">
                       {projects.map((p) => (

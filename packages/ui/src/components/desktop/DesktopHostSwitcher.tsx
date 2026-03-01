@@ -35,6 +35,7 @@ import {
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';
+import { useI18n } from '@/contexts/useI18n';
 import { isTauriShell, isDesktopShell } from '@/lib/desktop';
 import { useUIStore } from '@/stores/useUIStore';
 import {
@@ -243,6 +244,7 @@ export function DesktopHostSwitcherDialog({
   embedded = false,
   onHostSwitched,
 }: DesktopHostSwitcherDialogProps) {
+  const { t } = useI18n();
   const setSettingsDialogOpen = useUIStore((state) => state.setSettingsDialogOpen);
   const setSettingsPage = useUIStore((state) => state.setSettingsPage);
 
@@ -493,7 +495,7 @@ export function DesktopHostSwitcherDialog({
           ...prev,
           error: message,
         }));
-        toast.error(`SSH instance "${redactSensitiveUrl(host.label)}" failed to connect`, {
+        toast.error(t('desktop.hostSwitcher.sshFailedToConnect', { hostLabel: redactSensitiveUrl(host.label) }), {
           description: message,
         });
         return;
@@ -513,7 +515,7 @@ export function DesktopHostSwitcherDialog({
       }));
 
       if (probe.status === 'unreachable') {
-        toast.error(`Instance "${redactSensitiveUrl(host.label)}" is unreachable`);
+        toast.error(t('desktop.hostSwitcher.instanceUnreachable', { hostLabel: redactSensitiveUrl(host.label) }));
         setSwitchingHostId(null);
         return;
       }
@@ -527,7 +529,7 @@ export function DesktopHostSwitcherDialog({
     } catch {
       window.location.href = target;
     }
-  }, [onHostSwitched, sshHostIds, sshStatusesById]);
+  }, [onHostSwitched, sshHostIds, sshStatusesById, t]);
 
   const beginEdit = React.useCallback((host: DesktopHost) => {
     setEditingId(host.id);
@@ -596,7 +598,7 @@ export function DesktopHostSwitcherDialog({
     if (!origin) return;
     const target = toNavigationUrl(origin);
     desktopOpenNewWindowAtUrl(target).catch((err: unknown) => {
-      toast.error('Failed to open new window', {
+      toast.error(t('desktop.hostSwitcher.failedToOpenNewWindow'), {
         description: err instanceof Error ? err.message : String(err),
       });
     });
@@ -658,19 +660,19 @@ export function DesktopHostSwitcherDialog({
         }));
       });
       if (readyStatus.phase === 'ready') {
-        toast.success(`SSH instance "${redactSensitiveUrl(host.label)}" connected`);
+        toast.success(t('desktop.hostSwitcher.sshConnected', { hostLabel: redactSensitiveUrl(host.label) }));
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (message !== SSH_CONNECT_CANCELLED_ERROR) {
-        toast.error(`SSH instance "${redactSensitiveUrl(host.label)}" failed to connect`, {
+        toast.error(t('desktop.hostSwitcher.sshFailedToConnect', { hostLabel: redactSensitiveUrl(host.label) }), {
           description: message,
         });
       }
     } finally {
       setSwitchingHostId(null);
     }
-  }, []);
+  }, [t]);
 
   if (!isDesktopShell()) {
     return null;

@@ -5,6 +5,7 @@ import { SettingsSidebarLayout } from '@/components/sections/shared/SettingsSide
 import { SettingsSidebarItem } from '@/components/sections/shared/SettingsSidebarItem';
 import { useDesktopSshStore } from '@/stores/useDesktopSshStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useI18n } from '@/contexts/useI18n';
 import { toast } from '@/components/ui';
 import type { DesktopSshInstance } from '@/lib/desktopSsh';
 
@@ -52,6 +53,7 @@ const phaseLabel = (phase?: string): string => {
 };
 
 export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ onItemSelect }) => {
+  const { t } = useI18n();
   const instances = useDesktopSshStore((state) => state.instances);
   const statusesById = useDesktopSshStore((state) => state.statusesById);
   const isLoading = useDesktopSshStore((state) => state.isLoading);
@@ -93,7 +95,7 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
       setSelectedId(id);
       onItemSelect?.();
     } catch (error) {
-      toast.error('Failed to create SSH instance', {
+      toast.error(t('settings.remoteInstancesSidebar.failedCreateSshInstance'), {
         description: error instanceof Error ? error.message : String(error),
       });
     }
@@ -123,7 +125,7 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
 
       await upsertInstance(nextInstance);
       await connect(nextInstance.id);
-      toast.success('Retried with a random local port');
+      toast.success(t('settings.remoteInstancesSidebar.retriedWithRandomLocalPort'));
     }
   }, [connect, upsertInstance]);
 
@@ -174,7 +176,7 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
                 onClick: () => {
                   const op = isReady ? disconnect(instance.id) : connectWithPortRecovery(instance);
                   void op.catch((error) => {
-                    toast.error(`Failed to ${isReady ? 'disconnect' : 'connect'} instance`, {
+                    toast.error(t('settings.remoteInstancesSidebar.failedInstanceAction', { action: isReady ? t('settings.remoteInstancesSidebar.disconnectAction') : t('settings.remoteInstancesSidebar.connectAction') }), {
                       description: error instanceof Error ? error.message : String(error),
                     });
                   });
@@ -186,7 +188,7 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
                 onClick: () => {
                   if (!canRetry) return;
                   void retry(instance.id).catch((error) => {
-                    toast.error('Failed to retry connection', {
+                    toast.error(t('settings.remoteInstancesSidebar.failedRetryConnection'), {
                       description: error instanceof Error ? error.message : String(error),
                     });
                   });
@@ -203,7 +205,7 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
                       setSelectedId(next?.id || null);
                     }
                   }).catch((error) => {
-                    toast.error('Failed to remove instance', {
+                    toast.error(t('settings.remoteInstancesSidebar.failedRemoveInstance'), {
                       description: error instanceof Error ? error.message : String(error),
                     });
                   });

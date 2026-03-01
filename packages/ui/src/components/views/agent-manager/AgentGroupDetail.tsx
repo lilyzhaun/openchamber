@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useI18n } from '@/contexts/useI18n';
 
 interface AgentGroupDetailProps {
   group: AgentGroup;
@@ -39,6 +40,7 @@ export const AgentGroupDetail: React.FC<AgentGroupDetailProps> = ({
   group,
   className,
 }) => {
+  const { t } = useI18n();
   const { selectedSessionId, selectSession, deleteGroupWorktree, keepOnlyGroupWorktree } = useAgentGroupsStore();
   const { setCurrentSession, currentSessionId } = useSessionStore();
   const [worktreeDialog, setWorktreeDialog] = React.useState<null | { kind: 'remove' | 'keepOnly'; path: string; label: string }>(null);
@@ -86,17 +88,17 @@ export const AgentGroupDetail: React.FC<AgentGroupDetailProps> = ({
 
   const handleCopyWorktreePath = React.useCallback(() => {
     if (!selectedSession?.path) {
-      toast.error('No worktree path available');
+      toast.error(t('agentManager.noWorktreePathAvailable'));
       return;
     }
     void copyTextToClipboard(selectedSession.path).then((result) => {
       if (result.ok) {
-        toast.success('Worktree path copied');
+        toast.success(t('agentManager.worktreePathCopied'));
         return;
       }
-      toast.error('Failed to copy path');
+      toast.error(t('agentManager.failedToCopyPath'));
     });
-  }, [selectedSession?.path]);
+  }, [selectedSession?.path, t]);
 
   const handleRemoveSelectedWorktree = React.useCallback(async () => {
     if (!selectedSession) return;
@@ -113,23 +115,23 @@ export const AgentGroupDetail: React.FC<AgentGroupDetailProps> = ({
     setIsProcessing(true);
     try {
       if (worktreeDialog.kind === 'remove') {
-        toast.info('Removing worktree...');
+        toast.info(t('agentManager.removingWorktree'));
         const ok = await deleteGroupWorktree(group.name, worktreeDialog.path);
         if (ok) {
-          toast.success('Worktree removed');
+          toast.success(t('agentManager.worktreeRemoved'));
         } else {
           const error = useAgentGroupsStore.getState().error;
-          toast.error(error || 'Failed to remove worktree');
+          toast.error(error || t('agentManager.failedToRemoveWorktree'));
           return;
         }
       } else {
-        toast.info('Removing other worktrees...');
+        toast.info(t('agentManager.removingOtherWorktrees'));
         const ok = await keepOnlyGroupWorktree(group.name, worktreeDialog.path);
         if (ok) {
-          toast.success('Removed other worktrees');
+          toast.success(t('agentManager.removedOtherWorktrees'));
         } else {
           const error = useAgentGroupsStore.getState().error;
-          toast.error(error || 'Failed to remove other worktrees');
+          toast.error(error || t('agentManager.failedToRemoveOtherWorktrees'));
           return;
         }
       }
@@ -137,7 +139,7 @@ export const AgentGroupDetail: React.FC<AgentGroupDetailProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [deleteGroupWorktree, group.name, isProcessing, keepOnlyGroupWorktree, worktreeDialog]);
+  }, [deleteGroupWorktree, group.name, isProcessing, keepOnlyGroupWorktree, t, worktreeDialog]);
 
   return (
     <div className={cn('flex h-full flex-col bg-background', className)}>

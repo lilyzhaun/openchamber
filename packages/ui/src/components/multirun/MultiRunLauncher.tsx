@@ -18,6 +18,7 @@ import { ModelMultiSelect, generateInstanceId, type ModelSelectionWithId } from 
 import { BranchSelector, useBranchOptions } from './BranchSelector';
 import { AgentSelector } from './AgentSelector';
 import { isDesktopShell } from '@/lib/desktop';
+import { useI18n } from '@/contexts/useI18n';
 
 /** Max file size in bytes (10MB) */
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -52,6 +53,7 @@ export const MultiRunLauncher: React.FC<MultiRunLauncherProps> = ({
   onCreated,
   onCancel,
 }) => {
+  const { t } = useI18n();
   const [name, setName] = React.useState('');
   const [prompt, setPrompt] = React.useState(() => initialPrompt ?? '');
   const [selectedModels, setSelectedModels] = React.useState<ModelSelectionWithId[]>([]);
@@ -256,7 +258,7 @@ export const MultiRunLauncher: React.FC<MultiRunLauncherProps> = ({
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`File "${file.name}" is too large (max 10MB)`);
+        toast.error(t('multirun.fileTooLarge', { fileName: file.name }));
         continue;
       }
 
@@ -280,12 +282,12 @@ export const MultiRunLauncher: React.FC<MultiRunLauncherProps> = ({
         attachedCount++;
       } catch (error) {
         console.error('File attach failed', error);
-        toast.error(`Failed to attach "${file.name}"`);
+        toast.error(t('multirun.attachFileFailed', { fileName: file.name }));
       }
     }
 
     if (attachedCount > 0) {
-      toast.success(`Attached ${attachedCount} file${attachedCount > 1 ? 's' : ''}`);
+      toast.success(t('multirun.attachedFiles', { count: attachedCount, suffix: attachedCount > 1 ? 's' : '' }));
     }
 
     if (fileInputRef.current) {

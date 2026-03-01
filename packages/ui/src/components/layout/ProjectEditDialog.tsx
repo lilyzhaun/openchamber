@@ -12,6 +12,7 @@ import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { PROJECT_ICONS, PROJECT_COLORS, PROJECT_COLOR_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
 import { useProjectsStore } from '@/stores/useProjectsStore';
+import { useI18n } from '@/contexts/useI18n';
 
 interface ProjectEditDialogProps {
   open: boolean;
@@ -49,6 +50,7 @@ export const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
   initialIconBackground = null,
   onSave,
 }) => {
+  const { t } = useI18n();
   const uploadProjectIcon = useProjectsStore((state) => state.uploadProjectIcon);
   const removeProjectIcon = useProjectsStore((state) => state.removeProjectIcon);
   const discoverProjectIcon = useProjectsStore((state) => state.discoverProjectIcon);
@@ -99,15 +101,15 @@ export const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
     void uploadProjectIcon(projectId, file)
       .then((result) => {
         if (!result.ok) {
-          toast.error(result.error || 'Failed to upload project icon');
+          toast.error(result.error || t('layout.projectEdit.failedToUploadProjectIcon'));
           return;
         }
-        toast.success('Project icon updated');
+        toast.success(t('layout.projectEdit.projectIconUpdated'));
       })
       .finally(() => {
         setIsUploadingIcon(false);
       });
-  }, [isUploadingIcon, projectId, uploadProjectIcon]);
+  }, [isUploadingIcon, projectId, t, uploadProjectIcon]);
 
   const handleRemoveCustomIcon = React.useCallback(async () => {
     if (!projectId || !hasCustomIcon || isRemovingCustomIcon) {
@@ -118,15 +120,15 @@ export const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
     void removeProjectIcon(projectId)
       .then((result) => {
         if (!result.ok) {
-          toast.error(result.error || 'Failed to remove project icon');
+          toast.error(result.error || t('layout.projectEdit.failedToRemoveProjectIcon'));
           return;
         }
-        toast.success('Custom project icon removed');
+        toast.success(t('layout.projectEdit.customProjectIconRemoved'));
       })
       .finally(() => {
         setIsRemovingCustomIcon(false);
       });
-  }, [hasCustomIcon, isRemovingCustomIcon, projectId, removeProjectIcon]);
+  }, [hasCustomIcon, isRemovingCustomIcon, projectId, removeProjectIcon, t]);
 
   const handleDiscoverIcon = React.useCallback(async () => {
     if (!projectId || isDiscoveringIcon) {
@@ -137,19 +139,19 @@ export const ProjectEditDialog: React.FC<ProjectEditDialogProps> = ({
     void discoverProjectIcon(projectId)
       .then((result) => {
         if (!result.ok) {
-          toast.error(result.error || 'Failed to discover project icon');
+          toast.error(result.error || t('layout.projectEdit.failedToDiscoverProjectIcon'));
           return;
         }
         if (result.skipped) {
-          toast.success('Custom icon already set for this project');
+          toast.success(t('layout.projectEdit.customIconAlreadySet'));
           return;
         }
-        toast.success('Project icon discovered');
+        toast.success(t('layout.projectEdit.projectIconDiscovered'));
       })
       .finally(() => {
         setIsDiscoveringIcon(false);
       });
-  }, [discoverProjectIcon, isDiscoveringIcon, projectId]);
+  }, [discoverProjectIcon, isDiscoveringIcon, projectId, t]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

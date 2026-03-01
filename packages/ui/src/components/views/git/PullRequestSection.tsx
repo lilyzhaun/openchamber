@@ -54,6 +54,7 @@ import { useMessageStore } from '@/stores/messageStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
+import { useI18n } from '@/contexts/useI18n';
 import type {
   GitHubPullRequest,
   GitHubCheckRun,
@@ -274,6 +275,7 @@ export const PullRequestSection: React.FC<{
   variant?: 'framed' | 'plain';
   onGeneratedDescription?: () => void;
 }> = ({ directory, branch, baseBranch, trackingBranch, remotes = [], remoteBranches = [], variant = 'framed', onGeneratedDescription }) => {
+  const { t } = useI18n();
   const { github } = useRuntimeAPIs();
   const githubAuthStatus = useGitHubAuthStore((state) => state.status);
   const githubAuthChecked = useGitHubAuthStore((state) => state.hasChecked);
@@ -505,7 +507,7 @@ export const PullRequestSection: React.FC<{
 
   const openChecksDialog = React.useCallback(async () => {
     if (!github?.prContext) {
-      toast.error('GitHub runtime API unavailable');
+      toast.error(t('views.pr.githubApiUnavailable'));
       return;
     }
     if (!pr) return;
@@ -521,7 +523,7 @@ export const PullRequestSection: React.FC<{
       setCheckDetails(ctx);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to load check details', { description: message });
+      toast.error(t('views.pr.failedLoadCheckDetails'), { description: message });
     } finally {
       setIsLoadingCheckDetails(false);
     }
@@ -529,7 +531,7 @@ export const PullRequestSection: React.FC<{
 
   const openCommentsDialog = React.useCallback(async () => {
     if (!github?.prContext) {
-      toast.error('GitHub runtime API unavailable');
+      toast.error(t('views.pr.githubApiUnavailable'));
       return;
     }
     if (!pr) return;
@@ -544,7 +546,7 @@ export const PullRequestSection: React.FC<{
       setCommentsDetails(ctx);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to load comments', { description: message });
+      toast.error(t('views.pr.failedLoadComments'), { description: message });
     } finally {
       setIsLoadingCommentsDetails(false);
     }
@@ -617,7 +619,7 @@ export const PullRequestSection: React.FC<{
 
   const resolveChatDispatchTarget = React.useCallback((): ChatDispatchTarget | null => {
     if (!currentSessionId) {
-      toast.error('No active session', { description: 'Open a chat session first.' });
+      toast.error(t('views.pr.noActiveSession'), { description: t('views.pr.openChatSessionFirst') });
       return null;
     }
 
@@ -626,7 +628,7 @@ export const PullRequestSection: React.FC<{
     const providerID = currentProviderId || lastUsedProvider?.providerID;
     const modelID = currentModelId || lastUsedProvider?.modelID;
     if (!providerID || !modelID) {
-      toast.error('No model selected');
+      toast.error(t('views.pr.noModelSelected'));
       return null;
     }
 
@@ -660,7 +662,7 @@ export const PullRequestSection: React.FC<{
       target.currentVariant ?? undefined,
     ).catch((e) => {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to send message', { description: message });
+      toast.error(t('views.pr.failedToSendMessage'), { description: message });
     });
   }, []);
 
@@ -798,7 +800,7 @@ export const PullRequestSection: React.FC<{
     setActiveMainTab('chat');
 
     if (!github?.prContext) {
-      toast.error('GitHub runtime API unavailable');
+      toast.error(t('views.pr.githubApiUnavailable'));
       return;
     }
     if (!directory || !pr) return;
@@ -817,7 +819,7 @@ export const PullRequestSection: React.FC<{
       });
 
       if (failed.length === 0) {
-        toast.message('No failed checks');
+        toast.message(t('views.pr.noFailedChecks'));
         return;
       }
 
@@ -851,7 +853,7 @@ export const PullRequestSection: React.FC<{
       dispatchSyntheticPrompt(target, visibleText, instructionsText, payloadText);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to load checks', { description: message });
+      toast.error(t('views.pr.failedLoadChecks'), { description: message });
     }
   }, [directory, dispatchSyntheticPrompt, github, pr, resolveChatDispatchTarget, setActiveMainTab]);
 
@@ -859,7 +861,7 @@ export const PullRequestSection: React.FC<{
     setActiveMainTab('chat');
 
     if (!github?.prContext) {
-      toast.error('GitHub runtime API unavailable');
+      toast.error(t('views.pr.githubApiUnavailable'));
       return;
     }
     if (!directory || !pr) return;
@@ -874,7 +876,7 @@ export const PullRequestSection: React.FC<{
       const reviewComments = context.reviewComments ?? [];
       const total = issueComments.length + reviewComments.length;
       if (total === 0) {
-        toast.message('No PR comments');
+        toast.message(t('views.pr.noPrComments'));
         return;
       }
 
@@ -894,7 +896,7 @@ export const PullRequestSection: React.FC<{
       dispatchSyntheticPrompt(target, visibleText, instructionsText, payloadText);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to load PR comments', { description: message });
+      toast.error(t('views.pr.failedLoadPrComments'), { description: message });
     }
   }, [directory, dispatchSyntheticPrompt, github, pr, resolveChatDispatchTarget, setActiveMainTab]);
 
@@ -1146,7 +1148,7 @@ export const PullRequestSection: React.FC<{
       onGeneratedDescription?.();
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to generate description', { description: message });
+      toast.error(t('views.pr.failedGenerateDescription'), { description: message });
     } finally {
       setIsGenerating(false);
     }
@@ -1154,22 +1156,22 @@ export const PullRequestSection: React.FC<{
 
   const createPr = React.useCallback(async () => {
     if (!github?.prCreate) {
-      toast.error('GitHub runtime API unavailable');
+      toast.error(t('views.pr.githubApiUnavailable'));
       return;
     }
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      toast.error('Title is required');
+      toast.error(t('views.pr.titleRequired'));
       return;
     }
 
     const trimmedBase = targetBaseBranch.trim();
     if (!trimmedBase) {
-      toast.error('Base branch is required');
+      toast.error(t('views.pr.baseBranchRequired'));
       return;
     }
     if (trimmedBase === branch) {
-      toast.error('Base branch must differ from head branch');
+      toast.error(t('views.pr.baseBranchMustDiffer'));
       return;
     }
 
@@ -1186,12 +1188,12 @@ export const PullRequestSection: React.FC<{
         draft,
         ...(selectedRemote ? { remote: selectedRemote.name } : {}),
       });
-      toast.success('PR created');
+      toast.success(t('views.pr.prCreated'));
       setStatus((prev) => (prev ? { ...prev, pr } : prev));
       await refresh({ force: true });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to create PR', { description: message });
+      toast.error(t('views.pr.failedCreatePr'), { description: message });
     } finally {
       setIsCreating(false);
     }
@@ -1199,21 +1201,21 @@ export const PullRequestSection: React.FC<{
 
   const mergePr = React.useCallback(async (pr: GitHubPullRequest) => {
     if (!github?.prMerge) {
-      toast.error('GitHub runtime API unavailable');
+      toast.error(t('views.pr.githubApiUnavailable'));
       return;
     }
     setIsMerging(true);
     try {
       const result = await github.prMerge({ directory, number: pr.number, method: mergeMethod });
       if (result.merged) {
-        toast.success('PR merged');
+        toast.success(t('views.pr.prMerged'));
       } else {
-        toast.message('PR not merged', { description: result.message || 'Not mergeable' });
+        toast.message(t('views.pr.prNotMerged'), { description: result.message || t('views.pr.notMergeable') });
       }
       await refresh({ force: true });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Merge failed', { description: message });
+      toast.error(t('views.pr.mergeFailed'), { description: message });
       if (pr.url) {
         void openExternal(pr.url);
       }
@@ -1224,17 +1226,17 @@ export const PullRequestSection: React.FC<{
 
   const markReady = React.useCallback(async (pr: GitHubPullRequest) => {
     if (!github?.prReady) {
-      toast.error('GitHub runtime API unavailable');
+      toast.error(t('views.pr.githubApiUnavailable'));
       return;
     }
     setIsMarkingReady(true);
     try {
       await github.prReady({ directory, number: pr.number });
-      toast.success('Marked ready for review');
+      toast.success(t('views.pr.markedReadyForReview'));
       await refresh({ force: true });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to mark ready', { description: message });
+      toast.error(t('views.pr.failedMarkReady'), { description: message });
       if (pr.url) {
         void openExternal(pr.url);
       }
@@ -1245,13 +1247,13 @@ export const PullRequestSection: React.FC<{
 
   const updatePr = React.useCallback(async (pr: GitHubPullRequest) => {
     if (!github?.prUpdate) {
-      toast.error('GitHub runtime API unavailable');
+      toast.error(t('views.pr.githubApiUnavailable'));
       return;
     }
 
     const trimmedTitle = editTitle.trim();
     if (!trimmedTitle) {
-      toast.error('Title is required');
+      toast.error(t('views.pr.titleRequired'));
       return;
     }
 
@@ -1273,11 +1275,11 @@ export const PullRequestSection: React.FC<{
           }
         : prev));
       setIsEditingPr(false);
-      toast.success('PR updated');
+      toast.success(t('views.pr.prUpdated'));
       await refresh({ force: true });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to update PR', { description: message });
+      toast.error(t('views.pr.failedUpdatePr'), { description: message });
     } finally {
       setIsUpdating(false);
     }

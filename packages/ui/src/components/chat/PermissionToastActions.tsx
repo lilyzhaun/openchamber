@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/contexts/useI18n';
 
 interface PermissionToastActionsProps {
   sessionTitle: string;
@@ -27,10 +28,11 @@ export const PermissionToastActions: React.FC<PermissionToastActionsProps> = ({
   onAlways,
   onDeny,
 }) => {
+  const { t } = useI18n();
   const [isBusy, setIsBusy] = React.useState(false);
   const actionContext = sessionTitle.trim().length > 0 ? ` for ${sessionTitle}` : '';
-  const sessionPreview = truncateToastText(sessionTitle, 64) || 'Session';
-  const permissionPreview = truncateToastText(permissionBody, 120) || 'Permission details unavailable';
+  const sessionPreview = truncateToastText(sessionTitle, 64) || t('chat.permissionToast.sessionFallback');
+  const permissionPreview = truncateToastText(permissionBody, 120) || t('chat.permissionToast.detailsUnavailable');
 
   const handleAction = async (action: () => Promise<void> | void) => {
     if (isBusy || disabled) return;
@@ -46,13 +48,13 @@ export const PermissionToastActions: React.FC<PermissionToastActionsProps> = ({
     <div className="min-w-0">
       <div className="mb-1.5 min-w-0 space-y-0.5">
         <p className="typography-meta text-muted-foreground" title={sessionTitle}>
-          Session:{' '}
+          {t('chat.permissionToast.sessionLabel')}:{' '}
           <span className="inline-block max-w-[280px] align-bottom truncate text-foreground">
             {sessionPreview}
           </span>
         </p>
         <p className="typography-meta text-muted-foreground" title={permissionBody}>
-          Permission:{' '}
+          {t('chat.permissionToast.permissionLabel')}:{' '}
           <span className="inline-block max-w-[280px] align-bottom truncate">
             {permissionPreview}
           </span>
@@ -79,7 +81,7 @@ export const PermissionToastActions: React.FC<PermissionToastActionsProps> = ({
             e.currentTarget.style.backgroundColor = 'rgb(var(--status-success) / 0.1)';
           }}
         >
-          Once
+          {t('chat.permissionToast.once')}
         </button>
 
         <button
@@ -101,7 +103,7 @@ export const PermissionToastActions: React.FC<PermissionToastActionsProps> = ({
             e.currentTarget.style.backgroundColor = 'rgb(var(--muted) / 0.5)';
           }}
         >
-          Always
+          {t('chat.permissionToast.always')}
         </button>
 
         <button
@@ -123,7 +125,7 @@ export const PermissionToastActions: React.FC<PermissionToastActionsProps> = ({
             e.currentTarget.style.backgroundColor = 'rgb(var(--status-error) / 0.1)';
           }}
         >
-          Deny
+          {t('chat.permissionToast.deny')}
         </button>
       </div>
     </div>

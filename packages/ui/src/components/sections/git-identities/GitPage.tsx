@@ -36,6 +36,7 @@ import { GitHubSettings } from '@/components/sections/openchamber/GitHubSettings
 import { GitIdentityEditorDialog } from './GitIdentityEditorDialog';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/contexts/useI18n';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   branch: RiGitBranchLine,
@@ -55,6 +56,7 @@ const COLOR_MAP: Record<string, string> = {
 };
 
 export const GitPage: React.FC = () => {
+  const { t } = useI18n();
   const {
     profiles,
     globalIdentity,
@@ -93,10 +95,10 @@ export const GitPage: React.FC = () => {
     const next = defaultGitIdentityId === profileId ? null : profileId;
     const ok = await setDefaultGitIdentityId(next);
     if (!ok) {
-      toast.error('Failed to update default identity');
+      toast.error(t('settings.gitPage.failedUpdateDefaultIdentity'));
       return;
     }
-    toast.success(next ? 'Default identity updated' : 'Default identity unset');
+    toast.success(next ? t('settings.gitPage.defaultIdentityUpdated') : t('settings.gitPage.defaultIdentityUnset'));
   };
 
   const handleConfirmDelete = async () => {
@@ -104,10 +106,10 @@ export const GitPage: React.FC = () => {
     setIsDeletePending(true);
     const success = await deleteProfile(deleteDialogProfile.id);
     if (success) {
-      toast.success(`Profile "${deleteDialogProfile.name}" deleted`);
+      toast.success(t('settings.gitPage.profileDeleted', { name: deleteDialogProfile.name }));
       setDeleteDialogProfile(null);
     } else {
-      toast.error('Failed to delete profile');
+      toast.error(t('settings.gitPage.failedDeleteProfile'));
     }
     setIsDeletePending(false);
   };

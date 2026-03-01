@@ -3,6 +3,7 @@ import { ButtonSmall } from '@/components/ui/button-small';
 import { ButtonLarge } from '@/components/ui/button-large';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui';
+import { useI18n } from '@/contexts/useI18n';
 import { isMobileDeviceViaCSS } from '@/lib/device';
 import {
   Dialog,
@@ -30,6 +31,7 @@ interface SkillsSidebarProps {
 }
 
 export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) => {
+  const { t } = useI18n();
   const [renameDialogSkill, setRenameDialogSkill] = React.useState<DiscoveredSkill | null>(null);
   const [renameNewName, setRenameNewName] = React.useState('');
   const [deleteDialogSkill, setDeleteDialogSkill] = React.useState<DiscoveredSkill | null>(null);
@@ -80,10 +82,10 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
     setIsDeletePending(true);
     const success = await deleteSkill(deleteDialogSkill.name);
     if (success) {
-      toast.success(`Skill "${deleteDialogSkill.name}" deleted successfully`);
+      toast.success(t('settings.skillsSidebar.skillDeletedSuccessfully', { name: deleteDialogSkill.name }));
       setDeleteDialogSkill(null);
     } else {
-      toast.error('Failed to delete skill');
+      toast.error(t('settings.skillsSidebar.failedDeleteSkill'));
     }
     setIsDeletePending(false);
   };
@@ -101,7 +103,7 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
     // Get full skill detail to copy
     const detail = await getSkillDetail(skill.name);
     if (!detail) {
-      toast.error('Failed to load skill details for duplication');
+      toast.error(t('settings.skillsSidebar.failedLoadSkillDetailsForDuplication'));
       return;
     }
 
@@ -129,7 +131,7 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
     const sanitizedName = renameNewName.trim().replace(/\s+/g, '-').toLowerCase();
 
     if (!sanitizedName) {
-      toast.error('Skill name is required');
+      toast.error(t('settings.skillsSidebar.skillNameRequired'));
       return;
     }
 
@@ -139,14 +141,14 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
     }
 
     if (skills.some((s) => s.name === sanitizedName)) {
-      toast.error('A skill with this name already exists');
+      toast.error(t('settings.skillsSidebar.skillNameAlreadyExists'));
       return;
     }
 
     // Get full detail to copy
     const detail = await getSkillDetail(renameDialogSkill.name);
     if (!detail) {
-      toast.error('Failed to load skill details');
+      toast.error(t('settings.skillsSidebar.failedLoadSkillDetails'));
       setRenameDialogSkill(null);
       return;
     }
@@ -163,13 +165,13 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
       // Delete old skill
       const deleteSuccess = await deleteSkill(renameDialogSkill.name);
       if (deleteSuccess) {
-        toast.success(`Skill renamed to "${sanitizedName}"`);
+        toast.success(t('settings.skillsSidebar.skillRenamedTo', { name: sanitizedName }));
         setSelectedSkill(sanitizedName);
       } else {
-        toast.error('Failed to remove old skill after rename');
+        toast.error(t('settings.skillsSidebar.failedRemoveOldSkillAfterRename'));
       }
     } else {
-      toast.error('Failed to rename skill');
+      toast.error(t('settings.skillsSidebar.failedRenameSkill'));
     }
 
     setRenameDialogSkill(null);
@@ -374,7 +376,7 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
           <Input
             value={renameNewName}
             onChange={(e) => setRenameNewName(e.target.value)}
-            placeholder="New skill name..."
+            placeholder={t('settings.skillsSidebar.newSkillNamePlaceholder')}
             className="text-foreground placeholder:text-muted-foreground"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {

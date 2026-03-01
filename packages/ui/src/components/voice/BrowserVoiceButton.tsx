@@ -30,6 +30,7 @@ import {
 } from '@remixicon/react';
 import { VoiceStatusIndicator } from './VoiceStatusIndicator';
 import { toast } from '@/components/ui/toast';
+import { useI18n } from '@/contexts/useI18n';
 
 // Status text for accessibility and labels
 const statusLabels: Record<string, string> = {
@@ -49,7 +50,10 @@ const isIOSSafari = (): boolean => {
     return isIOS && isSafari;
 };
 
-const normalizeVoiceErrorMessage = (error: string): string => {
+const normalizeVoiceErrorMessage = (
+    error: string,
+    t: (key: string, params?: Record<string, string | number>) => string,
+): string => {
     const isMediaDevicesError =
         error.includes('getUserMedia') ||
         error.includes('mediaDevices') ||
@@ -60,16 +64,17 @@ const normalizeVoiceErrorMessage = (error: string): string => {
     }
 
     if (typeof window !== 'undefined' && !window.isSecureContext) {
-        return 'Voice requires a secure connection (HTTPS) or localhost. Please use HTTPS or access via localhost.';
+        return t('voice.browser.secureContextRequired');
     }
 
-    return 'Microphone access is unavailable in this runtime. On desktop, check System Settings -> Privacy & Security -> Microphone for OpenChamber.';
+    return t('voice.browser.microphoneUnavailable');
 };
 
 /**
  * Browser Voice Button with language selection
  */
 export function BrowserVoiceButton() {
+    const { t } = useI18n();
     const voiceModeEnabled = useConfigStore((s) => s.voiceModeEnabled);
     
     const {
@@ -121,7 +126,7 @@ export function BrowserVoiceButton() {
                 return;
             }
             lastToastedErrorRef.current = error;
-            const displayError = normalizeVoiceErrorMessage(error);
+            const displayError = normalizeVoiceErrorMessage(error, t);
             
             toast.error(displayError, {
                 duration: 5000,
@@ -131,7 +136,7 @@ export function BrowserVoiceButton() {
         if (!isError) {
             lastToastedErrorRef.current = null;
         }
-    }, [isError, error]);
+    }, [isError, error, t]);
 
     // Status text for accessibility
     const statusText = isError
@@ -143,7 +148,7 @@ export function BrowserVoiceButton() {
     // Tooltip content based on state
     const getTooltipContent = () => {
         if (isError && error) {
-            return normalizeVoiceErrorMessage(error);
+            return normalizeVoiceErrorMessage(error, t);
         }
         if (isActive) {
             return 'Stop voice conversation';

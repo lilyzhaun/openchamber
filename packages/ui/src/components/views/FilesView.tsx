@@ -74,6 +74,7 @@ import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import { ensurePierreThemeRegistered } from '@/lib/shiki/appThemeRegistry';
 import { getDefaultTheme } from '@/lib/theme/themes';
+import { useI18n } from '@/contexts/useI18n';
 
 type FileNode = {
   name: string;
@@ -248,6 +249,7 @@ const FileRow: React.FC<FileRowProps> = ({
   onRevealPath,
   onOpenDialog,
 }) => {
+  const { t } = useI18n();
   const isDir = node.type === 'directory';
   const { canRename, canCreateFile, canCreateFolder, canDelete, canReveal } = permissions;
 
@@ -339,17 +341,17 @@ const FileRow: React.FC<FileRowProps> = ({
                 e.stopPropagation();
                 void copyTextToClipboard(node.path).then((result) => {
                   if (result.ok) {
-                    toast.success('Path copied');
+                    toast.success(t('views.files.pathCopied'));
                     return;
                   }
-                  toast.error('Copy failed');
+                  toast.error(t('views.files.copyFailed'));
                 });
               }}>
-                <RiFileCopyLine className="mr-2 h-4 w-4" /> Copy Path
+                <RiFileCopyLine className="mr-2 h-4 w-4" /> {t('views.files.copyPath')}
               </DropdownMenuItem>
               {canReveal && (
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRevealPath(node.path); }}>
-                  <RiFolderReceivedLine className="mr-2 h-4 w-4" /> Reveal in Finder
+                  <RiFolderReceivedLine className="mr-2 h-4 w-4" /> {t('views.files.revealInFinder')}
                 </DropdownMenuItem>
               )}
               {isDir && (canCreateFile || canCreateFolder) && (
@@ -357,12 +359,12 @@ const FileRow: React.FC<FileRowProps> = ({
                   <DropdownMenuSeparator />
                   {canCreateFile && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onOpenDialog('createFile', node); }}>
-                      <RiFileAddLine className="mr-2 h-4 w-4" /> New File
+                      <RiFileAddLine className="mr-2 h-4 w-4" /> {t('views.files.newFile')}
                     </DropdownMenuItem>
                   )}
                   {canCreateFolder && (
                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onOpenDialog('createFolder', node); }}>
-                      <RiFolderAddLine className="mr-2 h-4 w-4" /> New Folder
+                      <RiFolderAddLine className="mr-2 h-4 w-4" /> {t('views.files.newFolder')}
                     </DropdownMenuItem>
                   )}
                 </>
@@ -391,6 +393,7 @@ interface FilesViewProps {
 }
 
 export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
+  const { t } = useI18n();
   const { files, runtime } = useRuntimeAPIs();
   const { currentTheme, availableThemes, lightThemeId, darkThemeId } = useThemeSystem();
   const { isMobile, screenWidth } = useDeviceInfo();
@@ -525,9 +528,9 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   const handleRevealPath = React.useCallback((targetPath: string) => {
     if (!files.revealPath) return;
     void files.revealPath(targetPath).catch(() => {
-      toast.error('Failed to reveal path');
+      toast.error(t('views.files.failedToRevealPath'));
     });
-  }, [files]);
+  }, [files, t]);
 
   const handleOpenDialog = React.useCallback((type: 'createFile' | 'createFolder' | 'rename' | 'delete', data: { path: string; name?: string; type?: 'file' | 'directory' }) => {
     setActiveDialog(type);
@@ -810,12 +813,12 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
 
     if (activeDialog === 'createFile') {
       if (!dialogInputValue.trim()) {
-        failDialogOperation('Filename is required');
+        failDialogOperation(t('views.files.filenameRequired'));
         done();
         return;
       }
       if (!files.writeFile) {
-        failDialogOperation('Write not supported');
+        failDialogOperation(t('views.files.writeNotSupported'));
         done();
         return;
       }
@@ -826,19 +829,19 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
       await files.writeFile(newPath, '')
         .then(async (result) => {
           if (result.success) {
-            toast.success('File created');
+            toast.success(t('views.files.fileCreated'));
             await refreshRoot();
           }
           finishDialogOperation();
         })
-        .catch(() => failDialogOperation('Operation failed'))
+        .catch(() => failDialogOperation(t('views.files.operationFailed')))
         .finally(done);
       return;
     }
 
     if (activeDialog === 'createFolder') {
       if (!dialogInputValue.trim()) {
-        failDialogOperation('Folder name is required');
+        failDialogOperation(t('views.files.folderNameRequired'));
         done();
         return;
       }
@@ -849,25 +852,25 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
       await files.createDirectory(newPath)
         .then(async (result) => {
           if (result.success) {
-            toast.success('Folder created');
+            toast.success(t('views.files.folderCreated'));
             await refreshRoot();
           }
           finishDialogOperation();
         })
-        .catch(() => failDialogOperation('Operation failed'))
+        .catch(() => failDialogOperation(t('views.files.operationFailed')))
         .finally(done);
       return;
     }
 
     if (activeDialog === 'rename') {
       if (!dialogInputValue.trim()) {
-        failDialogOperation('Name is required');
+        failDialogOperation(t('views.files.nameRequired'));
         done();
         return;
       }
 
       if (!files.rename) {
-        failDialogOperation('Rename not supported');
+        failDialogOperation(t('views.files.renameNotSupported'));
         done();
         return;
       }
@@ -880,7 +883,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
       await files.rename(oldPath, newPath)
         .then(async (result) => {
           if (result.success) {
-            toast.success('Renamed successfully');
+            toast.success(t('views.files.renamedSuccessfully'));
             await refreshRoot();
             if (root) {
               removeOpenPathsByPrefix(root, oldPath);
@@ -900,14 +903,14 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
           }
           finishDialogOperation();
         })
-        .catch(() => failDialogOperation('Operation failed'))
+        .catch(() => failDialogOperation(t('views.files.operationFailed')))
         .finally(done);
       return;
     }
 
     if (activeDialog === 'delete') {
       if (!files.delete) {
-        failDialogOperation('Delete not supported');
+        failDialogOperation(t('views.files.deleteNotSupported'));
         done();
         return;
       }
@@ -915,7 +918,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
       await files.delete(dialogData.path)
         .then(async (result) => {
           if (result.success) {
-            toast.success('Deleted successfully');
+            toast.success(t('views.files.deletedSuccessfully'));
             await refreshRoot();
             if (root) {
               removeOpenPathsByPrefix(root, dialogData.path);
@@ -935,13 +938,13 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
           }
           finishDialogOperation();
         })
-        .catch(() => failDialogOperation('Operation failed'))
+        .catch(() => failDialogOperation(t('views.files.operationFailed')))
         .finally(done);
       return;
     }
 
     done();
-  }, [activeDialog, dialogData, dialogInputValue, files, refreshRoot, isMobile, removeOpenPathsByPrefix, root, selectedFile?.path, setSelectedPath]);
+  }, [activeDialog, dialogData, dialogInputValue, files, refreshRoot, isMobile, removeOpenPathsByPrefix, root, selectedFile?.path, setSelectedPath, t]);
 
   const fuzzyScore = React.useCallback((query: string, candidate: string): number | null => {
     const q = query.trim().toLowerCase();
@@ -1087,7 +1090,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
 
   const saveDraft = React.useCallback(async () => {
     if (!selectedFile || !files.writeFile) {
-      toast.error('Saving not supported');
+      toast.error(t('views.files.savingNotSupported'));
       return;
     }
 
@@ -1100,18 +1103,18 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
     await files.writeFile(selectedFile.path, draftContent)
       .then((result) => {
         if (!result?.success) {
-          toast.error('Failed to write file');
+          toast.error(t('views.files.failedToWriteFile'));
           return;
         }
         setFileContent(draftContent);
       })
       .catch((error) => {
-        toast.error(error instanceof Error ? error.message : 'Save failed');
+        toast.error(error instanceof Error ? error.message : t('views.files.saveFailed'));
       })
       .finally(() => {
         setIsSaving(false);
       });
-  }, [draftContent, files, isDirty, selectedFile]);
+  }, [draftContent, files, isDirty, selectedFile, t]);
 
   React.useEffect(() => {
     if (!isDirty) {
@@ -1734,16 +1737,16 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {activeDialog === 'createFile' && 'Create File'}
-            {activeDialog === 'createFolder' && 'Create Folder'}
-            {activeDialog === 'rename' && 'Rename'}
-            {activeDialog === 'delete' && 'Delete'}
+            {activeDialog === 'createFile' && t('views.files.createFile')}
+            {activeDialog === 'createFolder' && t('views.files.createFolder')}
+            {activeDialog === 'rename' && t('views.files.rename')}
+            {activeDialog === 'delete' && t('views.files.delete')}
           </DialogTitle>
           <DialogDescription>
-            {activeDialog === 'createFile' && `Create a new file in ${dialogData?.path ?? 'root'}`}
-            {activeDialog === 'createFolder' && `Create a new folder in ${dialogData?.path ?? 'root'}`}
-            {activeDialog === 'rename' && `Rename ${dialogData?.name}`}
-            {activeDialog === 'delete' && `Are you sure you want to delete ${dialogData?.name}? This action cannot be undone.`}
+            {activeDialog === 'createFile' && t('views.files.createFileIn', { path: dialogData?.path ?? t('views.files.root') })}
+            {activeDialog === 'createFolder' && t('views.files.createFolderIn', { path: dialogData?.path ?? t('views.files.root') })}
+            {activeDialog === 'rename' && t('views.files.renameTarget', { name: dialogData?.name ?? '' })}
+            {activeDialog === 'delete' && t('views.files.deleteConfirm', { name: dialogData?.name ?? '' })}
           </DialogDescription>
         </DialogHeader>
 
@@ -1752,7 +1755,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
             <Input
               value={dialogInputValue}
               onChange={(e) => setDialogInputValue(e.target.value)}
-              placeholder={activeDialog === 'rename' ? 'New name' : 'Name'}
+              placeholder={activeDialog === 'rename' ? t('views.files.newName') : t('views.files.name')}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   void handleDialogSubmit();
@@ -1765,7 +1768,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setActiveDialog(null)} disabled={isDialogSubmitting}>
-            Cancel
+            {t('views.files.cancel')}
           </Button>
           <Button
             variant={activeDialog === 'delete' ? 'destructive' : 'default'}
@@ -1773,7 +1776,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
             disabled={isDialogSubmitting || (activeDialog !== 'delete' && !dialogInputValue.trim())}
           >
             {isDialogSubmitting ? <RiLoader4Line className="animate-spin" /> : (
-                activeDialog === 'delete' ? 'Delete' : 'Confirm'
+                activeDialog === 'delete' ? t('views.files.delete') : t('views.files.confirm')
             )}
           </Button>
         </DialogFooter>
@@ -1838,9 +1841,9 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
       }}>
         <DialogContent showCloseButton={false} className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Unsaved changes</DialogTitle>
+            <DialogTitle>{t('views.files.unsavedChanges')}</DialogTitle>
             <DialogDescription>
-              Save your edits before continuing?
+              {t('views.files.saveBeforeContinuing')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1850,9 +1853,9 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
               disabled={isSaving}
               className="border-[var(--status-success-border)] bg-[var(--status-success-background)] text-[var(--status-success)] hover:bg-[rgb(var(--status-success)/0.2)]"
             >
-              Save changes
+              {t('views.files.saveChanges')}
             </Button>
-            <Button variant="destructive" onClick={discardAndContinue}>Discard</Button>
+            <Button variant="destructive" onClick={discardAndContinue}>{t('views.files.discard')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1932,7 +1935,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="typography-ui-label font-medium truncate">Select a file</div>
+              <div className="typography-ui-label font-medium truncate">{t('views.files.selectAFile')}</div>
             )
           ) : (
             openFiles.length > 0 ? (
@@ -1993,7 +1996,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                 </div>
               </div>
             ) : (
-              <div className="typography-ui-label font-medium truncate">Select a file</div>
+              <div className="typography-ui-label font-medium truncate">{t('views.files.selectAFile')}</div>
             )
           )}
         </div>
@@ -2032,7 +2035,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                   'h-5 w-5 p-0 transition-opacity',
                   textViewMode === 'edit' ? 'text-foreground opacity-100' : 'text-muted-foreground opacity-70 hover:opacity-100'
                 )}
-                title={textViewMode === 'view' ? 'Switch to edit mode' : 'Switch to highlighted view'}
+                title={textViewMode === 'view' ? t('views.files.switchToEditMode') : t('views.files.switchToHighlightedView')}
               >
                 {textViewMode === 'view' ? <RiEditLine className="size-4" /> : <RiEyeLine className="size-4" />}
               </Button>
@@ -2048,7 +2051,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                     'h-5 w-5 p-0 transition-opacity',
                     wrapLines ? 'text-foreground opacity-100' : 'text-muted-foreground opacity-60 hover:opacity-100'
                   )}
-                  title={wrapLines ? 'Disable line wrap' : 'Enable line wrap'}
+                  title={wrapLines ? t('views.files.disableLineWrap') : t('views.files.enableLineWrap')}
                 >
                   <RiTextWrap className="size-4" />
                 </Button>
@@ -2061,7 +2064,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                       'h-5 w-5 p-0 transition-opacity',
                       isSearchOpen ? 'text-foreground opacity-100' : 'text-muted-foreground opacity-60 hover:opacity-100'
                     )}
-                    title="Find in file"
+                    title={t('views.files.findInFile')}
                   >
                     <RiSearchLine className="size-4" />
                   </Button>
@@ -2095,12 +2098,12 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                       setCopiedContent(false);
                     }, 1200);
                   } else {
-                    toast.error('Copy failed');
+                    toast.error(t('views.files.copyFailed'));
                   }
                 }}
                 className="h-5 w-5 p-0"
-                title="Copy file contents"
-                aria-label="Copy file contents"
+                title={t('views.files.copyFileContents')}
+                aria-label={t('views.files.copyFileContents')}
               >
                 {copiedContent ? (
                   <RiCheckLine className="h-4 w-4 text-[color:var(--status-success)]" />
@@ -2125,7 +2128,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                       setCopiedPath(false);
                     }, 1200);
                   } else {
-                    toast.error('Copy failed');
+                    toast.error(t('views.files.copyFailed'));
                   }
                 }}
                 className="h-5 w-5 p-0"
@@ -2148,8 +2151,8 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                   size="sm"
                   onClick={() => setIsFullscreen(!isFullscreen)}
                   className="h-5 w-5 p-0"
-                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                  aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  title={isFullscreen ? t('views.files.exitFullscreen') : t('views.files.fullscreen')}
+                  aria-label={isFullscreen ? t('views.files.exitFullscreen') : t('views.files.fullscreen')}
                 >
                   {isFullscreen ? (
                     <RiFullscreenExitLine className="h-4 w-4" />
@@ -2166,11 +2169,11 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
       <div className="flex-1 min-h-0 min-w-0 relative">
         <ScrollableOverlay outerClassName="h-full min-w-0" className="h-full min-w-0">
           {!selectedFile ? (
-            <div className="p-3 typography-ui text-muted-foreground">Pick a file from the tree.</div>
+            <div className="p-3 typography-ui text-muted-foreground">{t('views.files.pickFileFromTree')}</div>
           ) : fileLoading ? (
             <div className="p-3 flex items-center gap-2 typography-ui text-muted-foreground">
               <RiLoader4Line className="h-4 w-4 animate-spin" />
-              Loading…
+              {t('views.files.loading')}
             </div>
           ) : fileError ? (
             <div className="p-3 typography-ui text-[color:var(--status-error)]">{fileError}</div>
@@ -2192,9 +2195,9 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
               <ErrorBoundary
                 fallback={
                   <div className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2">
-                    <div className="mb-1 font-medium text-destructive">Preview unavailable</div>
+                    <div className="mb-1 font-medium text-destructive">{t('views.files.previewUnavailable')}</div>
                     <div className="text-sm text-muted-foreground">
-                      Switch to edit mode to fix the issue.
+                      {t('views.files.switchToEditToFix')}
                     </div>
                   </div>
                 }
@@ -2328,13 +2331,13 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
               ref={searchInputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search files…"
+              placeholder={t('views.files.searchFiles')}
               className="h-8 pl-8 pr-8 typography-meta"
             />
             {searchQuery.trim().length > 0 && (
               <button
                 type="button"
-                aria-label="Clear search"
+                aria-label={t('views.files.clearSearch')}
                 className="absolute right-2 top-2 inline-flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   setSearchQuery('');
@@ -2350,7 +2353,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
             size="sm"
             onClick={() => handleOpenDialog('createFile', { path: currentDirectory, type: 'directory' })}
             className="h-8 w-8 p-0 flex-shrink-0"
-            title="New File"
+            title={t('views.files.newFile')}
           >
             <RiFileAddLine className="h-4 w-4" />
           </Button>
@@ -2359,7 +2362,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
             size="sm"
             onClick={() => handleOpenDialog('createFolder', { path: currentDirectory, type: 'directory' })}
             className="h-8 w-8 p-0 flex-shrink-0"
-            title="New Folder"
+            title={t('views.files.newFolder')}
           >
             <RiFolderAddLine className="h-4 w-4" />
           </Button>
@@ -2374,7 +2377,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
           {searching ? (
             <li className="flex items-center gap-1.5 px-2 py-1 typography-meta text-muted-foreground">
               <RiLoader4Line className="h-4 w-4 animate-spin" />
-              Searching…
+              {t('views.files.searching')}
             </li>
           ) : searchResults.length > 0 ? (
             searchResults.map((node) => {
@@ -2404,7 +2407,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
           ) : hasTree ? (
             renderTree(root, 0)
           ) : (
-            <li className="px-2 py-1 typography-meta text-muted-foreground">Loading…</li>
+            <li className="px-2 py-1 typography-meta text-muted-foreground">{t('views.files.loading')}</li>
           )}
         </ul>
       </ScrollableOverlay>
@@ -2457,7 +2460,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                 'h-6 w-6 p-0 transition-opacity',
                 textViewMode === 'edit' ? 'text-foreground opacity-100' : 'text-muted-foreground opacity-70 hover:opacity-100'
               )}
-              title={textViewMode === 'view' ? 'Switch to edit mode' : 'Switch to highlighted view'}
+              title={textViewMode === 'view' ? t('views.files.switchToEditMode') : t('views.files.switchToHighlightedView')}
             >
               {textViewMode === 'view' ? <RiEditLine className="size-4" /> : <RiEyeLine className="size-4" />}
             </Button>
@@ -2472,7 +2475,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                 'h-6 w-6 p-0 transition-opacity',
                 wrapLines ? 'text-foreground opacity-100' : 'text-muted-foreground opacity-60 hover:opacity-100'
               )}
-              title={wrapLines ? 'Disable line wrap' : 'Enable line wrap'}
+              title={wrapLines ? t('views.files.disableLineWrap') : t('views.files.enableLineWrap')}
             >
               <RiTextWrap className="size-4" />
             </Button>
@@ -2504,12 +2507,12 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                     setCopiedContent(false);
                   }, 1200);
                 } else {
-                  toast.error('Copy failed');
+                  toast.error(t('views.files.copyFailed'));
                 }
               }}
               className="h-6 w-6 p-0"
-              title="Copy file contents"
-              aria-label="Copy file contents"
+              title={t('views.files.copyFileContents')}
+              aria-label={t('views.files.copyFileContents')}
             >
               {copiedContent ? (
                 <RiCheckLine className="h-4 w-4 text-[color:var(--status-success)]" />
@@ -2534,7 +2537,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
                     setCopiedPath(false);
                   }, 1200);
                 } else {
-                  toast.error('Copy failed');
+                  toast.error(t('views.files.copyFailed'));
                 }
               }}
               className="h-6 w-6 p-0"
@@ -2555,8 +2558,8 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
             size="sm"
             onClick={() => setIsFullscreen(false)}
             className="h-6 w-6 p-0"
-            title="Exit fullscreen"
-            aria-label="Exit fullscreen"
+            title={t('views.files.exitFullscreen')}
+            aria-label={t('views.files.exitFullscreen')}
           >
             <RiFullscreenExitLine className="h-4 w-4" />
           </Button>
@@ -2569,7 +2572,7 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
           {fileLoading ? (
             <div className="p-4 flex items-center gap-2 typography-ui text-muted-foreground">
               <RiLoader4Line className="h-4 w-4 animate-spin" />
-              Loading…
+              {t('views.files.loading')}
             </div>
           ) : fileError ? (
             <div className="p-4 typography-ui text-[color:var(--status-error)]">{fileError}</div>
@@ -2585,15 +2588,15 @@ const saveMdViewMode = React.useCallback((mode: 'preview' | 'edit') => {
             <div className="h-full overflow-auto p-4">
               {fileContent.length > 500 * 1024 && (
                 <div className="mb-3 rounded-md border border-status-warning/20 bg-status-warning/10 px-3 py-2 text-sm text-status-warning">
-                  This file is large ({Math.round(fileContent.length / 1024)}KB). Preview may be limited.
+                  {t('views.files.largeFilePreviewLimited', { size: Math.round(fileContent.length / 1024) })}
                 </div>
               )}
               <ErrorBoundary
                 fallback={
                   <div className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2">
-                    <div className="mb-1 font-medium text-destructive">Preview unavailable</div>
+                    <div className="mb-1 font-medium text-destructive">{t('views.files.previewUnavailable')}</div>
                     <div className="text-sm text-muted-foreground">
-                      Switch to edit mode to fix the issue.
+                      {t('views.files.switchToEditToFix')}
                     </div>
                   </div>
                 }

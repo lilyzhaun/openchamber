@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { updateDesktopSettings } from '@/lib/persistence';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/contexts/useI18n';
 
 type TunnelState =
   | 'checking'
@@ -175,6 +176,7 @@ const createPresetId = (): string => {
 };
 
 export const TunnelSettings: React.FC = () => {
+  const { t } = useI18n();
   const [state, setState] = React.useState<TunnelState>('checking');
   const [tunnelInfo, setTunnelInfo] = React.useState<TunnelInfo | null>(null);
   const [activeTunnelMode, setActiveTunnelMode] = React.useState<TunnelMode | null>(null);
@@ -473,7 +475,7 @@ export const TunnelSettings: React.FC = () => {
         setSelectedPresetId(payload.namedTunnelSelectedPresetId || '');
       }
     } catch {
-      toast.error('Failed to save tunnel settings');
+      toast.error(t('settings.tunnelSettings.failedSaveTunnelSettings'));
     } finally {
       setIsSavingMode(false);
     }
@@ -487,7 +489,7 @@ export const TunnelSettings: React.FC = () => {
         tunnelSessionTtlMs: nextSessionTtlMs,
       });
     } catch {
-      toast.error('Failed to save tunnel TTL settings');
+      toast.error(t('settings.tunnelSettings.failedSaveTunnelTtlSettings'));
     } finally {
       setIsSavingTtl(false);
     }
@@ -518,7 +520,7 @@ export const TunnelSettings: React.FC = () => {
         return next;
       });
     } catch {
-      toast.error('Failed to save named tunnel token');
+      toast.error(t('settings.tunnelSettings.failedSaveNamedTunnelToken'));
     }
   }, [sessionTokensByPresetId]);
 
@@ -534,8 +536,8 @@ export const TunnelSettings: React.FC = () => {
       if (tunnelMode === 'named') {
         if (!selectedPreset) {
           setState('idle');
-          setNamedValidationError('Select or add a named tunnel first');
-          toast.error('Select or add a named tunnel first');
+          setNamedValidationError(t('settings.tunnelSettings.selectOrAddNamedTunnelFirst'));
+          toast.error(t('settings.tunnelSettings.selectOrAddNamedTunnelFirst'));
           return;
         }
 
@@ -568,13 +570,13 @@ export const TunnelSettings: React.FC = () => {
       if (!res.ok || !data.ok) {
         if (tunnelMode === 'named' && typeof data.error === 'string' && data.error.includes('Named tunnel token is required')) {
           setState('idle');
-          setNamedValidationError('Named tunnel token is required before starting');
-          toast.error('Add a named tunnel token before starting');
+          setNamedValidationError(t('settings.tunnelSettings.namedTunnelTokenRequiredBeforeStart'));
+          toast.error(t('settings.tunnelSettings.addNamedTunnelTokenBeforeStart'));
           return;
         }
         setState('error');
-        setErrorMessage(data.error || 'Failed to start tunnel');
-        toast.error(data.error || 'Failed to start tunnel');
+        setErrorMessage(data.error || t('settings.tunnelSettings.failedStartTunnel'));
+        toast.error(data.error || t('settings.tunnelSettings.failedStartTunnel'));
         return;
       }
 
@@ -597,11 +599,11 @@ export const TunnelSettings: React.FC = () => {
         setTunnelMode(data.mode);
       }
       setState('active');
-      toast.success('Tunnel link ready');
+      toast.success(t('settings.tunnelSettings.tunnelLinkReady'));
     } catch {
       setState('error');
-      setErrorMessage('Failed to start tunnel');
-      toast.error('Failed to start tunnel');
+      setErrorMessage(t('settings.tunnelSettings.failedStartTunnel'));
+      toast.error(t('settings.tunnelSettings.failedStartTunnel'));
     }
   }, [
     namedTunnelPresets,
@@ -627,11 +629,11 @@ export const TunnelSettings: React.FC = () => {
       setActiveTunnelMode(null);
       setQrDataUrl(null);
       setState('idle');
-      toast.success('Tunnel stopped');
+      toast.success(t('settings.tunnelSettings.tunnelStopped'));
     } catch {
       setState('error');
-      setErrorMessage('Failed to stop tunnel');
-      toast.error('Failed to stop tunnel');
+      setErrorMessage(t('settings.tunnelSettings.failedStopTunnel'));
+      toast.error(t('settings.tunnelSettings.failedStopTunnel'));
     }
   }, []);
 
@@ -643,10 +645,10 @@ export const TunnelSettings: React.FC = () => {
     try {
       await navigator.clipboard.writeText(tunnelInfo.connectUrl);
       setCopied(true);
-      toast.success('Connect link copied');
+      toast.success(t('settings.tunnelSettings.connectLinkCopied'));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Failed to copy URL');
+      toast.error(t('settings.tunnelSettings.failedCopyUrl'));
     }
   }, [tunnelInfo?.connectUrl]);
 
@@ -692,7 +694,7 @@ export const TunnelSettings: React.FC = () => {
         namedTunnelPresets: presets,
       });
     } catch {
-      toast.error('Failed to save selected named tunnel');
+      toast.error(t('settings.tunnelSettings.failedSaveSelectedNamedTunnel'));
     }
   }, []);
 
@@ -713,20 +715,20 @@ export const TunnelSettings: React.FC = () => {
     const token = newPresetToken.trim();
 
     if (!name) {
-      toast.error('Tunnel name is required');
+      toast.error(t('settings.tunnelSettings.tunnelNameRequired'));
       return;
     }
     if (!hostname) {
-      toast.error('Named tunnel hostname is required');
+      toast.error(t('settings.tunnelSettings.namedTunnelHostnameRequired'));
       return;
     }
     if (!token) {
-      toast.error('Named tunnel token is required');
+      toast.error(t('settings.tunnelSettings.namedTunnelTokenRequired'));
       return;
     }
 
     if (namedTunnelPresets.some((preset) => preset.hostname === hostname)) {
-      toast.error('This hostname already exists');
+      toast.error(t('settings.tunnelSettings.hostnameAlreadyExists'));
       return;
     }
 
@@ -763,7 +765,7 @@ export const TunnelSettings: React.FC = () => {
       hostname: nextPreset.hostname,
       token,
     });
-    toast.success('Named tunnel saved');
+    toast.success(t('settings.tunnelSettings.namedTunnelSaved'));
   }, [namedTunnelPresets, newPresetHostname, newPresetName, newPresetToken, persistNamedTunnelToken, saveTunnelSettings, sessionTokensByPresetId]);
 
   const handleRemovePreset = React.useCallback(async (presetId: string) => {
@@ -808,7 +810,7 @@ export const TunnelSettings: React.FC = () => {
       namedTunnelPresetTokens: nextTokenMap,
     });
 
-    toast.success('Named tunnel removed');
+    toast.success(t('settings.tunnelSettings.namedTunnelRemoved'));
   }, [namedTunnelPresets, saveTunnelSettings, selectedPresetId, sessionTokensByPresetId]);
 
   const primaryCtaClass = 'gap-2 border-[var(--primary-base)] bg-[var(--primary-base)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)] hover:text-[var(--primary-foreground)]';
@@ -1139,14 +1141,14 @@ export const TunnelSettings: React.FC = () => {
                   <Input
                     value={newPresetName}
                     onChange={(event) => setNewPresetName(event.target.value)}
-                    placeholder="Tunnel name (e.g. Production)"
+                    placeholder={t('settings.tunnelSettings.tunnelNamePlaceholder')}
                     className="h-7"
                     disabled={isSavingMode || state === 'starting' || state === 'stopping'}
                   />
                   <Input
                     value={newPresetHostname}
                     onChange={(event) => setNewPresetHostname(event.target.value)}
-                    placeholder="Hostname (e.g. oc.example.com)"
+                    placeholder={t('settings.tunnelSettings.hostnamePlaceholder')}
                     className="h-7"
                     disabled={isSavingMode || state === 'starting' || state === 'stopping'}
                   />
@@ -1154,7 +1156,7 @@ export const TunnelSettings: React.FC = () => {
                     type="password"
                     value={newPresetToken}
                     onChange={(event) => setNewPresetToken(event.target.value)}
-                    placeholder="Token"
+                    placeholder={t('settings.tunnelSettings.tokenPlaceholder')}
                     className="h-7"
                     disabled={isSavingMode || state === 'starting' || state === 'stopping'}
                   />
@@ -1263,7 +1265,7 @@ export const TunnelSettings: React.FC = () => {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select saved tunnel" />
+                      <SelectValue placeholder={t('settings.tunnelSettings.selectSavedTunnel')} />
                     </SelectTrigger>
                     <SelectContent fitContent>
                       {namedTunnelPresets.map((preset) => (

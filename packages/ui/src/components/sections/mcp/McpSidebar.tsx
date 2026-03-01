@@ -16,6 +16,7 @@ import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { isMobileDeviceViaCSS } from '@/lib/device';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';
+import { useI18n } from '@/contexts/useI18n';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { SettingsProjectSelector } from '@/components/sections/shared/SettingsProjectSelector';
 import {
@@ -60,6 +61,7 @@ const StatusDot: React.FC<{ tone: StatusTone; enabled: boolean }> = ({ tone, ena
 };
 
 export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
+  const { t } = useI18n();
   const bgClass = 'bg-background';
 
   const { mcpServers, selectedMcpName, setSelectedMcp, setMcpDraft, loadMcpConfigs, deleteMcp } =
@@ -113,9 +115,9 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
     setIsDeleting(true);
     const success = await deleteMcp(deleteTarget.name);
     if (success) {
-      toast.success(`MCP server "${deleteTarget.name}" deleted`);
+      toast.success(t('settings.mcpSidebar.mcpServerDeleted', { name: deleteTarget.name }));
     } else {
-      toast.error('Failed to delete MCP server');
+      toast.error(t('settings.mcpSidebar.failedDeleteMcpServer'));
     }
     setDeleteTarget(null);
     setIsDeleting(false);
@@ -134,7 +136,7 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
             variant="ghost"
             className="h-7 w-7 px-0 -my-1 text-muted-foreground"
             onClick={handleCreateNew}
-            title="Add MCP server"
+            title={t('settings.mcpSidebar.addMcpServer')}
           >
             <RiAddLine className="h-3.5 w-3.5" />
           </ButtonSmall>

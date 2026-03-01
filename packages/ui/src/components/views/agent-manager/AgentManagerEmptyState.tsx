@@ -25,6 +25,7 @@ import { getWorktreeSetupCommands } from '@/lib/openchamberConfig';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import type { ProjectRef } from '@/lib/openchamberConfig';
 import type { CreateMultiRunParams, MultiRunFileAttachment } from '@/types/multirun';
+import { useI18n } from '@/contexts/useI18n';
 
 /** Max file size in bytes (10MB) */
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -53,6 +54,7 @@ export const AgentManagerEmptyState: React.FC<AgentManagerEmptyStateProps> = ({
   onCreateGroup,
   isCreating = false,
 }) => {
+  const { t } = useI18n();
   const [groupName, setGroupName] = React.useState('');
   const [prompt, setPrompt] = React.useState('');
   const [selectedModels, setSelectedModels] = React.useState<ModelSelectionWithId[]>([]);
@@ -158,7 +160,7 @@ export const AgentManagerEmptyState: React.FC<AgentManagerEmptyStateProps> = ({
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`File "${file.name}" is too large (max 10MB)`);
+        toast.error(t('agentManager.fileTooLarge', { fileName: file.name }));
         continue;
       }
 
@@ -182,12 +184,12 @@ export const AgentManagerEmptyState: React.FC<AgentManagerEmptyStateProps> = ({
         attachedCount++;
       } catch (error) {
         console.error('File attach failed', error);
-        toast.error(`Failed to attach "${file.name}"`);
+        toast.error(t('agentManager.attachFileFailed', { fileName: file.name }));
       }
     }
 
     if (attachedCount > 0) {
-      toast.success(`Attached ${attachedCount} file${attachedCount > 1 ? 's' : ''}`);
+      toast.success(t('agentManager.attachedFiles', { count: attachedCount, suffix: attachedCount > 1 ? 's' : '' }));
     }
 
     if (fileInputRef.current) {
@@ -255,7 +257,7 @@ export const AgentManagerEmptyState: React.FC<AgentManagerEmptyStateProps> = ({
       setBaseBranch('HEAD');
     } catch (error) {
       console.error('Failed to create agent group:', error);
-      toast.error('Failed to create agent group');
+      toast.error(t('agentManager.failedToCreateGroup'));
     } finally {
       setIsSubmitting(false);
     }

@@ -12,6 +12,7 @@ import { useDeviceInfo } from '@/lib/device';
 import { opencodeClient } from '@/lib/opencode/client';
 import { RiCloseLine, RiInformationLine, RiRobot2Line, RiSubtractLine, RiUser3Line, RiFolderLine } from '@remixicon/react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/contexts/useI18n';
 import { ModelSelector } from './ModelSelector';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
@@ -182,6 +183,7 @@ const buildPermissionConfigWithGlobal = (
 
 
 export const AgentsPage: React.FC = () => {
+  const { t } = useI18n();
   const { isMobile } = useDeviceInfo();
   const { selectedAgentName, getAgentByName, createAgent, updateAgent, agents, agentDraft, setAgentDraft } = useAgentsStore();
   useConfigStore();
@@ -378,7 +380,7 @@ export const AgentsPage: React.FC = () => {
   const applyPendingRule = React.useCallback((action: PermissionAction) => {
     const name = pendingRuleName.trim();
     if (!name) {
-      toast.error('Permission name is required');
+      toast.error(t('settings.agentsPage.permissionNameRequired'));
       return;
     }
 
@@ -530,13 +532,13 @@ export const AgentsPage: React.FC = () => {
     const agentName = isNewAgent ? draftName.trim().replace(/\s+/g, '-') : selectedAgentName?.trim();
 
     if (!agentName) {
-      toast.error('Agent name is required');
+      toast.error(t('settings.agentsPage.agentNameRequired'));
       return;
     }
 
     // Check for duplicate name when creating new agent
     if (isNewAgent && agents.some((a) => a.name === agentName)) {
-      toast.error('An agent with this name already exists');
+      toast.error(t('settings.agentsPage.agentNameAlreadyExists'));
       return;
     }
 
@@ -631,13 +633,13 @@ export const AgentsPage: React.FC = () => {
                     <Input
                       value={draftName}
                       onChange={(e) => setDraftName(e.target.value)}
-                      placeholder="agent-name"
+                      placeholder={t('settings.agentsPage.agentNamePlaceholder')}
                       className="h-7 w-40 px-2"
                     />
                   </div>
                   <Select value={draftScope} onValueChange={(v) => setDraftScope(v as AgentScope)}>
                     <SelectTrigger className="w-fit min-w-[100px]">
-                      <SelectValue placeholder="Scope" />
+                      <SelectValue placeholder={t('settings.agentsPage.scopePlaceholder')} />
                     </SelectTrigger>
                     <SelectContent align="end">
                       <SelectItem value="user">
@@ -664,7 +666,7 @@ export const AgentsPage: React.FC = () => {
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What does this agent do?"
+                  placeholder={t('settings.agentsPage.descriptionPlaceholder')}
                   rows={2}
                   className="w-full resize-none min-h-[60px] bg-transparent"
                 />
@@ -796,7 +798,7 @@ export const AgentsPage: React.FC = () => {
                     onClick={() => setTemperature(undefined)}
                     className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
                     aria-label="Clear temperature override"
-                    title="Clear"
+                    title={t('settings.agentsPage.clear')}
                   >
                     <RiCloseLine className="h-3.5 w-3.5" />
                   </ButtonSmall>
@@ -840,7 +842,7 @@ export const AgentsPage: React.FC = () => {
                     onClick={() => setTopP(undefined)}
                     className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
                     aria-label="Clear top p override"
-                    title="Clear"
+                    title={t('settings.agentsPage.clear')}
                   >
                     <RiCloseLine className="h-3.5 w-3.5" />
                   </ButtonSmall>
@@ -863,7 +865,7 @@ export const AgentsPage: React.FC = () => {
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="You are an expert coding assistant..."
+              placeholder={t('settings.agentsPage.systemPromptPlaceholder')}
               rows={8}
               className="w-full font-mono typography-meta min-h-[120px] max-h-[60vh] bg-transparent resize-y"
             />
@@ -1064,7 +1066,7 @@ export const AgentsPage: React.FC = () => {
                   <Input
                     value={pendingRulePattern}
                     onChange={(e) => setPendingRulePattern(e.target.value)}
-                    placeholder="Pattern (e.g. *)"
+                    placeholder={t('settings.agentsPage.patternPlaceholder')}
                     className="h-7 flex-1 font-mono text-xs"
                   />
 

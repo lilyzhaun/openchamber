@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAgentGroupsStore, type AgentGroup } from '@/stores/useAgentGroupsStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useI18n } from '@/contexts/useI18n';
 
 const formatRelativeTime = (timestamp: number): string => {
   const now = Date.now();
@@ -49,6 +50,7 @@ interface AgentGroupItemProps {
 }
 
 const AgentGroupItem: React.FC<AgentGroupItemProps> = ({ group, isSelected, onSelect }) => {
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -57,17 +59,17 @@ const AgentGroupItem: React.FC<AgentGroupItemProps> = ({ group, isSelected, onSe
   const handleDeleteGroup = React.useCallback(async () => {
     if (isDeleting) return;
     setIsDeleting(true);
-    toast.info(`Deleting "${group.name}"...`);
+    toast.info(t('agentManager.deletingGroup', { name: group.name }));
     const ok = await deleteGroup(group.name);
     if (ok) {
-      toast.success(`Deleted "${group.name}"`);
+      toast.success(t('agentManager.groupDeleted', { name: group.name }));
     } else {
       const error = useAgentGroupsStore.getState().error;
-      toast.error(error || `Failed to delete "${group.name}"`);
+      toast.error(error || t('agentManager.failedToDeleteGroup', { name: group.name }));
     }
     setIsDeleting(false);
     setConfirmOpen(false);
-  }, [deleteGroup, group.name, isDeleting]);
+  }, [deleteGroup, group.name, isDeleting, t]);
   
   return (
     <>

@@ -8,6 +8,7 @@ import { RiDiscordFill, RiGithubFill, RiTwitterXFill } from '@remixicon/react';
 import { debugUtils } from '@/lib/debug';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';
+import { useI18n } from '@/contexts/useI18n';
 
 declare const __APP_VERSION__: string | undefined;
 
@@ -20,6 +21,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({
   open,
   onOpenChange,
 }) => {
+  const { t } = useI18n();
   const [version, setVersion] = React.useState<string | null>(null);
   const [isCopyingDiagnostics, setIsCopyingDiagnostics] = React.useState(false);
   const [copiedDiagnostics, setCopiedDiagnostics] = React.useState(false);
@@ -32,8 +34,8 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({
     setCopiedDiagnostics(false);
     try {
       if (!diagnosticsReport) {
-        toast.error('Copy failed', {
-          description: 'Diagnostics not ready yet. Wait a second and retry.',
+        toast.error(t('ui.about.copyFailed'), {
+          description: t('ui.about.diagnosticsNotReady'),
         });
         return;
       }
@@ -41,14 +43,14 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({
       const result = await debugUtils.copyTextToClipboard(diagnosticsReport);
       if (result.ok) {
         setCopiedDiagnostics(true);
-        toast.success('Diagnostics copied');
+        toast.success(t('ui.about.diagnosticsCopied'));
       } else {
-        toast.error('Copy failed', {
+        toast.error(t('ui.about.copyFailed'), {
           description: result.error,
         });
       }
     } catch (error) {
-      toast.error('Copy failed');
+      toast.error(t('ui.about.copyFailed'));
       console.error('Failed to copy diagnostics:', error);
     } finally {
       setIsCopyingDiagnostics(false);

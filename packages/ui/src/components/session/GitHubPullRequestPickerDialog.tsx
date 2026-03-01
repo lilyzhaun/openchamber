@@ -37,6 +37,7 @@ import type {
   GitHubPullRequestsListResult,
   GitRemote,
 } from '@/lib/api/types';
+import { useI18n } from '@/contexts/useI18n';
 
 const parsePullRequestNumber = (value: string): number | null => {
   const trimmed = value.trim();
@@ -106,6 +107,7 @@ export function GitHubPullRequestPickerDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useI18n();
   const { github } = useRuntimeAPIs();
   const githubAuthStatus = useGitHubAuthStore((state) => state.status);
   const githubAuthChecked = useGitHubAuthStore((state) => state.hasChecked);
@@ -197,7 +199,7 @@ export function GitHubPullRequestPickerDialog({
       setHasMore(Boolean(next.hasMore));
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error('Failed to load more PRs', { description: message });
+      toast.error(t('session.githubPrPicker.failedLoadMorePrs'), { description: message });
     } finally {
       setIsLoadingMore(false);
     }
@@ -459,11 +461,11 @@ export function GitHubPullRequestPickerDialog({
 
   const startSession = React.useCallback(async (number: number) => {
     if (!projectDirectory) {
-      toast.error('No active project');
+      toast.error(t('session.githubPrPicker.noActiveProject'));
       return;
     }
     if (!github?.prContext) {
-      toast.error('GitHub runtime API unavailable');
+      toast.error(t('session.githubPrPicker.githubApiUnavailable'));
       return;
     }
     if (startingNumber) return;
@@ -471,15 +473,15 @@ export function GitHubPullRequestPickerDialog({
     try {
       const prContext = await github.prContext(projectDirectory, number, { includeDiff, includeCheckDetails: false });
       if (prContext.connected === false) {
-        toast.error('GitHub not connected');
+        toast.error(t('session.githubPrPicker.githubNotConnected'));
         return;
       }
       if (!prContext.repo) {
-        toast.error('Repo not resolvable', { description: 'origin remote must be a GitHub URL' });
+        toast.error(t('session.githubPrPicker.repoNotResolvable'), { description: t('session.githubPrPicker.originMustBeGithubUrl') });
         return;
       }
       if (!prContext.pr) {
-        toast.error('PR not found');
+        toast.error(t('session.githubPrPicker.prNotFound'));
         return;
       }
 
@@ -515,7 +517,7 @@ export function GitHubPullRequestPickerDialog({
       const modelID = defaultModel?.modelID || configState.currentModelId || lastUsedProvider?.modelID;
       const agentName = resolveDefaultAgentName() || configState.currentAgentName || undefined;
       if (!providerID || !modelID) {
-        toast.error('No model selected');
+        toast.error(t('session.githubPrPicker.noModelSelected'));
         return;
       }
 
@@ -615,13 +617,13 @@ Nice-to-have:
         ],
       }).catch((e) => {
         const message = e instanceof Error ? e.message : String(e);
-        toast.error('Failed to send PR context', { description: message });
+        toast.error(t('session.githubPrPicker.failedSendPrContext'), { description: message });
       });
 
-      toast.success('Session created from PR');
+      toast.success(t('session.githubPrPicker.sessionCreatedFromPr'));
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error(createInWorktree ? 'PR worktree failed' : 'Failed to start session', { description: message });
+      toast.error(createInWorktree ? t('session.githubPrPicker.prWorktreeFailed') : t('session.githubPrPicker.failedStartSession'), { description: message });
     } finally {
       setStartingNumber(null);
     }
@@ -644,17 +646,17 @@ Nice-to-have:
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <RiGitPullRequestLine className="h-5 w-5" />
-            New Session From GitHub PR
+            {t('session.githubPrPicker.newSessionFromGithubPr')}
           </DialogTitle>
           <DialogDescription>
-            Seeds a new session with hidden PR context (title/body/comments/files/checks).
+            {t('session.githubPrPicker.dialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="relative mt-2">
           <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by title or #123, or paste PR URL"
+            placeholder={t('session.githubPrPicker.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9 w-full"
@@ -663,26 +665,26 @@ Nice-to-have:
 
         <div className="flex-1 overflow-y-auto mt-2">
           {!projectDirectory ? (
-            <div className="text-center text-muted-foreground py-8">No active project selected.</div>
+            <div className="text-center text-muted-foreground py-8">{t('session.githubPrPicker.noActiveProjectSelected')}</div>
           ) : null}
 
           {!github ? (
-            <div className="text-center text-muted-foreground py-8">GitHub runtime API unavailable.</div>
+            <div className="text-center text-muted-foreground py-8">{t('session.githubPrPicker.githubApiUnavailable')}</div>
           ) : null}
 
           {isLoading ? (
             <div className="text-center text-muted-foreground py-8 flex items-center justify-center gap-2">
               <RiLoader4Line className="h-4 w-4 animate-spin" />
-              Loading pull requests...
+              {t('session.githubPrPicker.loadingPullRequests')}
             </div>
           ) : null}
 
           {connected === false ? (
             <div className="text-center text-muted-foreground py-8 space-y-3">
-              <div>GitHub not connected. Connect your GitHub account in settings.</div>
+              <div>{t('session.githubPrPicker.githubNotConnectedHint')}</div>
               <div className="flex justify-center">
                 <Button variant="outline" size="sm" onClick={openGitHubSettings}>
-                  Open settings
+                  {t('session.githubPrPicker.openSettings')}
                 </Button>
               </div>
             </div>
@@ -702,7 +704,7 @@ Nice-to-have:
             >
               <span className="typography-meta text-muted-foreground w-5 text-right flex-shrink-0">#</span>
               <p className="flex-1 min-w-0 typography-small text-foreground truncate ml-0.5">
-                Use PR #{directNumber}
+                {t('session.githubPrPicker.usePrNumber', { number: directNumber })}
               </p>
               <div className="flex-shrink-0 h-5 flex items-center mr-2">
                 {startingNumber === directNumber ? (
@@ -713,7 +715,7 @@ Nice-to-have:
           ) : null}
 
           {filtered.length === 0 && !isLoading && connected && github && projectDirectory ? (
-            <div className="text-center text-muted-foreground py-8">{query ? 'No PRs found' : 'No open PRs found'}</div>
+            <div className="text-center text-muted-foreground py-8">{query ? t('session.githubPrPicker.noPrsFound') : t('session.githubPrPicker.noOpenPrsFound')}</div>
           ) : null}
 
           {filtered.map((pr) => {
@@ -739,7 +741,7 @@ Nice-to-have:
                   <p className="typography-small text-foreground truncate ml-0.5">{pr.title}</p>
                   {createInWorktree && disabledByWorktree ? (
                     <p className="typography-micro text-muted-foreground mt-0.5 ml-0.5">
-                      PR worktree disabled: branch already exists or is in use ({pr.head})
+                      {t('session.githubPrPicker.prWorktreeDisabled', { head: pr.head })}
                     </p>
                   ) : null}
                 </div>
@@ -780,10 +782,10 @@ Nice-to-have:
                 {isLoadingMore ? (
                   <span className="inline-flex items-center gap-2">
                     <RiLoader4Line className="h-4 w-4 animate-spin" />
-                    Loading...
+                    {t('session.githubPrPicker.loading')}
                   </span>
                 ) : (
-                  'Load more'
+                  t('session.githubPrPicker.loadMore')
                 )}
               </button>
             </div>
@@ -791,7 +793,7 @@ Nice-to-have:
         </div>
 
         <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-          <p className="typography-meta text-muted-foreground font-medium mb-2">Actions</p>
+          <p className="typography-meta text-muted-foreground font-medium mb-2">{t('session.githubPrPicker.actions')}</p>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
               <div
@@ -823,7 +825,7 @@ Nice-to-have:
                     <RiCheckboxBlankLine className="h-4 w-4" />
                   )}
                 </button>
-                <span className="typography-meta text-muted-foreground">Create in PR worktree</span>
+                <span className="typography-meta text-muted-foreground">{t('session.githubPrPicker.createInPrWorktree')}</span>
               </div>
 
               <div
@@ -855,7 +857,7 @@ Nice-to-have:
                     <RiCheckboxBlankLine className="h-4 w-4" />
                   )}
                 </button>
-                <span className="typography-meta text-muted-foreground">Include full diff</span>
+                <span className="typography-meta text-muted-foreground">{t('session.githubPrPicker.includeFullDiff')}</span>
               </div>
             </div>
 
@@ -865,12 +867,12 @@ Nice-to-have:
                 <Button variant="outline" size="sm" asChild>
                   <a href={repoUrl} target="_blank" rel="noopener noreferrer">
                     <RiExternalLinkLine className="size-4" />
-                    Open Repo
+                    {t('session.githubPrPicker.openRepo')}
                   </a>
                 </Button>
               ) : null}
               <Button variant="outline" size="sm" onClick={refresh} disabled={isLoading || Boolean(startingNumber)}>
-                Refresh
+                {t('session.githubPrPicker.refresh')}
               </Button>
             </div>
           </div>

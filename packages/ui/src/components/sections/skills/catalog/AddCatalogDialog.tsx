@@ -26,6 +26,7 @@ import { updateDesktopSettings } from '@/lib/persistence';
 import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop';
 import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
 import { useGitIdentitiesStore } from '@/stores/useGitIdentitiesStore';
+import { useI18n } from '@/contexts/useI18n';
 
 const generateCatalogId = () => `custom:${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -77,6 +78,7 @@ interface AddCatalogDialogProps {
 }
 
 export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpenChange }) => {
+  const { t } = useI18n();
   const { scanRepo, loadCatalog, isScanning } = useSkillsCatalogStore();
   const defaultGitIdentityId = useGitIdentitiesStore((s) => s.defaultGitIdentityId);
   const loadDefaultGitIdentityId = useGitIdentitiesStore((s) => s.loadDefaultGitIdentityId);
@@ -126,7 +128,7 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
   const handleScan = async () => {
     const trimmedSource = source.trim();
     if (!trimmedSource) {
-      toast.error('Repository source is required');
+      toast.error(t('settings.addCatalogDialog.repositorySourceRequired'));
       return;
     }
 
@@ -146,7 +148,7 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
     if (!result.ok) {
       if (result.error?.kind === 'authRequired') {
         if (isVSCodeRuntime()) {
-          toast.error('Private repositories are not supported in VS Code yet');
+          toast.error(t('settings.addCatalogDialog.privateReposNotSupportedInVSCode'));
           return;
         }
 
@@ -161,25 +163,25 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
               : ids[0].id;
           setGitIdentityId(preferred);
         }
-        toast.error('Authentication required. Select a Git identity and scan again.');
+        toast.error(t('settings.addCatalogDialog.authRequiredScanAgain'));
         return;
       }
 
-      toast.error(result.error?.message || 'Failed to scan repository');
+      toast.error(result.error?.message || t('settings.addCatalogDialog.failedScanRepository'));
       return;
     }
 
     const count = result.items?.length || 0;
     setScanCount(count);
     if (count === 0) {
-      toast.error('No skills found in this repository');
+      toast.error(t('settings.addCatalogDialog.noSkillsFoundInRepository'));
       setScanOk(false);
       return;
     }
 
     setIdentityOptions([]);
     setScanOk(true);
-    toast.success(`Found ${count} skill(s)`);
+    toast.success(t('settings.addCatalogDialog.foundSkills', { count }));
   };
 
   const handleAdd = async () => {
@@ -188,22 +190,22 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
     const trimmedSubpath = subpath.trim();
 
     if (!trimmedLabel) {
-      toast.error('Catalog name is required');
+      toast.error(t('settings.addCatalogDialog.catalogNameRequired'));
       return;
     }
 
     if (!trimmedSource) {
-      toast.error('Repository source is required');
+      toast.error(t('settings.addCatalogDialog.repositorySourceRequired'));
       return;
     }
 
     if (!scanOk) {
-      toast.error('Scan the repository before adding this catalog');
+      toast.error(t('settings.addCatalogDialog.scanBeforeAddCatalog'));
       return;
     }
 
     if (isDuplicate) {
-      toast.error('This catalog already exists');
+      toast.error(t('settings.addCatalogDialog.catalogAlreadyExists'));
       return;
     }
 
@@ -220,11 +222,11 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
     try {
       await updateDesktopSettings({ skillCatalogs: updated });
       setExistingCatalogs(updated);
-      toast.success('Catalog added');
+      toast.success(t('settings.addCatalogDialog.catalogAdded'));
       await loadCatalog({ refresh: true });
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save catalog');
+      toast.error(error instanceof Error ? error.message : t('settings.addCatalogDialog.failedSaveCatalog'));
     }
   };
 
@@ -241,7 +243,7 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="typography-ui-label text-foreground">Catalog name</label>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Team Skills" />
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t('settings.addCatalogDialog.catalogNamePlaceholder')} />
           </div>
 
           <div className="space-y-2">
@@ -253,7 +255,7 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
                 setScanOk(false);
                 setScanCount(null);
               }}
-              placeholder="owner/repo or git@github.com:owner/repo.git"
+              placeholder={t('settings.addCatalogDialog.repositoryPlaceholder')}
             />
             <p className="typography-micro text-muted-foreground">
               Public repos work everywhere. Private repos require SSH identity (Desktop/Web only).
@@ -269,7 +271,7 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
                 setScanOk(false);
                 setScanCount(null);
               }}
-              placeholder="e.g. skills"
+              placeholder={t('settings.addCatalogDialog.subpathPlaceholder')}
             />
           </div>
 

@@ -9,8 +9,10 @@ import {
 import { toast } from '@/components/ui';
 import { useUIStore } from '@/stores/useUIStore';
 import { copyTextToClipboard } from '@/lib/clipboard';
+import { useI18n } from '@/contexts/useI18n';
 
 export const OpenCodeStatusDialog: React.FC = () => {
+  const { t } = useI18n();
   const {
     isOpenCodeStatusDialogOpen,
     setOpenCodeStatusDialogOpen,
@@ -24,11 +26,11 @@ export const OpenCodeStatusDialog: React.FC = () => {
 
     const result = await copyTextToClipboard(openCodeStatusText);
     if (result.ok) {
-      toast.success('Copied', { description: 'OpenCode status copied to clipboard.' });
+      toast.success(t('ui.openCodeStatus.copied'), { description: t('ui.openCodeStatus.copiedDescription') });
       return;
     }
-    toast.error('Copy failed');
-  }, [openCodeStatusText]);
+    toast.error(t('ui.openCodeStatus.copyFailed'));
+  }, [openCodeStatusText, t]);
 
   return (
     <Dialog open={isOpenCodeStatusDialogOpen} onOpenChange={setOpenCodeStatusDialogOpen}>

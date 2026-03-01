@@ -98,10 +98,10 @@ export const ProjectsPage: React.FC = () => {
     void uploadProjectIcon(selectedProject.id, file)
       .then((result) => {
         if (!result.ok) {
-          toast.error(result.error || 'Failed to upload project icon');
+          toast.error(result.error || t('settings.projectsPage.failedUploadProjectIcon'));
           return;
         }
-        toast.success('Project icon updated');
+        toast.success(t('settings.projectsPage.projectIconUpdated'));
       })
       .finally(() => {
         setIsUploadingIcon(false);
@@ -117,10 +117,10 @@ export const ProjectsPage: React.FC = () => {
     void removeProjectIcon(selectedProject.id)
       .then((result) => {
         if (!result.ok) {
-          toast.error(result.error || 'Failed to remove project icon');
+          toast.error(result.error || t('settings.projectsPage.failedRemoveProjectIcon'));
           return;
         }
-        toast.success('Custom project icon removed');
+        toast.success(t('settings.projectsPage.customProjectIconRemoved'));
       })
       .finally(() => {
         setIsRemovingCustomIcon(false);
@@ -136,14 +136,14 @@ export const ProjectsPage: React.FC = () => {
     void discoverProjectIcon(selectedProject.id)
       .then((result) => {
         if (!result.ok) {
-          toast.error(result.error || 'Failed to discover project icon');
+          toast.error(result.error || t('settings.projectsPage.failedDiscoverProjectIcon'));
           return;
         }
         if (result.skipped) {
-          toast.success('Custom icon already set for this project');
+          toast.success(t('settings.projectsPage.customIconAlreadySet'));
           return;
         }
-        toast.success('Project icon discovered');
+        toast.success(t('settings.projectsPage.projectIconDiscovered'));
       })
       .finally(() => {
         setIsDiscoveringIcon(false);
@@ -283,7 +283,7 @@ export const ProjectsPage: React.FC = () => {
               </div>
               {hasImageIcon && iconPreviewUrl && (
                 <div className="mt-2 flex items-center gap-2">
-                  <span className="typography-meta text-muted-foreground">Preview</span>
+                  <span className="typography-meta text-muted-foreground">{t('settings.projectsPage.preview')}</span>
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-[var(--surface-elevated)] p-1">
                     <span
                       className="inline-flex h-4 w-4 items-center justify-center overflow-hidden rounded-[2px]"
@@ -322,7 +322,7 @@ export const ProjectsPage: React.FC = () => {
                     onClick={() => setIconBackground(null)}
                     className="h-7 w-7 p-0"
                     aria-label="Clear icon background"
-                    title="Clear background"
+                    title={t('settings.projectsPage.clearBackground')}
                     disabled={!iconBackground}
                   >
                     <RiCloseLine className="h-3.5 w-3.5" />
@@ -338,7 +338,7 @@ export const ProjectsPage: React.FC = () => {
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploadingIcon}
                     >
-                      {isUploadingIcon ? 'Uploading...' : 'Upload Icon'}
+                      {isUploadingIcon ? t('settings.projectsPage.uploading') : t('settings.projectsPage.uploadIcon')}
                     </ButtonSmall>
                     <ButtonSmall
                       size="xs"
@@ -347,7 +347,7 @@ export const ProjectsPage: React.FC = () => {
                       onClick={() => void handleDiscoverIcon()}
                       disabled={isDiscoveringIcon}
                     >
-                      {isDiscoveringIcon ? 'Discovering...' : 'Discover Favicon'}
+                      {isDiscoveringIcon ? t('settings.projectsPage.discovering') : t('settings.projectsPage.discoverFavicon')}
                     </ButtonSmall>
                   </>
                 )}
@@ -359,7 +359,7 @@ export const ProjectsPage: React.FC = () => {
                     onClick={() => void handleRemoveCustomIcon()}
                     disabled={isRemovingCustomIcon}
                   >
-                    {isRemovingCustomIcon ? 'Removing...' : 'Remove Custom Icon'}
+                    {isRemovingCustomIcon ? t('settings.projectsPage.removing') : t('settings.projectsPage.removeCustomIcon')}
                   </ButtonSmall>
                 )}
               </div>

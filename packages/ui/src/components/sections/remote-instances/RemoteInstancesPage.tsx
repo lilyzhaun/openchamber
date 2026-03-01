@@ -38,6 +38,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { SettingsPageLayout } from '@/components/sections/shared/SettingsPageLayout';
 import { useDesktopSshStore } from '@/stores/useDesktopSshStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useI18n } from '@/contexts/useI18n';
 import { toast } from '@/components/ui';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import {
@@ -284,6 +285,7 @@ const normalizeForSave = (instance: DesktopSshInstance): DesktopSshInstance => {
 };
 
 export const RemoteInstancesPage: React.FC = () => {
+  const { t } = useI18n();
   const instances = useDesktopSshStore((state) => state.instances);
   const statusesById = useDesktopSshStore((state) => state.statusesById);
   const importCandidates = useDesktopSshStore((state) => state.importCandidates);
@@ -375,7 +377,7 @@ export const RemoteInstancesPage: React.FC = () => {
     const normalized = normalizeForSave(draft);
 
     if (!normalized.sshCommand.trim()) {
-      toast.error('SSH command is required');
+      toast.error(t('settings.remoteInstancesPage.sshCommandRequired'));
       return;
     }
 
@@ -414,9 +416,9 @@ export const RemoteInstancesPage: React.FC = () => {
 
     try {
       await upsertInstance(normalized);
-      toast.success('SSH instance saved');
+      toast.success(t('settings.remoteInstancesPage.sshInstanceSaved'));
     } catch (error) {
-      toast.error('Failed to save SSH instance', {
+      toast.error(t('settings.remoteInstancesPage.failedSaveSshInstance'), {
         description: error instanceof Error ? error.message : String(error),
       });
     }
@@ -428,10 +430,10 @@ export const RemoteInstancesPage: React.FC = () => {
       try {
         await createFromCommand(id, `ssh ${destination}`, host);
         setSelectedId(id);
-        toast.success('SSH instance created');
+        toast.success(t('settings.remoteInstancesPage.sshInstanceCreated'));
         return true;
       } catch (error) {
-        toast.error('Failed to create SSH instance', {
+        toast.error(t('settings.remoteInstancesPage.failedCreateSshInstance'), {
           description: error instanceof Error ? error.message : String(error),
         });
         return false;
@@ -467,7 +469,7 @@ export const RemoteInstancesPage: React.FC = () => {
       return;
     }
     if (!destination) {
-      toast.error('Destination is required');
+      toast.error(t('settings.remoteInstancesPage.destinationRequired'));
       return;
     }
 
@@ -508,7 +510,7 @@ export const RemoteInstancesPage: React.FC = () => {
 
       await upsertInstance(nextInstance);
       await connect(nextInstance.id);
-      toast.success('Retried with a random local port');
+      toast.success(t('settings.remoteInstancesPage.retriedWithRandomLocalPort'));
     }
   }, [connect, selectedInstance, upsertInstance]);
 
@@ -568,12 +570,12 @@ export const RemoteInstancesPage: React.FC = () => {
 
   const handleCopyAllLogs = React.useCallback(() => {
     if (!logLinesText.trim()) {
-      toast.error('No logs to copy');
+      toast.error(t('settings.remoteInstancesPage.noLogsToCopy'));
       return;
     }
     void copyTextToClipboard(logLinesText).then((result) => {
       if (result.ok) {
-        toast.success('Logs copied');
+        toast.success(t('settings.remoteInstancesPage.logsCopied'));
       }
     });
   }, [logLinesText]);
@@ -585,9 +587,9 @@ export const RemoteInstancesPage: React.FC = () => {
     try {
       await desktopSshLogsClear(draft.id);
       setLogDialogLines([]);
-      toast.success('Logs cleared');
+      toast.success(t('settings.remoteInstancesPage.logsCleared'));
     } catch (error) {
-      toast.error('Failed to clear logs', {
+      toast.error(t('settings.remoteInstancesPage.failedClearLogs'), {
         description: error instanceof Error ? error.message : String(error),
       });
     }
@@ -595,13 +597,13 @@ export const RemoteInstancesPage: React.FC = () => {
 
   const handleOpenCurrentInstance = React.useCallback(async () => {
     if (!status?.localUrl) {
-      toast.error('Instance URL is not available yet');
+      toast.error(t('settings.remoteInstancesPage.instanceUrlNotAvailableYet'));
       return;
     }
 
     const target = status.localUrl.trim();
     if (!target) {
-      toast.error('Instance URL is not available yet');
+      toast.error(t('settings.remoteInstancesPage.instanceUrlNotAvailableYet'));
       return;
     }
 
@@ -618,7 +620,7 @@ export const RemoteInstancesPage: React.FC = () => {
     void operation
       .catch((error) => {
         const actionLabel = canDisconnect ? (isReady ? 'disconnect' : 'cancel connection') : 'connect';
-        toast.error(`Failed to ${actionLabel}`, {
+        toast.error(t('settings.remoteInstancesPage.failedAction', { actionLabel }), {
           description: error instanceof Error ? error.message : String(error),
         });
       })
@@ -643,7 +645,7 @@ export const RemoteInstancesPage: React.FC = () => {
 
     void operation
       .catch((error) => {
-        toast.error('Retry failed', {
+        toast.error(t('settings.remoteInstancesPage.retryFailed'), {
           description: error instanceof Error ? error.message : String(error),
         });
       })
@@ -742,7 +744,7 @@ export const RemoteInstancesPage: React.FC = () => {
               <Input
                 value={patternDestination}
                 onChange={(event) => setPatternDestination(event.target.value)}
-                placeholder="user@host"
+                placeholder={t('settings.remoteInstancesPage.patternDestinationPlaceholder')}
                 autoFocus
               />
               <div className="flex items-center justify-end gap-2">
@@ -827,10 +829,10 @@ export const RemoteInstancesPage: React.FC = () => {
                 void removeInstance(draft.id)
                   .then(() => {
                     setSelectedId(null);
-                    toast.success('SSH instance removed');
+                    toast.success(t('settings.remoteInstancesPage.sshInstanceRemoved'));
                   })
                   .catch((err) => {
-                    toast.error('Failed to remove SSH instance', {
+                    toast.error(t('settings.remoteInstancesPage.failedRemoveSshInstance'), {
                       description: err instanceof Error ? err.message : String(err),
                     });
                   });
@@ -866,7 +868,7 @@ export const RemoteInstancesPage: React.FC = () => {
                   sshCommand: event.target.value,
                 }))
               }
-              placeholder="ssh -J jump user@host"
+              placeholder={t('settings.remoteInstancesPage.sshCommandPlaceholder')}
             />
           </div>
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
@@ -880,7 +882,7 @@ export const RemoteInstancesPage: React.FC = () => {
                   nickname: event.target.value,
                 }))
               }
-              placeholder="Production Host"
+              placeholder={t('settings.remoteInstancesPage.nicknamePlaceholder')}
             />
           </div>
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
@@ -912,7 +914,7 @@ export const RemoteInstancesPage: React.FC = () => {
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
             <div className="w-56 shrink-0">
               <HintLabel
-                label="Mode"
+                label={t('settings.remoteInstancesPage.labelMode')}
                 hint="Managed installs/updates and starts OpenChamber remotely. External assumes it is already running."
               />
             </div>
@@ -929,7 +931,7 @@ export const RemoteInstancesPage: React.FC = () => {
               }
             >
               <SelectTrigger className="h-7 w-fit min-w-[140px]">
-                <SelectValue placeholder="Select mode" />
+                <SelectValue placeholder={t('settings.remoteInstancesPage.selectMode')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="managed">Managed (auto start)</SelectItem>
@@ -941,7 +943,7 @@ export const RemoteInstancesPage: React.FC = () => {
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
             <div className="w-56 shrink-0">
               <HintLabel
-                label="Preferred remote port"
+                label={t('settings.remoteInstancesPage.labelPreferredRemotePort')}
                 hint="Port OpenChamber should use on the remote host. Leave empty to let the runtime choose."
               />
             </div>
@@ -978,7 +980,7 @@ export const RemoteInstancesPage: React.FC = () => {
             <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
               <div className="w-56 shrink-0">
                 <HintLabel
-                  label="Install method"
+                  label={t('settings.remoteInstancesPage.labelInstallMethod')}
                   hint="How OpenChamber gets installed/updated remotely when mode is Managed."
                 />
               </div>
@@ -998,7 +1000,7 @@ export const RemoteInstancesPage: React.FC = () => {
                 }
               >
                 <SelectTrigger className="h-7 w-fit min-w-[140px]">
-                  <SelectValue placeholder="Select install method" />
+                  <SelectValue placeholder={t('settings.remoteInstancesPage.selectInstallMethod')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bun">bun</SelectItem>
@@ -1014,7 +1016,7 @@ export const RemoteInstancesPage: React.FC = () => {
             <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
               <div className="w-56 shrink-0">
                 <HintLabel
-                  label="Keep server running"
+                  label={t('settings.remoteInstancesPage.labelKeepServerRunning')}
                   hint="If enabled, OpenChamber daemon is left running remotely when you disconnect."
                 />
               </div>
@@ -1046,7 +1048,7 @@ export const RemoteInstancesPage: React.FC = () => {
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
             <div className="w-56 shrink-0">
               <HintLabel
-                label="Bind host"
+                label={t('settings.remoteInstancesPage.labelBindHost')}
                 hint="Network interface for the main local URL. Use 127.0.0.1/localhost for local-only access."
               />
             </div>
@@ -1069,7 +1071,7 @@ export const RemoteInstancesPage: React.FC = () => {
               }}
             >
               <SelectTrigger className="h-7 w-fit min-w-[140px]">
-                <SelectValue placeholder="Select bind host" />
+                <SelectValue placeholder={t('settings.remoteInstancesPage.selectBindHost')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="127.0.0.1">127.0.0.1</SelectItem>
@@ -1082,7 +1084,7 @@ export const RemoteInstancesPage: React.FC = () => {
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
             <div className="w-56 shrink-0">
               <HintLabel
-                label="Preferred local port"
+                label={t('settings.remoteInstancesPage.labelPreferredLocalPort')}
                 hint="Preferred local port for the main OpenChamber tunnel. Leave empty for auto-select."
               />
             </div>
@@ -1119,7 +1121,7 @@ export const RemoteInstancesPage: React.FC = () => {
                 variant="outline"
                 size="xs"
                 className="!font-normal h-7 w-7 px-0"
-                title="Pick random port"
+                title={t('settings.remoteInstancesPage.pickRandomPort')}
                 onClick={() =>
                   updateDraft((current) => ({
                     ...current,
@@ -1162,7 +1164,7 @@ export const RemoteInstancesPage: React.FC = () => {
                   },
                 }))
               }
-              placeholder="Password or key passphrase"
+              placeholder={t('settings.remoteInstancesPage.sshPasswordPlaceholder')}
             />
           </div>
 
@@ -1185,7 +1187,7 @@ export const RemoteInstancesPage: React.FC = () => {
                   },
                 }))
               }
-              placeholder="Protect remote UI with password"
+              placeholder={t('settings.remoteInstancesPage.openchamberPasswordPlaceholder')}
             />
           </div>
         </section>
@@ -1276,7 +1278,7 @@ export const RemoteInstancesPage: React.FC = () => {
                     <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
                       <div className="w-56 shrink-0">
                         <HintLabel
-                          label="Forward type"
+                          label={t('settings.remoteInstancesPage.labelForwardType')}
                           hint="Local (-L): laptop -> remote service. Remote (-R): remote machine -> this laptop. Dynamic (-D): local SOCKS5 proxy."
                         />
                       </div>
@@ -1290,7 +1292,7 @@ export const RemoteInstancesPage: React.FC = () => {
                         }
                       >
                         <SelectTrigger className="h-7 w-fit min-w-[140px]">
-                          <SelectValue placeholder="Type" />
+                          <SelectValue placeholder={t('settings.remoteInstancesPage.forwardTypePlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="local">Local (-L)</SelectItem>
@@ -1424,7 +1426,7 @@ export const RemoteInstancesPage: React.FC = () => {
                           onClick={() => {
                             void openExternalUrl(localEndpointUrl).then((opened) => {
                               if (!opened) {
-                                toast.error('Failed to open local endpoint');
+                                toast.error(t('settings.remoteInstancesPage.failedOpenLocalEndpoint'));
                               }
                             });
                           }}
@@ -1517,7 +1519,7 @@ export const RemoteInstancesPage: React.FC = () => {
                 onClick={() => {
                   void copyTextToClipboard(status.localUrl || '').then((result) => {
                     if (result.ok) {
-                      toast.success('Local URL copied');
+                      toast.success(t('settings.remoteInstancesPage.localUrlCopied'));
                     }
                   });
                 }}
@@ -1598,7 +1600,7 @@ export const RemoteInstancesPage: React.FC = () => {
             <Input
               value={patternDestination}
               onChange={(event) => setPatternDestination(event.target.value)}
-              placeholder="user@host"
+              placeholder={t('settings.remoteInstancesPage.patternDestinationPlaceholder')}
               autoFocus
             />
             <div className="flex items-center justify-end gap-2">
