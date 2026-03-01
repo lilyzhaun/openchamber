@@ -1,10 +1,11 @@
 import React from 'react';
 
-import type { Session } from '@opencode-ai/sdk/v2';
+import type { Message, Part, Session } from '@opencode-ai/sdk/v2';
 
 import { useAssistantStatus } from '@/hooks/useAssistantStatus';
 import { useCurrentSessionActivity } from '@/hooks/useSessionActivity';
 import { getAgentColor } from '@/lib/agentColors';
+import { parseSessionActivity } from '@/lib/messages/parseSessionActivity';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 
@@ -101,6 +102,7 @@ export function usePixelOfficeState(): PixelOfficeState {
   const getSessionAgentSelection = useSessionStore((state) => state.getSessionAgentSelection);
   const currentAgentContext = useSessionStore((state) => state.currentAgentContext);
   const agents = useConfigStore((state) => state.agents);
+  const messages = useSessionStore((state) => state.messages);
 
   const fallbackAgent = React.useMemo(() => agents[0]?.name ?? 'agent', [agents]);
 
@@ -143,18 +145,52 @@ export function usePixelOfficeState(): PixelOfficeState {
       const resolved = resolveAgentFromSession(session, getSessionAgentSelection, currentAgentContext, fallbackAgent);
       const statusType = (sessionStatus?.get(session.id)?.type ?? 'idle') as 'busy' | 'retry' | 'idle';
 
-      const leadTool = isLead ? (working.activeToolName ?? null) : null;
-      const source: AgentActivity['source'] = isLead
-        ? (leadTool ? 'tool' : 'session')
-        : (statusType !== 'idle' ? 'session' : 'fallback');
-      const toolName = isLead ? leadTool : null;
+      // For the lead agent, use the pre-computed working state from useAssistantStatus.
+      // For child agents, parse their own session messages to derive real activity.
+      let toolName: string | null;
+      let activityStr: string;
+      let statusText: string | null;
+      let source: AgentActivity['source'];
+
+      if (isLead) {
+        toolName = working.activeToolName ?? null;
+        activityStr = working.activity;
+        statusText = working.statusText ?? null;
+        source = toolName ? 'tool' : 'session';
+      } else if (statusType !== 'idle') {
+        // Child session is active — parse its messages for fine-grained activity
+        const childMessages = (messages.get(session.id) ?? []) as Array<{ info: Message; parts: Part[] }>;
+        const parsed = parseSessionActivity(childMessages);
+
+        toolName = parsed.activeToolName ?? null;
+        statusText = parsed.isGenericStatus ? null : parsed.statusText;
+        source = toolName ? 'tool' : 'session';
+
+        // Map the parsed part type to an activity string matching the lead agent's vocabulary.
+        // This ensures resolveAgentAction() in PixelOffice.tsx receives the same granularity.
+        if (parsed.activePartType === 'tool' || parsed.activePartType === 'editing') {
+          activityStr = 'tooling';
+        } else if (parsed.activePartType === 'reasoning') {
+          activityStr = 'cooldown';
+        } else if (parsed.activePartType === 'text') {
+          activityStr = 'streaming';
+        } else {
+          activityStr = statusType; // fallback to coarse 'busy' / 'retry'
+        }
+      } else {
+        toolName = null;
+        activityStr = 'idle';
+        statusText = null;
+        source = 'fallback';
+      }
+
       const zone = toolName ? toolToZone(toolName) : (statusType === 'idle' ? 'commons' : 'desk');
 
       const activityLabel =
         source === 'tool'
           ? `tool:${toolToLabel(toolName)}`
           : source === 'session'
-            ? `session:${statusType}`
+            ? `session:${activityStr}`
             : 'fallback:idle';
 
       const color = getAgentColor(resolved.name);
@@ -169,8 +205,8 @@ export function usePixelOfficeState(): PixelOfficeState {
         activityLabel,
         activity: {
           toolName,
-          activity: isLead ? working.activity : statusType,
-          statusText: isLead ? (working.statusText ?? null) : null,
+          activity: activityStr,
+          statusText,
           source,
         },
         colorVar: color.var,
@@ -194,6 +230,7 @@ export function usePixelOfficeState(): PixelOfficeState {
     getSessionAgentSelection,
     currentAgentContext,
     sessionStatus,
+    messages,
     working.activeToolName,
     working.activity,
     working.statusText,
