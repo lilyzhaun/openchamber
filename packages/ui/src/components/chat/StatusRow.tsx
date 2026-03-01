@@ -272,9 +272,10 @@ export const StatusRow: React.FC<StatusRowProps> = ({
 
           {isPixelOfficeOpen && (
             <div
-              style={{ width: "calc(100cqw - 4ch)" }}
+              style={{ maxWidth: "calc(100cqw - 4ch)" }}
               className={cn(
                 "absolute right-0 bottom-full mb-1 z-50",
+                "w-max min-w-[200px]",
                 "rounded-xl border border-border bg-background shadow-none",
                 "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2",
                 "duration-150"

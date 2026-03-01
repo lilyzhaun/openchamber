@@ -672,7 +672,7 @@ export const PixelOfficePanel: React.FC = () => {
   const state = usePixelOfficeState();
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: SCENE_W }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <OfficeScene cards={state.cards} isWorking={state.isWorking} />
 
