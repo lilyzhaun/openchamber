@@ -635,7 +635,7 @@ const OfficeScene: React.FC<{ cards: RealAgentCard[]; isWorking: boolean }> = ({
 
 const AgentCards: React.FC<{ cards: RealAgentCard[] }> = ({ cards }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 36, overflowY: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 36, overflowY: 'auto', minWidth: 0 }}>
       {cards.slice(0, 2).map((card) => (
         <div
           key={card.slotId}
@@ -651,7 +651,7 @@ const AgentCards: React.FC<{ cards: RealAgentCard[] }> = ({ cards }) => {
             borderRadius: 2,
           }}
         >
-          <span className="typography-micro" style={{ fontSize: 8 }}>
+          <span className="typography-micro" style={{ fontSize: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
             @{card.agentName}
           </span>
           <span className="typography-micro" style={{ fontSize: 8, opacity: 0.82 }}>
@@ -672,7 +672,7 @@ export const PixelOfficePanel: React.FC = () => {
   const state = usePixelOfficeState();
 
   return (
-    <div style={{ width: SCENE_W }}>
+    <div style={{ width: SCENE_W, maxWidth: '100%', overflow: 'hidden' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <OfficeScene cards={state.cards} isWorking={state.isWorking} />
 
