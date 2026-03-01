@@ -36,8 +36,8 @@ const SCALE = 2;
 const FRAME_DISPLAY = WORKER_FRAME * SCALE; // 32
 
 /** Scene dimensions (in display pixels) */
-const SCENE_W = 224;
-const SCENE_H = 176;
+const SCENE_W = 400;
+const SCENE_H = 220;
 
 /** Tile size for the floor grid (display) */
 const TILE = 16;
@@ -94,6 +94,56 @@ const resolveAgentAction = (card: RealAgentCard): AgentAction => {
 
   return card.activity.source === 'fallback' ? 'idle' : 'collaborating';
 };
+/** Translate raw English status text to Chinese for speech bubbles */
+const translateBubble = (raw: string): string => {
+  const toolMap: Record<string, string> = {
+    read: '读取文件', write: '写入文件', edit: '编辑文件', multiedit: '批量编辑',
+    grep: '搜索内容', glob: '查找文件', list: '列出文件', bash: '执行命令',
+    webfetch: '获取网页', websearch: '搜索网络', codesearch: '搜索代码',
+    apply_patch: '应用补丁',
+  };
+  const lower = raw.toLowerCase();
+  for (const [eng, zh] of Object.entries(toolMap)) {
+    if (lower.includes(eng)) return zh;
+  }
+  const statusMap: [RegExp, string][] = [
+    [/thinking/i, '思考中'],
+    [/generating/i, '生成中'],
+    [/waiting/i, '等待中'],
+    [/running/i, '运行中'],
+    [/complet/i, '已完成'],
+    [/reading/i, '读取中'],
+    [/writing/i, '写入中'],
+    [/search/i, '搜索中'],
+    [/analyz/i, '分析中'],
+    [/process/i, '处理中'],
+    [/install/i, '安装中'],
+    [/build/i, '构建中'],
+    [/test/i, '测试中'],
+    [/debug/i, '调试中'],
+    [/fix/i, '修复中'],
+    [/creat/i, '创建中'],
+    [/updat/i, '更新中'],
+    [/delet/i, '删除中'],
+    [/refactor/i, '重构中'],
+    [/review/i, '审查中'],
+    [/deploy/i, '部署中'],
+    [/commit/i, '提交中'],
+    [/push/i, '推送中'],
+    [/pull/i, '拉取中'],
+    [/fetch/i, '获取中'],
+    [/compil/i, '编译中'],
+    [/format/i, '格式化'],
+    [/lint/i, '代码检查'],
+  ];
+  for (const [re, zh] of statusMap) {
+    if (re.test(raw)) return zh;
+  }
+  // Truncate if still English
+  if (raw.length > 20) return raw.slice(0, 18) + '…';
+  return raw;
+};
+
 
 // ---------------------------------------------------------------------------
 // Zone layout
@@ -104,9 +154,9 @@ interface ZoneLayout {
 }
 
 const ZONES: Record<OfficeZone, ZoneLayout> = {
-  desk: { anchors: [{ x: 48, y: 52 }, { x: 80, y: 52 }, { x: 64, y: 68 }] },
-  bookshelf: { anchors: [{ x: 32, y: 136 }, { x: 64, y: 136 }, { x: 48, y: 148 }] },
-  commons: { anchors: [{ x: 164, y: 56 }, { x: 164, y: 136 }, { x: 180, y: 96 }] },
+  desk: { anchors: [{ x: 48, y: 56 }, { x: 110, y: 56 }, { x: 48, y: 80 }, { x: 110, y: 80 }, { x: 172, y: 56 }, { x: 172, y: 80 }] },
+  bookshelf: { anchors: [{ x: 40, y: 170 }, { x: 80, y: 170 }, { x: 120, y: 170 }, { x: 60, y: 190 }, { x: 100, y: 190 }, { x: 140, y: 190 }] },
+  commons: { anchors: [{ x: 290, y: 60 }, { x: 330, y: 60 }, { x: 290, y: 130 }, { x: 330, y: 130 }, { x: 310, y: 170 }, { x: 350, y: 170 }] },
 };
 
 // ---------------------------------------------------------------------------
@@ -403,101 +453,103 @@ const OfficeScene: React.FC<{ cards: RealAgentCard[]; isWorking: boolean }> = ({
       {/* Wall baseboard */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 24, height: 4, backgroundColor: 'color-mix(in oklab, var(--status-warning) 30%, var(--surface-elevated))', zIndex: 2 }} />
 
-      {/* === WINDOWS on wall === */}
       {/* Window 1 */}
-      <Furn left={16} top={4} w={24} h={16} bg="color-mix(in oklab, var(--status-info-background) 80%, var(--surface-background))" z={3} radius={1}>
-        {/* Window cross */}
+      <Furn left={20} top={4} w={24} h={16} bg="color-mix(in oklab, var(--status-info-background) 80%, var(--surface-background))" z={3} radius={1}>
         <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: 'var(--interactive-border)' }} />
         <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, backgroundColor: 'var(--interactive-border)' }} />
-        {/* Curtain */}
         <div style={{ position: 'absolute', left: -3, top: -1, width: 3, height: 18, backgroundColor: 'color-mix(in oklab, var(--status-error-background) 50%, var(--surface-elevated))', borderRadius: 1 }} />
         <div style={{ position: 'absolute', right: -3, top: -1, width: 3, height: 18, backgroundColor: 'color-mix(in oklab, var(--status-error-background) 50%, var(--surface-elevated))', borderRadius: 1 }} />
       </Furn>
       {/* Window 2 */}
-      <Furn left={60} top={4} w={24} h={16} bg="color-mix(in oklab, var(--status-info-background) 80%, var(--surface-background))" z={3} radius={1}>
+      <Furn left={80} top={4} w={24} h={16} bg="color-mix(in oklab, var(--status-info-background) 80%, var(--surface-background))" z={3} radius={1}>
         <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: 'var(--interactive-border)' }} />
         <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, backgroundColor: 'var(--interactive-border)' }} />
         <div style={{ position: 'absolute', left: -3, top: -1, width: 3, height: 18, backgroundColor: 'color-mix(in oklab, var(--status-error-background) 50%, var(--surface-elevated))', borderRadius: 1 }} />
         <div style={{ position: 'absolute', right: -3, top: -1, width: 3, height: 18, backgroundColor: 'color-mix(in oklab, var(--status-error-background) 50%, var(--surface-elevated))', borderRadius: 1 }} />
       </Furn>
-      {/* Window 3 (commons side) */}
-      <Furn left={148} top={4} w={24} h={16} bg="color-mix(in oklab, var(--status-info-background) 80%, var(--surface-background))" z={3} radius={1}>
+      {/* Window 3 */}
+      <Furn left={140} top={4} w={24} h={16} bg="color-mix(in oklab, var(--status-info-background) 80%, var(--surface-background))" z={3} radius={1}>
+        <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: 'var(--interactive-border)' }} />
+        <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, backgroundColor: 'var(--interactive-border)' }} />
+      </Furn>
+      {/* Window 4 (commons) */}
+      <Furn left={290} top={4} w={24} h={16} bg="color-mix(in oklab, var(--status-info-background) 80%, var(--surface-background))" z={3} radius={1}>
+        <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: 'var(--interactive-border)' }} />
+        <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, backgroundColor: 'var(--interactive-border)' }} />
+      </Furn>
+      {/* Window 5 (commons) */}
+      <Furn left={340} top={4} w={24} h={16} bg="color-mix(in oklab, var(--status-info-background) 80%, var(--surface-background))" z={3} radius={1}>
         <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, backgroundColor: 'var(--interactive-border)' }} />
         <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, backgroundColor: 'var(--interactive-border)' }} />
       </Furn>
 
       {/* === ZONE SEPARATOR: vertical divider === */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 112,
-          top: 24,
-          width: 2,
-          height: SCENE_H - 24,
-          backgroundColor: 'var(--interactive-border)',
-          zIndex: 4,
-          opacity: 0.5,
-        }}
-      />
+      <div style={{ position: 'absolute', left: 210, top: 24, width: 2, height: SCENE_H - 24, backgroundColor: 'var(--interactive-border)', zIndex: 4, opacity: 0.5 }} />
       {/* Horizontal separator between desk and bookshelf zones */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 92,
-          width: 112,
-          height: 2,
-          backgroundColor: 'var(--interactive-border)',
-          zIndex: 4,
-          opacity: 0.4,
-        }}
-      />
+      <div style={{ position: 'absolute', left: 0, top: 110, width: 210, height: 2, backgroundColor: 'var(--interactive-border)', zIndex: 4, opacity: 0.4 }} />
 
-      {/* === DESK ZONE (top-left) === */}
-      {/* Carpet under desk area */}
-      <Furn left={8} top={28} w={96} h={60} bg="color-mix(in oklab, var(--primary-base) 8%, transparent)" border={false} z={1} radius={2} />
+      {/* === DESK ZONE (top-left, 3x2 grid of 6 workstations) === */}
+      <Furn left={8} top={28} w={194} h={78} bg="color-mix(in oklab, var(--primary-base) 6%, transparent)" border={false} z={1} radius={2} />
 
-      {/* Desk 1 */}
+      {/* Row 1: Desks 1-3 */}
       <Furn left={16} top={34} w={28} h={14} bg="color-mix(in oklab, var(--status-warning) 35%, var(--surface-elevated))" z={8}>
-        {/* Monitor on desk */}
         <div style={{ position: 'absolute', left: 6, top: -10, width: 16, height: 10, overflow: 'hidden', zIndex: 9 }}>
           <SpriteDiv src={computerUrl} sheetW={COMPUTER_SHEET_W} sheetH={COMPUTER_SHEET_H} col={computerCol} row={computerRow} scale={1} style={{ position: 'absolute', left: 0, top: 0 }} />
         </div>
       </Furn>
-      {/* Chair 1 */}
-      <Furn left={24} top={50} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
+      <Furn left={30} top={52} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
 
-      {/* Desk 2 */}
-      <Furn left={62} top={34} w={28} h={14} bg="color-mix(in oklab, var(--status-warning) 35%, var(--surface-elevated))" z={8}>
-        {/* Monitor on desk */}
+      <Furn left={78} top={34} w={28} h={14} bg="color-mix(in oklab, var(--status-warning) 35%, var(--surface-elevated))" z={8}>
+        <div style={{ position: 'absolute', left: 6, top: -10, width: 16, height: 10, overflow: 'hidden', zIndex: 9 }}>
+          <SpriteDiv src={computerUrl} sheetW={COMPUTER_SHEET_W} sheetH={COMPUTER_SHEET_H} col={(computerCol + 1) % COMPUTER_COLS} row={computerRow} scale={1} style={{ position: 'absolute', left: 0, top: 0 }} />
+        </div>
+      </Furn>
+      <Furn left={92} top={52} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
+
+      <Furn left={140} top={34} w={28} h={14} bg="color-mix(in oklab, var(--status-warning) 35%, var(--surface-elevated))" z={8}>
         <div style={{ position: 'absolute', left: 6, top: -10, width: 16, height: 10, overflow: 'hidden', zIndex: 9 }}>
           <SpriteDiv src={computerUrl} sheetW={COMPUTER_SHEET_W} sheetH={COMPUTER_SHEET_H} col={(computerCol + 2) % COMPUTER_COLS} row={computerRow} scale={1} style={{ position: 'absolute', left: 0, top: 0 }} />
         </div>
       </Furn>
-      {/* Chair 2 */}
-      <Furn left={70} top={50} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
+      <Furn left={154} top={52} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
+
+      {/* Row 2: Desks 4-6 */}
+      <Furn left={16} top={64} w={28} h={14} bg="color-mix(in oklab, var(--status-warning) 35%, var(--surface-elevated))" z={8}>
+        <div style={{ position: 'absolute', left: 6, top: -10, width: 16, height: 10, overflow: 'hidden', zIndex: 9 }}>
+          <SpriteDiv src={computerUrl} sheetW={COMPUTER_SHEET_W} sheetH={COMPUTER_SHEET_H} col={(computerCol + 3) % COMPUTER_COLS} row={computerRow} scale={1} style={{ position: 'absolute', left: 0, top: 0 }} />
+        </div>
+      </Furn>
+      <Furn left={30} top={80} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
+
+      <Furn left={78} top={64} w={28} h={14} bg="color-mix(in oklab, var(--status-warning) 35%, var(--surface-elevated))" z={8}>
+        <div style={{ position: 'absolute', left: 6, top: -10, width: 16, height: 10, overflow: 'hidden', zIndex: 9 }}>
+          <SpriteDiv src={computerUrl} sheetW={COMPUTER_SHEET_W} sheetH={COMPUTER_SHEET_H} col={(computerCol + 4) % COMPUTER_COLS} row={computerRow} scale={1} style={{ position: 'absolute', left: 0, top: 0 }} />
+        </div>
+      </Furn>
+      <Furn left={92} top={80} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
+
+      <Furn left={140} top={64} w={28} h={14} bg="color-mix(in oklab, var(--status-warning) 35%, var(--surface-elevated))" z={8}>
+        <div style={{ position: 'absolute', left: 6, top: -10, width: 16, height: 10, overflow: 'hidden', zIndex: 9 }}>
+          <SpriteDiv src={computerUrl} sheetW={COMPUTER_SHEET_W} sheetH={COMPUTER_SHEET_H} col={computerCol} row={(computerRow + 1) % 3} scale={1} style={{ position: 'absolute', left: 0, top: 0 }} />
+        </div>
+      </Furn>
+      <Furn left={154} top={80} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
 
       {/* === BOOKSHELF ZONE (bottom-left) === */}
-      {/* Carpet under bookshelf area */}
-      <Furn left={8} top={96} w={96} h={72} bg="color-mix(in oklab, var(--status-info) 6%, transparent)" border={false} z={1} radius={2} />
+      <Furn left={8} top={114} w={194} h={100} bg="color-mix(in oklab, var(--status-info) 5%, transparent)" border={false} z={1} radius={2} />
 
-      {/* Bookshelf 1 */}
-      <Furn left={8} top={98} w={14} h={40} bg="var(--surface-elevated)" z={8}>
-        {/* Book spines */}
+      {/* Bookshelves along left wall */}
+      <Furn left={8} top={116} w={14} h={40} bg="var(--surface-elevated)" z={8}>
         <div style={{ position: 'absolute', left: 2, top: 4, width: 3, height: 10, backgroundColor: 'var(--status-info)', borderRadius: 1 }} />
         <div style={{ position: 'absolute', left: 6, top: 4, width: 2, height: 10, backgroundColor: 'var(--status-warning)', borderRadius: 1 }} />
         <div style={{ position: 'absolute', left: 9, top: 4, width: 3, height: 10, backgroundColor: 'var(--status-success)', borderRadius: 1 }} />
-        {/* Shelf divider */}
         <div style={{ position: 'absolute', left: 1, top: 16, right: 1, height: 1, backgroundColor: 'var(--interactive-border)' }} />
         <div style={{ position: 'absolute', left: 2, top: 19, width: 4, height: 8, backgroundColor: 'var(--status-error)', borderRadius: 1 }} />
         <div style={{ position: 'absolute', left: 7, top: 19, width: 3, height: 8, backgroundColor: 'var(--primary-base)', borderRadius: 1 }} />
-        {/* Shelf divider */}
         <div style={{ position: 'absolute', left: 1, top: 29, right: 1, height: 1, backgroundColor: 'var(--interactive-border)' }} />
         <div style={{ position: 'absolute', left: 3, top: 31, width: 8, height: 6, backgroundColor: 'color-mix(in oklab, var(--status-warning) 40%, var(--surface-elevated))', borderRadius: 1 }} />
       </Furn>
-
-      {/* Bookshelf 2 */}
-      <Furn left={26} top={98} w={14} h={40} bg="var(--surface-elevated)" z={8}>
+      <Furn left={26} top={116} w={14} h={40} bg="var(--surface-elevated)" z={8}>
         <div style={{ position: 'absolute', left: 2, top: 4, width: 2, height: 10, backgroundColor: 'var(--primary-base)', borderRadius: 1 }} />
         <div style={{ position: 'absolute', left: 5, top: 4, width: 3, height: 10, backgroundColor: 'var(--status-success)', borderRadius: 1 }} />
         <div style={{ position: 'absolute', left: 9, top: 4, width: 3, height: 10, backgroundColor: 'var(--status-warning)', borderRadius: 1 }} />
@@ -505,38 +557,33 @@ const OfficeScene: React.FC<{ cards: RealAgentCard[]; isWorking: boolean }> = ({
         <div style={{ position: 'absolute', left: 2, top: 19, width: 5, height: 8, backgroundColor: 'var(--status-info)', borderRadius: 1 }} />
         <div style={{ position: 'absolute', left: 8, top: 19, width: 4, height: 8, backgroundColor: 'var(--status-error)', borderRadius: 1 }} />
         <div style={{ position: 'absolute', left: 1, top: 29, right: 1, height: 1, backgroundColor: 'var(--interactive-border)' }} />
-        <div style={{ position: 'absolute', left: 2, top: 31, width: 3, height: 6, backgroundColor: 'var(--status-info)', borderRadius: 1 }} />
-        <div style={{ position: 'absolute', left: 6, top: 31, width: 6, height: 6, backgroundColor: 'color-mix(in oklab, var(--primary-base) 30%, var(--surface-elevated))', borderRadius: 1 }} />
+      </Furn>
+      <Furn left={44} top={116} w={14} h={40} bg="var(--surface-elevated)" z={8}>
+        <div style={{ position: 'absolute', left: 2, top: 4, width: 3, height: 10, backgroundColor: 'var(--status-error)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', left: 6, top: 4, width: 3, height: 10, backgroundColor: 'var(--status-info)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', left: 10, top: 4, width: 2, height: 10, backgroundColor: 'var(--primary-base)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', left: 1, top: 16, right: 1, height: 1, backgroundColor: 'var(--interactive-border)' }} />
       </Furn>
 
-      {/* Reading table */}
-      <Furn left={50} top={112} w={40} h={16} bg="color-mix(in oklab, var(--status-warning) 28%, var(--surface-elevated))" z={7} radius={2}>
-        {/* Books on table */}
+      {/* Reading tables */}
+      <Furn left={80} top={140} w={44} h={16} bg="color-mix(in oklab, var(--status-warning) 28%, var(--surface-elevated))" z={7} radius={2}>
         <div style={{ position: 'absolute', left: 4, top: 3, width: 8, height: 5, backgroundColor: 'var(--status-info)', borderRadius: 1, transform: 'rotate(-5deg)' }} />
-        <div style={{ position: 'absolute', left: 14, top: 4, width: 6, height: 4, backgroundColor: 'var(--status-success)', borderRadius: 1, transform: 'rotate(3deg)' }} />
+        <div style={{ position: 'absolute', left: 16, top: 4, width: 6, height: 4, backgroundColor: 'var(--status-success)', borderRadius: 1 }} />
         <div style={{ position: 'absolute', right: 4, top: 3, width: 7, height: 5, backgroundColor: 'var(--status-warning)', borderRadius: 1 }} />
       </Furn>
-      {/* Chair at reading table */}
-      <Furn left={64} top={130} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
+      <Furn left={96} top={158} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
+      <Furn left={116} top={158} w={10} h={8} bg="color-mix(in oklab, var(--surface-foreground) 20%, var(--surface-elevated))" z={6} radius={2} />
 
       {/* === COMMONS ZONE (right side) === */}
-      {/* Carpet in commons */}
-      <Furn left={118} top={28} w={100} h={144} bg="color-mix(in oklab, var(--status-success) 6%, transparent)" border={false} z={1} radius={2} />
+      <Furn left={216} top={28} w={180} h={186} bg="color-mix(in oklab, var(--status-success) 5%, transparent)" border={false} z={1} radius={2} />
 
       {/* Watercooler */}
-      <div style={{ position: 'absolute', left: 196, top: 28, zIndex: 9, overflow: 'hidden', width: 16 * SCALE, height: 16 * SCALE }}>
-        <SpriteDiv
-          src={watercoolerUrl}
-          sheetW={COOLER_SHEET_W}
-          sheetH={16}
-          col={coolerFrame}
-          row={0}
-        />
+      <div style={{ position: 'absolute', left: 370, top: 28, zIndex: 9, overflow: 'hidden', width: 16 * SCALE, height: 16 * SCALE }}>
+        <SpriteDiv src={watercoolerUrl} sheetW={COOLER_SHEET_W} sheetH={16} col={coolerFrame} row={0} />
       </div>
 
-      {/* Coffee machine next to watercooler */}
-      <Furn left={186} top={32} w={8} h={12} bg="color-mix(in oklab, var(--surface-foreground) 30%, var(--surface-elevated))" z={8} radius={1}>
-        {/* Steam when active */}
+      {/* Coffee machine */}
+      <Furn left={360} top={32} w={8} h={12} bg="color-mix(in oklab, var(--surface-foreground) 30%, var(--surface-elevated))" z={8} radius={1}>
         {hasAgentInCommons && (
           <>
             <div style={{ position: 'absolute', left: 2, top: -4, width: 2, height: 3, backgroundColor: 'var(--surface-muted-foreground)', opacity: 0.4, borderRadius: 1, animation: 'pixelOfficeFloat 1.5s ease-in-out infinite' }} />
@@ -546,80 +593,52 @@ const OfficeScene: React.FC<{ cards: RealAgentCard[]; isWorking: boolean }> = ({
       </Furn>
 
       {/* Sofa (top-right) */}
-      <Furn left={124} top={34} w={36} h={16} bg="color-mix(in oklab, var(--status-success-background) 60%, var(--surface-elevated))" z={7} radius={3}>
-        {/* Sofa back */}
+      <Furn left={240} top={34} w={50} h={16} bg="color-mix(in oklab, var(--status-success-background) 60%, var(--surface-elevated))" z={7} radius={3}>
         <div style={{ position: 'absolute', left: 0, top: 0, right: 0, height: 5, backgroundColor: 'color-mix(in oklab, var(--status-success) 25%, var(--surface-elevated))', borderRadius: '3px 3px 0 0' }} />
-        {/* Cushion divider */}
-        <div style={{ position: 'absolute', left: '50%', top: 5, width: 1, height: 9, backgroundColor: 'var(--interactive-border)', opacity: 0.4 }} />
+        <div style={{ position: 'absolute', left: '33%', top: 5, width: 1, height: 9, backgroundColor: 'var(--interactive-border)', opacity: 0.4 }} />
+        <div style={{ position: 'absolute', left: '66%', top: 5, width: 1, height: 9, backgroundColor: 'var(--interactive-border)', opacity: 0.4 }} />
       </Furn>
 
       {/* Coffee table */}
-      <Furn left={130} top={56} w={24} h={10} bg="color-mix(in oklab, var(--status-warning) 30%, var(--surface-elevated))" z={7} radius={2}>
-        {/* Coffee cup */}
-        <div style={{ position: 'absolute', left: 4, top: 2, width: 5, height: 5, backgroundColor: 'var(--surface-background)', border: '1px solid var(--interactive-border)', borderRadius: '50%' }} />
-        <div style={{ position: 'absolute', left: 5, top: 3, width: 3, height: 3, backgroundColor: 'color-mix(in oklab, var(--status-warning) 60%, var(--surface-background))', borderRadius: '50%' }} />
+      <Furn left={250} top={58} w={30} h={12} bg="color-mix(in oklab, var(--status-warning) 30%, var(--surface-elevated))" z={7} radius={2}>
+        <div style={{ position: 'absolute', left: 4, top: 3, width: 5, height: 5, backgroundColor: 'var(--surface-background)', border: '1px solid var(--interactive-border)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', left: 5, top: 4, width: 3, height: 3, backgroundColor: 'color-mix(in oklab, var(--status-warning) 60%, var(--surface-background))', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', right: 4, top: 3, width: 5, height: 5, backgroundColor: 'var(--surface-background)', border: '1px solid var(--interactive-border)', borderRadius: '50%' }} />
       </Furn>
 
       {/* Plants */}
-      {/* Potted plant 1 */}
-      <Furn left={120} top={92} w={10} h={6} bg="color-mix(in oklab, var(--status-warning) 40%, var(--surface-elevated))" z={8} radius={1}>
-        {/* Leaves */}
+      <Furn left={222} top={100} w={10} h={6} bg="color-mix(in oklab, var(--status-warning) 40%, var(--surface-elevated))" z={8} radius={1}>
         <div style={{ position: 'absolute', left: 1, top: -8, width: 8, height: 8, backgroundColor: 'var(--status-success)', borderRadius: '50% 50% 20% 20%' }} />
         <div style={{ position: 'absolute', left: -2, top: -6, width: 6, height: 6, backgroundColor: 'color-mix(in oklab, var(--status-success) 80%, var(--surface-background))', borderRadius: '50%' }} />
         <div style={{ position: 'absolute', right: -2, top: -5, width: 5, height: 5, backgroundColor: 'color-mix(in oklab, var(--status-success) 70%, var(--surface-background))', borderRadius: '50%' }} />
       </Furn>
-
-      {/* Potted plant 2 (small) */}
-      <Furn left={200} top={148} w={8} h={5} bg="color-mix(in oklab, var(--status-warning) 40%, var(--surface-elevated))" z={8} radius={1}>
+      <Furn left={380} top={190} w={8} h={5} bg="color-mix(in oklab, var(--status-warning) 40%, var(--surface-elevated))" z={8} radius={1}>
         <div style={{ position: 'absolute', left: 1, top: -5, width: 6, height: 5, backgroundColor: 'var(--status-success)', borderRadius: '40%' }} />
       </Furn>
 
-      {/* Bean bag chairs (bottom-right commons) */}
-      <Furn left={140} top={120} w={16} h={12} bg="color-mix(in oklab, var(--status-info-background) 60%, var(--surface-elevated))" z={7} radius={6} />
-      <Furn left={164} top={124} w={14} h={10} bg="color-mix(in oklab, var(--status-warning-background) 60%, var(--surface-elevated))" z={7} radius={6} />
+      {/* Bean bag chairs */}
+      <Furn left={250} top={120} w={18} h={14} bg="color-mix(in oklab, var(--status-info-background) 60%, var(--surface-elevated))" z={7} radius={6} />
+      <Furn left={280} top={124} w={16} h={12} bg="color-mix(in oklab, var(--status-warning-background) 60%, var(--surface-elevated))" z={7} radius={6} />
+      <Furn left={310} top={120} w={16} h={14} bg="color-mix(in oklab, var(--status-success-background) 50%, var(--surface-elevated))" z={7} radius={6} />
 
-      {/* Small side table between bean bags */}
-      <Furn left={158} top={116} w={8} h={8} bg="color-mix(in oklab, var(--status-warning) 25%, var(--surface-elevated))" z={8} radius={1} />
+      {/* Side table */}
+      <Furn left={270} top={114} w={8} h={8} bg="color-mix(in oklab, var(--status-warning) 25%, var(--surface-elevated))" z={8} radius={1} />
 
-      {/* Whiteboard on right wall */}
-      <Furn left={186} top={70} w={28} h={20} bg="var(--surface-background)" z={8} radius={1}>
-        {/* Whiteboard content lines */}
-        <div style={{ position: 'absolute', left: 3, top: 4, width: 18, height: 2, backgroundColor: 'var(--status-info)', opacity: 0.5, borderRadius: 1 }} />
-        <div style={{ position: 'absolute', left: 3, top: 8, width: 14, height: 2, backgroundColor: 'var(--status-success)', opacity: 0.5, borderRadius: 1 }} />
-        <div style={{ position: 'absolute', left: 3, top: 12, width: 20, height: 2, backgroundColor: 'var(--status-warning)', opacity: 0.4, borderRadius: 1 }} />
-        {/* Marker */}
-        <div style={{ position: 'absolute', right: 2, bottom: 2, width: 2, height: 6, backgroundColor: 'var(--status-error)', borderRadius: 1 }} />
+      {/* Whiteboard */}
+      <Furn left={340} top={70} w={40} h={26} bg="var(--surface-background)" z={8} radius={1}>
+        <div style={{ position: 'absolute', left: 3, top: 4, width: 28, height: 2, backgroundColor: 'var(--status-info)', opacity: 0.5, borderRadius: 1 }} />
+        <div style={{ position: 'absolute', left: 3, top: 9, width: 20, height: 2, backgroundColor: 'var(--status-success)', opacity: 0.5, borderRadius: 1 }} />
+        <div style={{ position: 'absolute', left: 3, top: 14, width: 32, height: 2, backgroundColor: 'var(--status-warning)', opacity: 0.4, borderRadius: 1 }} />
+        <div style={{ position: 'absolute', left: 3, top: 19, width: 16, height: 2, backgroundColor: 'var(--status-error)', opacity: 0.3, borderRadius: 1 }} />
+        <div style={{ position: 'absolute', right: 3, bottom: 2, width: 2, height: 6, backgroundColor: 'var(--status-error)', borderRadius: 1 }} />
       </Furn>
 
       {/* === FLOOR DETAILS === */}
-      {/* Door mat */}
-      <Furn left={100} top={164} w={24} h={8} bg="color-mix(in oklab, var(--status-warning) 20%, var(--surface-elevated))" border={false} z={1} radius={2} />
+      <Furn left={190} top={206} w={24} h={8} bg="color-mix(in oklab, var(--status-warning) 20%, var(--surface-elevated))" border={false} z={1} radius={2} />
 
-      {/* Subtle warm light overlay from windows */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 16,
-          top: 24,
-          width: 80,
-          height: 40,
-          background: 'linear-gradient(to bottom, color-mix(in oklab, var(--status-warning) 8%, transparent), transparent)',
-          pointerEvents: 'none',
-          zIndex: 2,
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          left: 148,
-          top: 24,
-          width: 40,
-          height: 30,
-          background: 'linear-gradient(to bottom, color-mix(in oklab, var(--status-warning) 6%, transparent), transparent)',
-          pointerEvents: 'none',
-          zIndex: 2,
-        }}
-      />
+      {/* Window light overlays */}
+      <div style={{ position: 'absolute', left: 20, top: 24, width: 120, height: 40, background: 'linear-gradient(to bottom, color-mix(in oklab, var(--status-warning) 8%, transparent), transparent)', pointerEvents: 'none', zIndex: 2 }} />
+      <div style={{ position: 'absolute', left: 290, top: 24, width: 80, height: 30, background: 'linear-gradient(to bottom, color-mix(in oklab, var(--status-warning) 6%, transparent), transparent)', pointerEvents: 'none', zIndex: 2 }} />
 
       {/* === AGENTS === */}
       {positioned.map(({ card, x, y }) => (
@@ -635,8 +654,8 @@ const OfficeScene: React.FC<{ cards: RealAgentCard[]; isWorking: boolean }> = ({
 
 const AgentCards: React.FC<{ cards: RealAgentCard[] }> = ({ cards }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 36, overflowY: 'auto' }}>
-      {cards.slice(0, 2).map((card) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 72, overflowY: 'auto' }}>
+      {cards.slice(0, 6).map((card) => (
         <div
           key={card.slotId}
           style={{
@@ -687,7 +706,7 @@ export const PixelOfficePanel: React.FC = () => {
             }}
           >
             <div className="typography-micro" style={{ fontSize: 8, color: 'var(--surface-foreground)', lineHeight: 1.15 }}>
-              💬 {state.speechBubble}
+              💬 {translateBubble(state.speechBubble)}
             </div>
           </div>
         )}

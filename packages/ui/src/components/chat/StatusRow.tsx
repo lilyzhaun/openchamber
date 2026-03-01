@@ -275,7 +275,7 @@ export const StatusRow: React.FC<StatusRowProps> = ({
               style={{ maxWidth: "calc(100cqw - 4ch)" }}
               className={cn(
                 "absolute right-0 bottom-full mb-1 z-50",
-                "w-max min-w-[200px]",
+                "w-max min-w-[440px]",
                 "rounded-xl border border-border bg-background shadow-none",
                 "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2",
                 "duration-150"
@@ -284,7 +284,7 @@ export const StatusRow: React.FC<StatusRowProps> = ({
               <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                 <span className="typography-ui-label text-muted-foreground">Pixel Office</span>
               </div>
-              <div className="px-3 py-2 max-h-[200px] overflow-y-auto">
+              <div className="px-3 py-2 max-h-[360px] overflow-y-auto">
                 <PixelOfficePanel />
               </div>
             </div>

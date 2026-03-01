@@ -19,7 +19,7 @@ export interface AgentActivity {
 }
 
 export interface RealAgentCard {
-  slotId: 'lead' | 'child-1' | 'child-2';
+  slotId: 'lead' | 'child-1' | 'child-2' | 'child-3' | 'child-4' | 'child-5';
   sessionId: string;
   sessionTitle: string;
   agentName: string;
@@ -111,7 +111,7 @@ export function usePixelOfficeState(): PixelOfficeState {
 
   const childSessions = React.useMemo(() => {
     if (!currentSessionId) return [] as Session[];
-    return sessions.filter((s) => s.parentID === currentSessionId).slice(0, 2);
+    return sessions.filter((s) => s.parentID === currentSessionId).slice(0, 5);
   }, [currentSessionId, sessions]);
 
   const cards = React.useMemo<RealAgentCard[]>(() => {
@@ -180,8 +180,10 @@ export function usePixelOfficeState(): PixelOfficeState {
 
     const result: RealAgentCard[] = [toCard(currentSession, 'lead', true)];
 
-    if (childSessions[0]) result.push(toCard(childSessions[0], 'child-1', false));
-    if (childSessions[1]) result.push(toCard(childSessions[1], 'child-2', false));
+    const childSlotIds: RealAgentCard['slotId'][] = ['child-1', 'child-2', 'child-3', 'child-4', 'child-5'];
+    for (let i = 0; i < childSessions.length; i++) {
+      result.push(toCard(childSessions[i], childSlotIds[i], false));
+    }
 
     return result;
   }, [
