@@ -2,6 +2,13 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { usePixelOfficeState } from '@/stores/pixelOffice';
 
+import worker1Url from '@/assets/stardew-office/worker_1.png';
+import worker2Url from '@/assets/stardew-office/worker_2.png';
+import worker3Url from '@/assets/stardew-office/worker_3.png';
+import worker4Url from '@/assets/stardew-office/worker_4.png';
+import computerUrl from '@/assets/stardew-office/computer.png';
+import watercoolerUrl from '@/assets/stardew-office/watercooler.png';
+
 // 定义方块类型
 type BlockType = 'grass' | 'dirt' | 'wood' | 'leaf' | 'bookshelf' | 'workbench' | 'empty';
 
@@ -27,11 +34,13 @@ interface Card {
 }
 
 // 常量定义
-const BLOCK_SIZE = 64;
-const TILE_HEIGHT = 32;
-const ISO_ANGLE = Math.atan(0.5);
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
+const TILE_W = 16;
+const TILE_H = 8;
+const TILE_Z = 16;
+const CANVAS_WIDTH = 280;
+const CANVAS_HEIGHT = 200;
+const ORIGIN_X = 140;
+const ORIGIN_Y = 28;
 
 // 静态地图数据 - 岛屿状布局
 const MAP_BLOCKS: Block[] = [
@@ -93,102 +102,122 @@ const PixelOffice: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>(0);
-  const [tiles, setTiles] = useState<{[key: string]: HTMLCanvasElement}>({});
+  const [textures, setTextures] = useState<{[key: string]: {top: HTMLCanvasElement, left: HTMLCanvasElement, right: HTMLCanvasElement}}>({});
   const theme = useThemeSystem();
   const { cards } = usePixelOfficeState();
   const [cardPositions, setCardPositions] = useState<{[id: string]: {x: number, y: number}}>({});
+  // Images for sprites
+  const [sprites, setSprites] = useState<{[key: string]: HTMLImageElement}>({});
+
+  useEffect(() => {
+    const loadSprite = (src: string) => {
+      return new Promise<HTMLImageElement>((resolve) => {
+        const img = new Image();
+        img.src = src;
+        img.onload = () => resolve(img);
+      });
+    };
+    
+    Promise.all([
+      loadSprite(worker1Url).then(img => ['worker1', img] as [string, HTMLImageElement]),
+      loadSprite(worker2Url).then(img => ['worker2', img] as [string, HTMLImageElement]),
+      loadSprite(worker3Url).then(img => ['worker3', img] as [string, HTMLImageElement]),
+      loadSprite(worker4Url).then(img => ['worker4', img] as [string, HTMLImageElement]),
+      loadSprite(computerUrl).then(img => ['computer', img] as [string, HTMLImageElement]),
+      loadSprite(watercoolerUrl).then(img => ['watercooler', img] as [string, HTMLImageElement])
+    ]).then(results => {
+      setSprites(Object.fromEntries(results));
+    });
+  }, []);
 
   // 根据主题颜色生成贴图
   useEffect(() => {
     if (!theme) return;
 
-    const generateTileTexture = (color: string) => {
-      const tileCanvas = document.createElement('canvas');
-      tileCanvas.width = BLOCK_SIZE;
-      tileCanvas.height = BLOCK_SIZE;
-      const ctx = tileCanvas.getContext('2d');
-      
-      if (ctx) {
-        // 填充底色
-        ctx.fillStyle = color;
-        ctx.fillRect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
-        
-        // 添加纹理细节
-        ctx.strokeStyle = theme.currentTheme.colors.interactive.border;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
-        
-        // 根据不同方块类型添加不同细节
-        ctx.fillStyle = theme.currentTheme.colors.surface.muted;
-        ctx.beginPath();
-        ctx.arc(BLOCK_SIZE * 0.25, BLOCK_SIZE * 0.25, 2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.beginPath();
-        ctx.arc(BLOCK_SIZE * 0.75, BLOCK_SIZE * 0.75, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      
-      return tileCanvas;
+    const generateTextures = (color: string) => {
+      const createSide = (baseColor: string, isTop: boolean = false) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 16;
+        canvas.height = 16;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = baseColor;
+          ctx.fillRect(0, 0, 16, 16);
+          
+          // Add texture noise/border
+          ctx.strokeStyle = theme.currentTheme.colors.interactive.border;
+          ctx.lineWidth = 1;
+          // ctx.strokeRect(0, 0, 16, 16);
+          
+          if (isTop) {
+             ctx.fillStyle = theme.currentTheme.colors.surface.muted;
+             ctx.fillRect(2, 2, 2, 2);
+             ctx.fillRect(12, 12, 2, 2);
+             ctx.fillRect(8, 4, 2, 2);
+          }
+        }
+        return canvas;
+      };
+
+      return {
+        top: createSide(color, true),
+        left: createSide(color),
+        right: createSide(color)
+      };
     };
 
-    const newTiles: {[key: string]: HTMLCanvasElement} = {};
+    const newTextures: {[key: string]: {top: HTMLCanvasElement, left: HTMLCanvasElement, right: HTMLCanvasElement}} = {};
     
     // 为不同类型的方块生成不同的颜色贴图
-    newTiles.grass = generateTileTexture(theme.currentTheme.colors.status.success);
-    newTiles.dirt = generateTileTexture(theme.currentTheme.colors.status.warning);
-    newTiles.wood = generateTileTexture(theme.currentTheme.colors.primary.base);
-    newTiles.leaf = generateTileTexture(theme.currentTheme.colors.surface.subtle);
-    newTiles.bookshelf = generateTileTexture(theme.currentTheme.colors.surface.muted);
-    newTiles.workbench = generateTileTexture(theme.currentTheme.colors.status.error);
+    newTextures.grass = generateTextures(theme.currentTheme.colors.status.success);
+    newTextures.dirt = generateTextures(theme.currentTheme.colors.status.warning);
+    newTextures.wood = generateTextures(theme.currentTheme.colors.primary.base);
+    newTextures.leaf = generateTextures(theme.currentTheme.colors.surface.subtle);
+    newTextures.bookshelf = generateTextures(theme.currentTheme.colors.surface.muted);
+    newTextures.workbench = generateTextures(theme.currentTheme.colors.status.error);
     
-    setTiles(newTiles);
+    setTextures(newTextures);
   }, [theme]);
 
   // 将3D坐标转换为2D等轴测坐标
+  // 将3D坐标转换为2D等轴测坐标
   const isoProject = useCallback((x: number, y: number, z: number) => {
-    const isoX = (x - y) * Math.cos(ISO_ANGLE);
-    const isoY = (x + y) * Math.sin(ISO_ANGLE) - z;
-    return { x: isoX, y: isoY };
+    const cx = ORIGIN_X + (x - y) * TILE_W;
+    const cy = ORIGIN_Y + (x + y) * TILE_H - z * TILE_Z;
+    return { x: cx, y: cy };
   }, []);
 
   // 绘制立方体的三个可见面
-  const drawCube = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, z: number, tile: HTMLCanvasElement) => {
-    const size = BLOCK_SIZE;
-    const height = TILE_HEIGHT;
-    
-    // 计算等轴测投影
-    const projected = isoProject(x, y, z);
-    const screenX = projected.x;
-    const screenY = projected.y;
-    
-    // 设置变换矩阵
-    ctx.save();
-    ctx.translate(screenX, screenY);
-    
-    // 绘制底部面
-    ctx.drawImage(tile, 0, -height, size, height);
-    
-    // 绘制左侧面
-    ctx.save();
-    ctx.transform(1, -Math.sin(ISO_ANGLE), 0, 1, 0, 0);
-    ctx.drawImage(tile, -size/2, -height, size/2, height);
-    ctx.restore();
-    
-    // 绘制右侧面
-    ctx.save();
-    ctx.transform(1, Math.sin(ISO_ANGLE), 0, 1, 0, 0);
-    ctx.drawImage(tile, 0, -height, size/2, height);
-    ctx.restore();
-    
-    ctx.restore();
-  }, [isoProject]);
+  const drawCube = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, z: number, texture: {top: HTMLCanvasElement, left: HTMLCanvasElement, right: HTMLCanvasElement}) => {
+    const cx = ORIGIN_X + (x - y) * TILE_W;
+    const cy = ORIGIN_Y + (x + y) * TILE_H - z * TILE_Z;
 
+    // 画顶面
+    ctx.save();
+    ctx.setTransform(1, 0.5, -1, 0.5, cx, cy);
+    ctx.drawImage(texture.top, 0, 0);
+    ctx.restore();
+
+    // 画左面
+    ctx.save();
+    ctx.setTransform(1, 0.5, 0, 1, cx - 16, cy + 8);
+    ctx.drawImage(texture.left, 0, 0);
+    ctx.fillStyle = 'rgba(0,0,0,0.15)'; // 阴影
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.restore();
+
+    // 画右面
+    ctx.save();
+    ctx.setTransform(1, -0.5, 0, 1, cx, cy + 16);
+    ctx.drawImage(texture.right, 0, 0);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; // 阴影
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.restore();
+  }, []);
   // 渲染循环
   const render = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || Object.keys(tiles).length === 0) return;
-    
+    if (!canvas || Object.keys(textures).length === 0) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
@@ -200,12 +229,11 @@ const PixelOffice: React.FC = () => {
     
     // 绘制方块
     for (const block of sortedBlocks) {
-      const tile = tiles[block.type];
-      if (tile) {
-        drawCube(ctx, block.x, block.y, block.z, tile);
+      const texture = textures[block.type];
+      if (texture) {
+        drawCube(ctx, block.x, block.y, block.z, texture);
       }
     }
-    
     // 计算卡片位置并更新状态
     const newCardPositions: {[id: string]: {x: number, y: number}} = {};
     
@@ -218,26 +246,44 @@ const PixelOffice: React.FC = () => {
       // 存储卡片的实际屏幕位置
       newCardPositions[card.id] = { x: screenX, y: screenY };
       
-      // 绘制卡片占位符
-      ctx.save();
-      ctx.fillStyle = theme?.currentTheme.colors.surface.elevated || '#ffffff';
-      ctx.strokeStyle = theme?.currentTheme.colors.interactive.border || '#cccccc';
-      ctx.lineWidth = 1;
-      roundRect(ctx, screenX - 20, screenY - 28, 40, 24, 4);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
+      const spriteKey = card.id.includes('worker') ? card.id.replace(/[^a-zA-Z0-9]/g, '') : 
+        (card.label?.toLowerCase().includes('computer') ? 'computer' : 
+        (card.label?.toLowerCase().includes('watercooler') ? 'watercooler' : 'worker1'));
+
+      const sprite = sprites[spriteKey] || sprites['worker1'];
+      
+      if (sprite) {
+        // 根据动画帧实现简单的跳动/呼吸效果
+        const bounce = Math.sin((card.animationFrame || 0) * 0.1) * 2;
+        const yOffset = -24 + bounce;
+        
+        ctx.drawImage(
+          sprite,
+          screenX - sprite.width / 2,
+          screenY + yOffset - sprite.height
+        );
+      } else {
+        // Fallback: draw placeholder
+        ctx.save();
+        ctx.fillStyle = theme?.currentTheme.colors.surface.elevated || '#ffffff';
+        ctx.strokeStyle = theme?.currentTheme.colors.interactive.border || '#cccccc';
+        ctx.lineWidth = 1;
+        roundRect(ctx, screenX - 20, screenY - 28, 40, 24, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
     });
     
     setCardPositions(newCardPositions);
     
     // 请求下一帧
     animationRef.current = requestAnimationFrame(render);
-  }, [tiles, cards, theme, drawCube, isoProject]);
+  }, [textures, cards, theme, drawCube, isoProject, sprites]);
 
   // 启动渲染循环
   useEffect(() => {
-    if (Object.keys(tiles).length > 0) {
+    if (Object.keys(textures).length > 0) {
       animationRef.current = requestAnimationFrame(render);
     }
     
@@ -246,7 +292,7 @@ const PixelOffice: React.FC = () => {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [tiles, render]);
+  }, [textures, render]);
 
   // 更新卡片动画
   useEffect(() => {
@@ -285,6 +331,10 @@ const PixelOffice: React.FC = () => {
         height={CANVAS_HEIGHT}
         className="rounded-lg border shadow-sm"
         style={{ 
+          width: '100%',
+          maxWidth: CANVAS_WIDTH,
+          height: 'auto',
+          imageRendering: 'pixelated',
           backgroundColor: theme?.currentTheme.colors.surface.background || '#f0f0f0',
           borderColor: theme?.currentTheme.colors.interactive.border || '#ddd'
         }}
