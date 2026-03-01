@@ -20,19 +20,6 @@ interface Block {
   type: BlockType;
 }
 
-// 卡片数据结构
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface Card {
-  id: string;
-  x: number;
-  y: number;
-  z: number;
-  badge?: string;
-  label?: string;
-  animationFrame?: number;
-  bounceOffset?: number;
-}
-
 // 常量定义
 const TILE_W = 16;
 const TILE_H = 8;
@@ -189,31 +176,37 @@ const PixelOffice: React.FC = () => {
 
   // 绘制立方体的三个可见面
   const drawCube = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, z: number, texture: {top: HTMLCanvasElement, left: HTMLCanvasElement, right: HTMLCanvasElement}) => {
-    const cx = ORIGIN_X + (x - y) * TILE_W;
-    const cy = ORIGIN_Y + (x + y) * TILE_H - z * TILE_Z;
+    const cx = ORIGIN_X + (x - y) * TILE_W;  // = 140 + (x-y)*16
+    const cy = ORIGIN_Y + (x + y) * TILE_H - z * TILE_Z;  // = 28 + (x+y)*8 - z*16
 
-    // 画顶面
+    // 画顶面 - 使用标准等距投影变换 (1, 0.5) 和 (-1, 0.5)
+    // 顶面是一个菱形：开始于 (cx, cy)
     ctx.save();
     ctx.setTransform(1, 0.5, -1, 0.5, cx, cy);
     ctx.drawImage(texture.top, 0, 0);
     ctx.restore();
 
-    // 画左面
+    // 画左面 - 是一个竖条 (16x16)
+    // 左面的开始点是 (cx - 8, cy + 8)，向下垂直
     ctx.save();
-    ctx.setTransform(1, 0.5, 0, 1, cx - 16, cy + 8);
+    // 左面使用简单的平移变换（无缩放或倾斜）
+    ctx.setTransform(1, 0, 0, 1, cx - 8, cy + 8);
     ctx.drawImage(texture.left, 0, 0);
-    ctx.fillStyle = 'rgba(0,0,0,0.15)'; // 阴影
+    // 左面阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.fillRect(0, 0, 16, 16);
     ctx.restore();
 
     // 画右面
     ctx.save();
-    ctx.setTransform(1, -0.5, 0, 1, cx, cy + 16);
+    // 右面也是竖条，开始点是 (cx + 8, cy + 8)
+    ctx.setTransform(1, 0, 0, 1, cx + 8, cy + 8);
     ctx.drawImage(texture.right, 0, 0);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)'; // 阴影
+    // 右面更深的阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(0, 0, 16, 16);
     ctx.restore();
-  }, []);
+  }, [])
   // 渲染循环
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -221,8 +214,10 @@ const PixelOffice: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // 清除画布
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 使用主题背景色清除画布
+    const backgroundColor = theme?.currentTheme.colors.surface.background || '#f5f5f5';
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // 按深度排序方块 (x + y + z)，从远到近绘制
     const sortedBlocks = [...MAP_BLOCKS].sort((a, b) => (a.x + a.y + a.z) - (b.x + b.y + b.z));
