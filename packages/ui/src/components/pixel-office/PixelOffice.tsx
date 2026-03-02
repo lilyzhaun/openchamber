@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { useI18n } from '@/contexts/useI18n';
-import type { OfficeZone, RealAgentCard } from '@/hooks/usePixelOfficeState';
+import type { RealAgentCard } from '@/hooks/usePixelOfficeState';
 import { usePixelOfficeState } from '@/hooks/usePixelOfficeState';
 
 import worker1Url from '@/assets/stardew-office/worker_1.png';
@@ -28,53 +28,131 @@ import rugUrl from '@/assets/stardew-office/rug.png';
 import smallTableUrl from '@/assets/stardew-office/small_table.png';
 import trashCanUrl from '@/assets/stardew-office/trash_can.png';
 import ceilingLampUrl from '@/assets/stardew-office/ceiling_lamp.png';
+import gardenBenchUrl from '@/assets/stardew-office/garden_bench.png';
+import arcSofaUrl from '@/assets/stardew-office/arc_sofa.png';
+import blueOrbUrl from '@/assets/stardew-office/blue_orb.png';
+import tallPlantUrl from '@/assets/stardew-office/tall_plant.png';
+import receptionCounterUrl from '@/assets/stardew-office/reception_counter.png';
+import fridgeUrl from '@/assets/stardew-office/fridge.png';
+import wineSofaUrl from '@/assets/stardew-office/wine_sofa.png';
+import retroMonitorUrl from '@/assets/stardew-office/retro_monitor.png';
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+const SCENE_W = 560;
+const SCENE_H = 380;
+const CORRIDOR_Y = 240;
 
-/** Worker sprite sheets: 64×160, 4 cols × 10 rows, 16×16 per frame */
-const WORKER_SPRITES = [worker1Url, worker2Url, worker3Url, worker4Url];
+const WORKER_SPRITES = [worker1Url, worker2Url, worker3Url, worker4Url] as const;
 const WORKER_FRAME = 16;
 const WORKER_COLS = 4;
 const WORKER_SHEET_W = 64;
 const WORKER_SHEET_H = 160;
+const WORKER_SCALE = 1.5;
+const FRAME_DISPLAY = WORKER_FRAME * WORKER_SCALE;
 
-/** Computer sprite sheet: 80×160, 5 cols × 10 rows, 16×16 per frame */
 const COMPUTER_COLS = 5;
 const COMPUTER_SHEET_W = 80;
 const COMPUTER_SHEET_H = 160;
 
-/** Watercooler sprite sheet: 112×16, 7 frames in 1 row, 16×16 per frame */
 const COOLER_FRAMES = 7;
 const COOLER_SHEET_W = 112;
-
-/** Display scale: 16px native → ~26px rendered (slightly smaller than background) */
-const SCALE = 1.5;
-const FRAME_DISPLAY = WORKER_FRAME * SCALE; // ~26
-
-/** Scene dimensions (in display pixels) */
-const SCENE_W = 400;
-const SCENE_H = 280;
-
-/** Tile size for the floor grid (display) */
-const TILE = 20;
 
 const FURNITURE_FRAMES = 4;
 const FURNITURE_FRAME = 32;
 const FURNITURE_SHEET_W = 128;
 const FURNITURE_SHEET_H = 32;
 
-type FurnitureKey =
-  | 'desk_large' | 'chair_office' | 'bookshelf_tall' | 'sofa_modular'
-  | 'whiteboard_wall' | 'plant_pot' | 'clock_wall' | 'chart_board'
-  | 'printer' | 'filing_cabinet' | 'conference_table' | 'wall_frame'
-  | 'wall_monitor' | 'coffee_machine' | 'rug' | 'small_table'
-  | 'trash_can' | 'ceiling_lamp';
+type Direction = 'up' | 'down' | 'left' | 'right';
+type AgentAction = 'writing' | 'reading' | 'searching' | 'browsing' | 'running' | 'thinking' | 'composing' | 'delegating' | 'reviewing' | 'retrying' | 'arriving' | 'idle';
+type Point = { x: number; y: number };
+type SceneFurnitureKey =
+  | 'desk_large'
+  | 'chair_office'
+  | 'bookshelf_tall'
+  | 'sofa_modular'
+  | 'whiteboard_wall'
+  | 'plant_pot'
+  | 'clock_wall'
+  | 'chart_board'
+  | 'printer'
+  | 'filing_cabinet'
+  | 'conference_table'
+  | 'wall_frame'
+  | 'wall_monitor'
+  | 'coffee_machine'
+  | 'rug'
+  | 'small_table'
+  | 'trash_can'
+  | 'ceiling_lamp'
+  | 'garden_bench'
+  | 'arc_sofa'
+  | 'blue_orb'
+  | 'tall_plant'
+  | 'reception_counter'
+  | 'fridge'
+  | 'wine_sofa'
+  | 'retro_monitor'
+  | 'computer'
+  | 'watercooler';
 
-type SceneFurnitureKey = FurnitureKey | 'computer' | 'watercooler';
+type NewOfficeZone = 'main_office' | 'meeting_room' | 'corridor' | 'small_office' | 'reception' | 'garden';
 
-const FURNITURE_SPRITES: Record<FurnitureKey, string> = {
+interface RoomLayout {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  wallHeight: number;
+  wallColor: string;
+  floorColor: string;
+  borderColor: string;
+}
+
+interface SceneObject {
+  key: SceneFurnitureKey;
+  x: number;
+  y: number;
+  z: number;
+  scale?: number;
+  animated?: boolean;
+  frameOffset?: number;
+}
+
+interface AgentMotion {
+  card: RealAgentCard;
+  position: Point;
+  direction: Direction;
+  isMoving: boolean;
+  phase: number;
+}
+
+const ROOMS: Record<NewOfficeZone, RoomLayout> = {
+  main_office: { x: 0, y: 0, w: 275, h: 220, wallHeight: 52, wallColor: '#d8ccb9', floorColor: '#b99973', borderColor: '#5f4a33' },
+  meeting_room: { x: 285, y: 0, w: 275, h: 220, wallHeight: 52, wallColor: '#c3d6de', floorColor: '#8daac1', borderColor: '#486176' },
+  corridor: { x: 0, y: 228, w: 560, h: 24, wallHeight: 0, wallColor: '#8f8a7b', floorColor: '#7e7868', borderColor: '#4d493d' },
+  small_office: { x: 0, y: 260, w: 135, h: 120, wallHeight: 40, wallColor: '#d6c8b0', floorColor: '#b49a79', borderColor: '#5f4f38' },
+  reception: { x: 145, y: 260, w: 275, h: 120, wallHeight: 40, wallColor: '#d2c2a7', floorColor: '#b4875f', borderColor: '#66492b' },
+  garden: { x: 430, y: 260, w: 130, h: 120, wallHeight: 40, wallColor: '#9abd86', floorColor: '#6ea35b', borderColor: '#36562a' },
+};
+
+const DOORWAYS: Record<NewOfficeZone, Point> = {
+  main_office: { x: 137, y: 220 },
+  meeting_room: { x: 422, y: 220 },
+  corridor: { x: 280, y: 240 },
+  small_office: { x: 67, y: 260 },
+  reception: { x: 282, y: 260 },
+  garden: { x: 495, y: 260 },
+};
+
+const ZONE_ANCHORS: Record<NewOfficeZone, Point[]> = {
+  main_office: [{ x: 64, y: 120 }, { x: 112, y: 132 }, { x: 168, y: 122 }, { x: 220, y: 136 }, { x: 92, y: 172 }, { x: 188, y: 174 }],
+  meeting_room: [{ x: 330, y: 118 }, { x: 378, y: 130 }, { x: 430, y: 120 }, { x: 488, y: 132 }, { x: 360, y: 174 }, { x: 462, y: 172 }],
+  corridor: [{ x: 200, y: 240 }, { x: 240, y: 240 }, { x: 280, y: 240 }, { x: 320, y: 240 }, { x: 360, y: 240 }, { x: 400, y: 240 }],
+  small_office: [{ x: 36, y: 320 }, { x: 64, y: 330 }, { x: 92, y: 320 }, { x: 120, y: 334 }, { x: 56, y: 360 }, { x: 108, y: 358 }],
+  reception: [{ x: 176, y: 320 }, { x: 220, y: 334 }, { x: 268, y: 322 }, { x: 316, y: 336 }, { x: 364, y: 324 }, { x: 240, y: 360 }],
+  garden: [{ x: 446, y: 320 }, { x: 474, y: 334 }, { x: 502, y: 322 }, { x: 532, y: 336 }, { x: 452, y: 360 }, { x: 512, y: 360 }],
+};
+
+const FURNITURE_SPRITES: Record<Exclude<SceneFurnitureKey, 'computer' | 'watercooler'>, string> = {
   desk_large: deskLargeUrl,
   chair_office: chairOfficeUrl,
   bookshelf_tall: bookshelfTallUrl,
@@ -93,60 +171,79 @@ const FURNITURE_SPRITES: Record<FurnitureKey, string> = {
   small_table: smallTableUrl,
   trash_can: trashCanUrl,
   ceiling_lamp: ceilingLampUrl,
+  garden_bench: gardenBenchUrl,
+  arc_sofa: arcSofaUrl,
+  blue_orb: blueOrbUrl,
+  tall_plant: tallPlantUrl,
+  reception_counter: receptionCounterUrl,
+  fridge: fridgeUrl,
+  wine_sofa: wineSofaUrl,
+  retro_monitor: retroMonitorUrl,
 };
 
-// ---------------------------------------------------------------------------
-// Sprite-row semantics for worker sheets
-// ---------------------------------------------------------------------------
-// Row 0: walk right   Row 1: walk left
-// Row 2: walk down    Row 3: walk up
-// Row 4: typing right Row 5: typing left
-// Row 6: idle right   Row 7: idle left
-// Row 8: idle down    Row 9: action right
-
-// ---------------------------------------------------------------------------
-// Action types — fine-grained, driven by real activity data
-// ---------------------------------------------------------------------------
-
-type AgentAction =
-  | 'writing'      // edit/write/multiedit/apply_patch — actively modifying files
-  | 'reading'      // read — examining a specific file
-  | 'searching'    // grep/glob/list — scanning the codebase
-  | 'browsing'     // webfetch/websearch/codesearch — looking things up online
-  | 'running'      // bash — executing a shell command
-  | 'thinking'     // reasoning partType — deep thought, no tool active
-  | 'composing'    // text partType — streaming a response
-  | 'delegating'   // task/todowrite — coordinating sub-agents or tasks
-  | 'reviewing'    // permission — waiting for user approval
-  | 'retrying'     // retry status — something failed, trying again
-  | 'arriving'     // session just started, no activity yet but working
-  | 'idle';        // not working at all
-
-/** Compact label shown in the action badge — derived from statusText when possible */
-const getActionLabel = (card: RealAgentCard, action: AgentAction): string => {
-  // If we have a real statusText from the assistant, use it directly
-  const st = card.activity.statusText?.trim();
-  if (st && st.length > 0 && st.length <= 14) return st;
-  if (st && st.length > 14) return st.slice(0, 12) + '…';
-
-  // Otherwise fall back to action-based label
-  switch (action) {
-    case 'writing':    return '写入文件';
-    case 'reading':    return '读取文件';
-    case 'searching':  return '搜索代码';
-    case 'browsing':   return '查阅资料';
-    case 'running':    return '运行命令';
-    case 'thinking':   return '思考中';
-    case 'composing':  return '编写回复';
-    case 'delegating': return '分派任务';
-    case 'reviewing':  return '等待确认';
-    case 'retrying':   return '重试中';
-    case 'arriving':   return '准备中';
-    case 'idle':       return '休息中';
-  }
+const ROOM_OBJECTS: Record<NewOfficeZone, SceneObject[]> = {
+  main_office: [
+    { key: 'desk_large', x: 28, y: 78, z: 8, scale: 1.05 },
+    { key: 'chair_office', x: 40, y: 126, z: 9 },
+    { key: 'retro_monitor', x: 96, y: 66, z: 7 },
+    { key: 'computer', x: 86, y: 78, z: 10, animated: true },
+    { key: 'filing_cabinet', x: 176, y: 76, z: 8 },
+    { key: 'printer', x: 186, y: 120, z: 9, animated: true },
+    { key: 'blue_orb', x: 236, y: 66, z: 7, animated: true },
+    { key: 'clock_wall', x: 130, y: 14, z: 7, animated: true },
+  ],
+  meeting_room: [
+    { key: 'conference_table', x: 328, y: 86, z: 8, scale: 1.12 },
+    { key: 'chair_office', x: 314, y: 136, z: 9 },
+    { key: 'chair_office', x: 372, y: 136, z: 9, frameOffset: 1 },
+    { key: 'wall_monitor', x: 470, y: 22, z: 7, animated: true },
+    { key: 'whiteboard_wall', x: 360, y: 20, z: 7 },
+    { key: 'arc_sofa', x: 470, y: 96, z: 8 },
+    { key: 'wine_sofa', x: 486, y: 152, z: 9 },
+    { key: 'chart_board', x: 318, y: 18, z: 7, animated: true },
+  ],
+  corridor: [
+    { key: 'plant_pot', x: 26, y: 214, z: 6, animated: true },
+    { key: 'ceiling_lamp', x: 92, y: 196, z: 5, animated: true },
+    { key: 'small_table', x: 160, y: 210, z: 6 },
+    { key: 'watercooler', x: 228, y: 208, z: 6, animated: true, scale: 1.6 },
+    { key: 'trash_can', x: 314, y: 216, z: 6 },
+    { key: 'plant_pot', x: 376, y: 214, z: 6, frameOffset: 1, animated: true },
+    { key: 'ceiling_lamp', x: 446, y: 196, z: 5, frameOffset: 2, animated: true },
+    { key: 'wall_frame', x: 514, y: 198, z: 5 },
+  ],
+  small_office: [
+    { key: 'bookshelf_tall', x: 10, y: 286, z: 8 },
+    { key: 'bookshelf_tall', x: 38, y: 286, z: 8, frameOffset: 2 },
+    { key: 'small_table', x: 82, y: 312, z: 9 },
+    { key: 'chair_office', x: 100, y: 338, z: 9 },
+    { key: 'fridge', x: 8, y: 322, z: 8 },
+    { key: 'coffee_machine', x: 64, y: 332, z: 9, animated: true },
+    { key: 'plant_pot', x: 116, y: 334, z: 9, animated: true },
+    { key: 'wall_frame', x: 82, y: 270, z: 7 },
+  ],
+  reception: [
+    { key: 'reception_counter', x: 178, y: 284, z: 8 },
+    { key: 'chair_office', x: 216, y: 336, z: 9 },
+    { key: 'small_table', x: 292, y: 330, z: 9 },
+    { key: 'wall_frame', x: 352, y: 272, z: 7 },
+    { key: 'chart_board', x: 186, y: 270, z: 7, animated: true },
+    { key: 'clock_wall', x: 320, y: 272, z: 7, animated: true },
+    { key: 'plant_pot', x: 380, y: 334, z: 9, animated: true },
+    { key: 'rug', x: 246, y: 330, z: 5 },
+  ],
+  garden: [
+    { key: 'garden_bench', x: 438, y: 314, z: 8 },
+    { key: 'tall_plant', x: 522, y: 264, z: 9, animated: true },
+    { key: 'plant_pot', x: 440, y: 342, z: 9, animated: true },
+    { key: 'plant_pot', x: 474, y: 340, z: 9, frameOffset: 1, animated: true },
+    { key: 'small_table', x: 510, y: 336, z: 9 },
+    { key: 'wine_sofa', x: 470, y: 282, z: 8 },
+    { key: 'arc_sofa', x: 430, y: 272, z: 8 },
+    { key: 'blue_orb', x: 532, y: 322, z: 9, animated: true },
+  ],
 };
 
-/** Tool name → action. Most specific mapping. */
 const TOOL_ACTION_MAP: Record<string, AgentAction> = {
   write: 'writing',
   edit: 'writing',
@@ -167,247 +264,219 @@ const TOOL_ACTION_MAP: Record<string, AgentAction> = {
   question: 'reviewing',
 };
 
-/**
- * Resolve the current visual action for an agent card.
- * Priority: toolName > activePartType > activity phase > session status > fallback
- */
-const resolveAgentAction = (card: RealAgentCard): AgentAction => {
-  // 1. Active tool takes priority — it's the most concrete signal
-  const toolName = card.activity.toolName?.toLowerCase() ?? null;
-  if (toolName && TOOL_ACTION_MAP[toolName]) {
-    return TOOL_ACTION_MAP[toolName];
-  }
-
-  // 2. Check statusText for specific phrases
-  const status = `${card.activity.activity} ${card.activity.statusText ?? ''}`.toLowerCase();
-
-  // Retry is a distinct visual state
-  if (status.includes('retry')) return 'retrying';
-
-  // Permission waiting
-  if (status.includes('permission') || status.includes('waiting')) return 'reviewing';
-
-  // 3. Infer from statusText keywords (these come from useAssistantStatus)
-  if (status.includes('thinking') || status.includes('reasoning')) return 'thinking';
-  if (status.includes('composing') || status.includes('streaming')) return 'composing';
-  if (status.includes('editing') || status.includes('writing')) return 'writing';
-  if (status.includes('reading')) return 'reading';
-  if (status.includes('searching') || status.includes('finding') || status.includes('listing')) return 'searching';
-  if (status.includes('fetching') || status.includes('web') || status.includes('learning')) return 'browsing';
-  if (status.includes('running') || status.includes('command')) return 'running';
-  if (status.includes('delegat') || status.includes('todo') || status.includes('planning')) return 'delegating';
-
-  // 4. Session-level activity (includes child session statusType values: 'busy', 'retry', 'idle')
-  if (card.activity.activity === 'tooling') return 'running';
-  if (card.activity.activity === 'streaming') return 'composing';
-  if (card.activity.activity === 'cooldown') return 'thinking';
-  if (card.activity.activity === 'permission') return 'reviewing';
-  if (card.activity.activity === 'busy') return 'composing';  // child session actively working
-  if (card.activity.activity === 'retry') return 'retrying';  // child session retrying
-
-  // 5. Source-based fallback — only for truly unknown states
-  if (card.activity.source === 'session' && card.activity.activity !== 'idle') {
-    return 'composing';  // session is active but we can't determine specifics
-  }
-
-  return 'idle';
-};
-
-// ---------------------------------------------------------------------------
-// Zone layout
-// ---------------------------------------------------------------------------
-
-interface ZoneLayout {
-  anchors: Array<{ x: number; y: number }>;
-}
-
-const ZONES: Record<OfficeZone, ZoneLayout> = {
-  desk: { anchors: [
-    { x: 50, y: 90 }, { x: 130, y: 90 }, { x: 50, y: 120 },
-    { x: 130, y: 120 }, { x: 80, y: 105 }, { x: 160, y: 105 },
-  ]},
-  bookshelf: { anchors: [
-    { x: 60, y: 230 }, { x: 100, y: 240 }, { x: 140, y: 230 },
-  ]},
-  commons: { anchors: [
-    { x: 260, y: 90 }, { x: 310, y: 100 }, { x: 350, y: 90 },
-    { x: 280, y: 230 }, { x: 340, y: 240 },
-  ]},
-};
-
-type RoomId = 'workspace' | 'conference' | 'library' | 'breakroom';
-
-interface RoomLayout {
-  id: RoomId;
-  zone: OfficeZone;
-  x: number; y: number;
-  w: number; h: number;
-  wallHeight: number;
-  wallColor: string;
-  floorColor: string;
-  baseboardColor: string;
-}
-
-const CORRIDOR = {
-  thickness: 6,
-  horizontalY: 137,
-  verticalX: 197,
-  color: 'color-mix(in oklab, var(--surface-foreground) 85%, var(--surface-background))',
-  borderColor: 'color-mix(in oklab, var(--interactive-border) 90%, transparent)',
-} as const;
-
-const ROOMS: RoomLayout[] = [
-  {
-    id: 'workspace', zone: 'desk',
-    x: 0, y: 0, w: 197, h: 137, wallHeight: 28,
-    wallColor: 'color-mix(in oklab, var(--status-warning-background) 58%, var(--surface-background))',
-    floorColor: 'color-mix(in oklab, var(--status-info-background) 34%, var(--surface-background))',
-    baseboardColor: 'color-mix(in oklab, var(--status-warning) 36%, var(--surface-elevated))',
-  },
-  {
-    id: 'conference', zone: 'commons',
-    x: 203, y: 0, w: 197, h: 137, wallHeight: 28,
-    wallColor: 'color-mix(in oklab, var(--status-success-background) 50%, var(--surface-background))',
-    floorColor: 'color-mix(in oklab, var(--status-success-background) 28%, var(--surface-background))',
-    baseboardColor: 'color-mix(in oklab, var(--status-success) 40%, var(--surface-elevated))',
-  },
-  {
-    id: 'library', zone: 'bookshelf',
-    x: 0, y: 143, w: 197, h: 137, wallHeight: 28,
-    wallColor: 'color-mix(in oklab, var(--primary-background) 50%, var(--surface-background))',
-    floorColor: 'color-mix(in oklab, var(--primary-background) 28%, var(--surface-background))',
-    baseboardColor: 'color-mix(in oklab, var(--primary-base) 30%, var(--surface-elevated))',
-  },
-  {
-    id: 'breakroom', zone: 'commons',
-    x: 203, y: 143, w: 197, h: 137, wallHeight: 28,
-    wallColor: 'color-mix(in oklab, var(--status-warning) 25%, var(--surface-elevated))',
-    floorColor: 'color-mix(in oklab, var(--status-warning-background) 38%, var(--surface-background))',
-    baseboardColor: 'color-mix(in oklab, var(--status-warning) 45%, var(--surface-elevated))',
-  },
-];
-
-interface SceneObject {
-  key: SceneFurnitureKey;
-  x: number;
-  y: number;
-  z: number;
-  scale?: number;
-  animated?: boolean;
-  frameOffset?: number;
-}
-
-const ROOM_OBJECTS: Record<RoomId, SceneObject[]> = {
-  workspace: [
-    { key: 'desk_large', x: 20, y: 40, z: 9, scale: 1.08 },
-    { key: 'chair_office', x: 34, y: 78, z: 9 },
-    { key: 'computer', x: 30, y: 38, z: 10, scale: 1.3, animated: true },
-    { key: 'desk_large', x: 100, y: 40, z: 9, scale: 1.08, frameOffset: 1 },
-    { key: 'chair_office', x: 114, y: 78, z: 9 },
-    { key: 'computer', x: 110, y: 38, z: 10, scale: 1.3, animated: true, frameOffset: 1 },
-    { key: 'filing_cabinet', x: 160, y: 52, z: 8 },
-    { key: 'printer', x: 160, y: 92, z: 8, animated: true },
-  ],
-  conference: [
-    { key: 'conference_table', x: 60, y: 60, z: 9, scale: 1.1 },
-    { key: 'chair_office', x: 40, y: 80, z: 9 },
-    { key: 'chair_office', x: 90, y: 80, z: 9, frameOffset: 1 },
-    { key: 'chair_office', x: 140, y: 80, z: 9, frameOffset: 2 },
-    { key: 'whiteboard_wall', x: 80, y: 6, z: 7 },
-    { key: 'wall_monitor', x: 140, y: 6, z: 7, animated: true },
-    { key: 'plant_pot', x: 165, y: 100, z: 9, animated: true },
-  ],
-  library: [
-    { key: 'bookshelf_tall', x: 10, y: 18, z: 8, scale: 1.05 },
-    { key: 'bookshelf_tall', x: 10, y: 68, z: 8, scale: 1.05, frameOffset: 2 },
-    { key: 'small_table', x: 80, y: 60, z: 9 },
-    { key: 'chair_office', x: 90, y: 90, z: 9 },
-    { key: 'wall_frame', x: 60, y: 6, z: 7 },
-    { key: 'clock_wall', x: 130, y: 6, z: 7, animated: true },
-    { key: 'plant_pot', x: 160, y: 100, z: 9, animated: true, frameOffset: 1 },
-  ],
-  breakroom: [
-    { key: 'sofa_modular', x: 30, y: 70, z: 8, scale: 1.08 },
-    { key: 'coffee_machine', x: 150, y: 40, z: 9, animated: true },
-    { key: 'small_table', x: 80, y: 60, z: 9, frameOffset: 1 },
-    { key: 'watercooler', x: 120, y: 80, z: 9, scale: 2, animated: true },
-    { key: 'rug', x: 70, y: 90, z: 5 },
-    { key: 'trash_can', x: 160, y: 100, z: 8 },
-    { key: 'chart_board', x: 100, y: 6, z: 7, animated: true },
-  ],
-};
-
-const ZONE_ROOM_MAP: Record<OfficeZone, RoomId[]> = {
-  desk: ['workspace'],
-  bookshelf: ['library'],
-  commons: ['conference', 'breakroom'],
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Map agent name → sprite index. Uses a better distribution hash and ensures
- * lead vs child agents look visually distinct.
- */
 const spriteIndexFromName = (name: string, isLead: boolean): number => {
-  let hash = 0;
-  for (let i = 0; i < name.length; i += 1) {
-    hash = (hash * 131 + name.charCodeAt(i)) | 0;
-  }
-  // Lead agent gets sprite 0 (the 'main character' look)
-  // Children distribute across 1-3 so they look different from lead
   if (isLead) return 0;
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) hash = (hash * 131 + name.charCodeAt(i)) | 0;
   return 1 + (Math.abs(hash) % (WORKER_SPRITES.length - 1));
 };
 
-/**
- * Map action → { row, speed } in the worker sprite sheet.
- *
- * Sprite rows:
- *   0: walk right   1: walk left
- *   2: walk down    3: walk up
- *   4: typing right 5: typing left
- *   6: idle right   7: idle left
- *   8: idle down    9: action right
- */
-const actionToSpriteRow = (action: AgentAction): { row: number; speed: number } => {
-  switch (action) {
-    case 'writing':     return { row: 4, speed: 1.0 };  // typing animation — actively coding
-    case 'reading':     return { row: 6, speed: 0.4 };  // idle right — looking at screen
-    case 'searching':   return { row: 0, speed: 0.8 };  // walk right — scanning through files
-    case 'browsing':    return { row: 2, speed: 0.6 };  // walk down — browsing the web
-    case 'running':     return { row: 9, speed: 1.5 };  // action right — executing something
-    case 'thinking':    return { row: 8, speed: 0.3 };  // idle down — deep in thought, slow
-    case 'composing':   return { row: 4, speed: 0.6 };  // typing but slower — drafting text
-    case 'delegating':  return { row: 3, speed: 0.7 };  // walk up — going to assign work
-    case 'reviewing':   return { row: 7, speed: 0.2 };  // idle left — waiting, barely moving
-    case 'retrying':    return { row: 9, speed: 2.0 };  // action fast — urgently retrying
-    case 'arriving':    return { row: 2, speed: 0.5 };  // walk down — entering the scene
-    case 'idle':        return { row: 8, speed: 0.2 };  // idle down — very slow breathing
-    default:            return { row: 8, speed: 0.3 };
+const normalizeZone = (zone: RealAgentCard['zone']): NewOfficeZone => {
+  switch (zone) {
+    case 'main_office':
+    case 'meeting_room':
+    case 'corridor':
+    case 'small_office':
+    case 'reception':
+    case 'garden':
+      return zone;
+    default:
+      return 'garden';
   }
 };
 
-// ---------------------------------------------------------------------------
-// Animation tick hook
-// ---------------------------------------------------------------------------
+const roundPoint = (p: Point): Point => ({ x: Math.round(p.x), y: Math.round(p.y) });
 
-const useAnimationTick = (intervalMs = 280): number => {
+const actionToSpriteRow = (action: AgentAction, direction: Direction, isMoving: boolean): { row: number; speed: number } => {
+  if (isMoving) {
+    if (direction === 'right') return { row: 0, speed: 1.1 };
+    if (direction === 'left') return { row: 1, speed: 1.1 };
+    if (direction === 'down') return { row: 2, speed: 1.1 };
+    return { row: 3, speed: 1.1 };
+  }
+  switch (action) {
+    case 'writing': return { row: 4, speed: 1.0 };
+    case 'running': return { row: 9, speed: 1.7 };
+    case 'thinking': return { row: 8, speed: 0.3 };
+    case 'composing': return { row: 4, speed: 0.6 };
+    case 'retrying': return { row: 9, speed: 2.0 };
+    case 'reviewing': return { row: 7, speed: 0.25 };
+    case 'delegating': return { row: 3, speed: 0.6 };
+    case 'reading': return { row: 6, speed: 0.4 };
+    case 'searching': return { row: 6, speed: 0.6 };
+    case 'browsing': return { row: 8, speed: 0.5 };
+    case 'arriving': return { row: 2, speed: 0.5 };
+    case 'idle':
+    default:
+      return { row: direction === 'left' ? 7 : direction === 'right' ? 6 : 8, speed: 0.2 };
+  }
+};
+
+const getActionLabel = (card: RealAgentCard, action: AgentAction): string => {
+  const st = card.activity.statusText?.trim();
+  if (st && st.length > 0) return st.length > 14 ? `${st.slice(0, 12)}…` : st;
+  switch (action) {
+    case 'writing': return '写入文件';
+    case 'reading': return '读取文件';
+    case 'searching': return '搜索代码';
+    case 'browsing': return '查阅资料';
+    case 'running': return '运行命令';
+    case 'thinking': return '思考中';
+    case 'composing': return '编写回复';
+    case 'delegating': return '分派任务';
+    case 'reviewing': return '等待确认';
+    case 'retrying': return '重试中';
+    case 'arriving': return '准备中';
+    case 'idle':
+    default:
+      return '休息中';
+  }
+};
+
+const resolveAgentAction = (card: RealAgentCard): AgentAction => {
+  const toolName = card.activity.toolName?.toLowerCase() ?? null;
+  if (toolName && TOOL_ACTION_MAP[toolName]) return TOOL_ACTION_MAP[toolName];
+  const status = `${card.activity.activity} ${card.activity.statusText ?? ''}`.toLowerCase();
+  if (status.includes('retry')) return 'retrying';
+  if (status.includes('permission') || status.includes('waiting')) return 'reviewing';
+  if (status.includes('thinking') || status.includes('reasoning') || card.activity.activity === 'cooldown') return 'thinking';
+  if (status.includes('streaming') || card.activity.activity === 'streaming') return 'composing';
+  if (status.includes('writing') || status.includes('editing')) return 'writing';
+  if (status.includes('reading')) return 'reading';
+  if (status.includes('search') || status.includes('listing') || status.includes('finding')) return 'searching';
+  if (status.includes('fetching') || status.includes('web')) return 'browsing';
+  if (status.includes('running') || status.includes('command') || card.activity.activity === 'tooling') return 'running';
+  if (status.includes('delegat') || status.includes('todo') || status.includes('planning')) return 'delegating';
+  if (card.activity.activity === 'busy') return 'composing';
+  return 'idle';
+};
+
+const getDirection = (from: Point, to: Point, fallback: Direction): Direction => {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) > 0) return dx > 0 ? 'right' : 'left';
+  if (Math.abs(dy) > 0) return dy > 0 ? 'down' : 'up';
+  return fallback;
+};
+
+const buildRoute = (from: Point, fromZone: NewOfficeZone, to: Point, toZone: NewOfficeZone): Point[] => {
+  if (fromZone === toZone) return [roundPoint(to)];
+  const points: Point[] = [];
+  
+  if (fromZone !== 'corridor') {
+    points.push(roundPoint(DOORWAYS[fromZone]));
+    points.push(roundPoint({ x: DOORWAYS[fromZone].x, y: CORRIDOR_Y }));
+  }
+  
+  if (toZone !== 'corridor') {
+    points.push(roundPoint({ x: DOORWAYS[toZone].x, y: CORRIDOR_Y }));
+    points.push(roundPoint(DOORWAYS[toZone]));
+  } else {
+    points.push(roundPoint({ x: to.x, y: CORRIDOR_Y }));
+  }
+  
+  points.push(roundPoint(to));
+  return points.filter((p, idx) => idx === 0 || p.x !== points[idx - 1].x || p.y !== points[idx - 1].y);
+};
+
+const useAnimationTick = (intervalMs = 240): number => {
   const [tick, setTick] = React.useState(0);
-
   React.useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), intervalMs);
-    return () => clearInterval(id);
+    const id = window.setInterval(() => setTick((t) => t + 1), intervalMs);
+    return () => window.clearInterval(id);
   }, [intervalMs]);
-
   return tick;
 };
 
-// ---------------------------------------------------------------------------
-// SpriteDiv — renders one frame from a sprite sheet
-// ---------------------------------------------------------------------------
+const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
+  const [positions, setPositions] = React.useState<Record<string, Point>>({});
+  const [directions, setDirections] = React.useState<Record<string, Direction>>({});
+  const routesRef = React.useRef<Record<string, Point[]>>({});
+  const zonesRef = React.useRef<Record<string, NewOfficeZone>>({});
+  const phaseRef = React.useRef<Record<string, number>>({});
+  const lastTsRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    const usage: Record<NewOfficeZone, number> = { main_office: 0, meeting_room: 0, corridor: 0, small_office: 0, reception: 0, garden: 0 };
+    setPositions((prev) => {
+      const next = { ...prev };
+      for (const card of cards) {
+        const zone = normalizeZone(card.zone);
+        const index = usage[zone];
+        usage[zone] += 1;
+        const target = roundPoint(ZONE_ANCHORS[zone][index % ZONE_ANCHORS[zone].length]);
+        const current = next[card.sessionId] ?? target;
+        const currentZone = zonesRef.current[card.sessionId] ?? zone;
+        routesRef.current[card.sessionId] = buildRoute(current, currentZone, target, zone);
+        zonesRef.current[card.sessionId] = zone;
+        next[card.sessionId] = roundPoint(current);
+        phaseRef.current[card.sessionId] = phaseRef.current[card.sessionId] ?? 0;
+      }
+      return next;
+    });
+  }, [cards]);
+
+  React.useEffect(() => {
+    let rafId = 0;
+    const speed = 96;
+    const loop = (ts: number) => {
+      const prevTs = lastTsRef.current ?? ts;
+      const delta = Math.min((ts - prevTs) / 1000, 0.05);
+      lastTsRef.current = ts;
+
+      setPositions((prev) => {
+        const next = { ...prev };
+        const nextDir: Record<string, Direction> = { ...directions };
+        let changed = false;
+        for (const card of cards) {
+          const id = card.sessionId;
+          const route = routesRef.current[id] ?? [];
+          if (route.length === 0) continue;
+          const current = next[id] ?? route[0];
+          const target = route[0];
+          const dx = target.x - current.x;
+          const dy = target.y - current.y;
+          const dist = Math.hypot(dx, dy);
+          const step = speed * delta;
+          const dir = getDirection(current, target, nextDir[id] ?? 'down');
+          nextDir[id] = dir;
+          if (dist <= step || dist === 0) {
+            next[id] = roundPoint(target);
+            route.shift();
+          } else {
+            next[id] = roundPoint({ x: current.x + (dx / dist) * step, y: current.y + (dy / dist) * step });
+          }
+          phaseRef.current[id] = (phaseRef.current[id] ?? 0) + 1;
+          changed = true;
+        }
+        setDirections(nextDir);
+        return changed ? next : prev;
+      });
+
+      rafId = window.requestAnimationFrame(loop);
+    };
+
+    rafId = window.requestAnimationFrame(loop);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      lastTsRef.current = null;
+    };
+  }, [cards, directions]);
+
+  return React.useMemo(() => {
+    const usage: Record<NewOfficeZone, number> = { main_office: 0, meeting_room: 0, corridor: 0, small_office: 0, reception: 0, garden: 0 };
+    return cards.map((card) => {
+      const zone = normalizeZone(card.zone);
+      const idx = usage[zone];
+      usage[zone] += 1;
+      const fallback = roundPoint(ZONE_ANCHORS[zone][idx % ZONE_ANCHORS[zone].length]);
+      const position = positions[card.sessionId] ?? fallback;
+      const direction = directions[card.sessionId] ?? 'down';
+      const isMoving = (routesRef.current[card.sessionId] ?? []).length > 0;
+      return { card, position, direction, isMoving, phase: phaseRef.current[card.sessionId] ?? 0 };
+    });
+  }, [cards, positions, directions]);
+};
 
 interface SpriteDivProps {
   src: string;
@@ -420,17 +489,17 @@ interface SpriteDivProps {
   style?: React.CSSProperties;
 }
 
-const SpriteDiv: React.FC<SpriteDivProps> = ({ src, sheetW, sheetH, col, row, frameSize = 16, scale = SCALE, style }) => {
+const SpriteDiv: React.FC<SpriteDivProps> = ({ src, sheetW, sheetH, col, row, frameSize = 16, scale = WORKER_SCALE, style }) => {
   const displaySize = frameSize * scale;
   return (
     <div
       aria-hidden
       style={{
-        width: displaySize,
-        height: displaySize,
+        width: Math.round(displaySize),
+        height: Math.round(displaySize),
         backgroundImage: `url(${src})`,
-        backgroundSize: `${sheetW * scale}px ${sheetH * scale}px`,
-        backgroundPosition: `-${col * displaySize}px -${row * displaySize}px`,
+        backgroundSize: `${Math.round(sheetW * scale)}px ${Math.round(sheetH * scale)}px`,
+        backgroundPosition: `-${Math.round(col * displaySize)}px -${Math.round(row * displaySize)}px`,
         backgroundRepeat: 'no-repeat',
         imageRendering: 'pixelated',
         ...style,
@@ -439,121 +508,73 @@ const SpriteDiv: React.FC<SpriteDivProps> = ({ src, sheetW, sheetH, col, row, fr
   );
 };
 
-// ---------------------------------------------------------------------------
-// AgentSprite — a character in the scene
-// ---------------------------------------------------------------------------
+const getSceneObjectFrame = (item: SceneObject, tick: number) => {
+  if (item.key === 'computer') {
+    const base = item.frameOffset ?? 0;
+    const col = item.animated ? (tick + base) % COMPUTER_COLS : base;
+    const row = item.animated ? Math.floor((tick + base) / COMPUTER_COLS) % 3 : 0;
+    return { col, row };
+  }
+  if (item.key === 'watercooler') {
+    return { col: item.animated ? tick % COOLER_FRAMES : 0, row: 0 };
+  }
+  const base = item.frameOffset ?? 0;
+  return { col: item.animated ? (tick + base) % FURNITURE_FRAMES : base % FURNITURE_FRAMES, row: 0 };
+};
 
-const AgentSprite: React.FC<{
-  card: RealAgentCard;
-  x: number;
-  y: number;
-  tick: number;
-}> = ({ card, x, y, tick }) => {
-  const action = resolveAgentAction(card);
-  const { row, speed } = actionToSpriteRow(action);
-  const spriteUrl = WORKER_SPRITES[spriteIndexFromName(card.agentName, card.isLead)];
-  const label = getActionLabel(card, action);
+const SceneFurnitureSprite: React.FC<{ object: SceneObject; tick: number }> = ({ object, tick }) => {
+  const frame = getSceneObjectFrame(object, tick);
+  const scale = object.scale ?? 1;
+  const left = Math.round(object.x);
+  const top = Math.round(object.y);
+  if (object.key === 'computer') {
+    return <div style={{ position: 'absolute', left, top, zIndex: object.z }}><SpriteDiv src={computerUrl} sheetW={COMPUTER_SHEET_W} sheetH={COMPUTER_SHEET_H} col={frame.col} row={frame.row} frameSize={16} scale={scale} /></div>;
+  }
+  if (object.key === 'watercooler') {
+    return <div style={{ position: 'absolute', left, top, zIndex: object.z }}><SpriteDiv src={watercoolerUrl} sheetW={COOLER_SHEET_W} sheetH={16} col={frame.col} row={0} frameSize={16} scale={scale} /></div>;
+  }
+  if (object.key === 'blue_orb') {
+    // Add a pulsing glow effect to the blue orb
+    const glowScale = 1 + Math.sin(tick * 0.1) * 0.1;
+    return (
+      <div style={{ position: 'absolute', left, top, zIndex: object.z, filter: `drop-shadow(0 0 8px rgba(100, 200, 255, ${0.5 + Math.sin(tick * 0.1) * 0.3}))` }}>
+        <SpriteDiv src={FURNITURE_SPRITES[object.key]} sheetW={FURNITURE_SHEET_W} sheetH={FURNITURE_SHEET_H} col={frame.col} row={0} frameSize={FURNITURE_FRAME} scale={scale * glowScale} />
+      </div>
+    );
+  }
+  return <div style={{ position: 'absolute', left, top, zIndex: object.z }}><SpriteDiv src={FURNITURE_SPRITES[object.key]} sheetW={FURNITURE_SHEET_W} sheetH={FURNITURE_SHEET_H} col={frame.col} row={0} frameSize={FURNITURE_FRAME} scale={scale} /></div>;
+};
 
-  // Frame cycling: speed multiplier controls how many ticks per frame change
-  const effectiveTick = Math.floor(tick * speed);
-  const col = action !== 'idle' ? effectiveTick % WORKER_COLS : effectiveTick % 2;
-
-  // Bounce for active agents, intensity varies by action
-  const bounceIntensity = action === 'retrying' ? 2 : action === 'running' ? 1 : action === 'idle' ? 0 : 1;
-  const bounceY = bounceIntensity > 0 && action !== 'idle' ? (tick % 2 === 0 ? 0 : -bounceIntensity) : 0;
-
-  // Badge color based on action category
-  const badgeColor = (() => {
-    switch (action) {
-      case 'writing':    return 'var(--status-success)';
-      case 'reading':    return 'var(--status-info)';
-      case 'searching':  return 'var(--status-info)';
-      case 'browsing':   return 'var(--primary-base)';
-      case 'running':    return 'var(--status-warning)';
-      case 'thinking':   return 'var(--surface-muted-foreground)';
-      case 'composing':  return 'var(--status-success)';
-      case 'delegating': return 'var(--primary-base)';
-      case 'reviewing':  return 'var(--status-warning)';
-      case 'retrying':   return 'var(--status-error)';
-      case 'arriving':   return 'var(--surface-muted-foreground)';
-      case 'idle':       return 'var(--surface-muted-foreground)';
-    }
-  })();
+const AgentSprite: React.FC<{ motion: AgentMotion; tick: number }> = ({ motion, tick }) => {
+  const action = resolveAgentAction(motion.card);
+  const { row, speed } = actionToSpriteRow(action, motion.direction, motion.isMoving);
+  const effectiveTick = Math.floor((tick + motion.phase) * speed);
+  const col = motion.isMoving ? effectiveTick % WORKER_COLS : effectiveTick % 2;
+  const spriteUrl = WORKER_SPRITES[spriteIndexFromName(motion.card.agentName, motion.card.isLead)];
+  const label = getActionLabel(motion.card, action);
 
   return (
     <div
       style={{
         position: 'absolute',
-        left: x,
-        top: y + bounceY,
+        left: Math.round(motion.position.x),
+        top: Math.round(motion.position.y),
         transform: 'translate(-50%, -100%)',
-        transition: 'left 400ms ease, top 400ms ease',
-        zIndex: 20,
+        zIndex: 50,
       }}
     >
-      {/* Shadow */}
       <div
         style={{
           position: 'absolute',
-          left: FRAME_DISPLAY / 2 - 6,
-          top: FRAME_DISPLAY - 2,
+          left: Math.round(FRAME_DISPLAY / 2 - 6),
+          top: Math.round(FRAME_DISPLAY - 2),
           width: 12,
           height: 4,
           borderRadius: '50%',
-          backgroundColor: 'color-mix(in oklab, var(--surface-foreground) 18%, transparent)',
+          backgroundColor: '#00000044',
         }}
       />
-
-      {/* Character sprite */}
-      <SpriteDiv
-        src={spriteUrl}
-        sheetW={WORKER_SHEET_W}
-        sheetH={WORKER_SHEET_H}
-        col={col}
-        row={row}
-      />
-
-      {/* Lead crown indicator */}
-      {card.isLead && (
-        <div
-          style={{
-            position: 'absolute',
-            left: FRAME_DISPLAY / 2 - 4,
-            top: -4,
-            width: 8,
-            height: 5,
-            clipPath: 'polygon(0% 100%, 15% 30%, 30% 70%, 50% 0%, 70% 70%, 85% 30%, 100% 100%)',
-            backgroundColor: 'var(--status-success)',
-          }}
-        />
-      )}
-
-      {/* Contextual indicator — only shown for distinctive states */}
-      {action === 'thinking' && (
-        /* Thought bubble dots */
-        <>
-          <div style={{ position: 'absolute', right: -1, top: 6, width: 3, height: 3, backgroundColor: 'var(--surface-muted-foreground)', borderRadius: '50%', opacity: 0.7, animation: 'pixelOfficeFloat 1.5s ease-in-out infinite' }} />
-          <div style={{ position: 'absolute', right: -4, top: 2, width: 2, height: 2, backgroundColor: 'var(--surface-muted-foreground)', borderRadius: '50%', opacity: 0.4, animation: 'pixelOfficeFloat 2s ease-in-out infinite 0.3s' }} />
-        </>
-      )}
-      {action === 'running' && (
-        /* Terminal cursor blink */
-        <div style={{ position: 'absolute', right: -2, top: 14, width: 4, height: 5, backgroundColor: 'var(--status-warning)', opacity: tick % 3 === 0 ? 1 : 0.4, transition: 'opacity 150ms' }} />
-      )}
-      {action === 'retrying' && (
-        /* Warning dot */
-        <div style={{ position: 'absolute', right: 0, top: 2, width: 4, height: 4, backgroundColor: 'var(--status-error)', borderRadius: '50%', animation: 'pixelOfficeBounce 0.6s ease-in-out infinite' }} />
-      )}
-      {action === 'reviewing' && (
-        /* Question mark indicator */
-        <div style={{ position: 'absolute', right: -3, top: 4, fontSize: 7, lineHeight: 1, color: 'var(--status-warning)', fontWeight: 'bold' }}>?</div>
-      )}
-      {action === 'delegating' && (
-        /* Outgoing arrow */
-        <div style={{ position: 'absolute', left: -3, top: 10, fontSize: 6, lineHeight: 1, color: 'var(--primary-base)' }}>→</div>
-      )}
-
-      {/* Action label badge */}
+      <SpriteDiv src={spriteUrl} sheetW={WORKER_SHEET_W} sheetH={WORKER_SHEET_H} col={col} row={row} frameSize={16} scale={WORKER_SCALE} />
       <div
         style={{
           position: 'absolute',
@@ -562,14 +583,12 @@ const AgentSprite: React.FC<{
           transform: 'translateX(-50%)',
           fontSize: 7,
           lineHeight: 1,
-          color: badgeColor,
           padding: '1px 4px',
-          border: `1px solid ${badgeColor}`,
-          backgroundColor: 'var(--surface-elevated)',
-          whiteSpace: 'nowrap',
+          border: '1px solid #4a3f31',
+          backgroundColor: '#f2e2bf',
+          color: '#2f2518',
           borderRadius: 3,
-          opacity: action === 'idle' ? 0.6 : 1,
-          animation: action !== 'idle' ? 'pixelOfficeFloat 2s ease-in-out infinite' : 'none',
+          whiteSpace: 'nowrap',
         }}
       >
         {label}
@@ -578,272 +597,77 @@ const AgentSprite: React.FC<{
   );
 };
 
-// ---------------------------------------------------------------------------
-// Furniture components
-// ---------------------------------------------------------------------------
-
-const getSceneObjectFrame = (item: SceneObject, tick: number, deskActive: boolean, commonsActive: boolean) => {
-  if (item.key === 'computer') {
-    if (!deskActive) return { col: item.frameOffset ?? 0, row: 0 };
-    const col = (tick + (item.frameOffset ?? 0)) % COMPUTER_COLS;
-    const row = Math.floor(tick / COMPUTER_COLS) % 3;
-    return { col, row };
-  }
-  if (item.key === 'watercooler') {
-    return { col: commonsActive ? tick % COOLER_FRAMES : 0, row: 0 };
-  }
-  const base = item.frameOffset ?? 0;
-  const col = item.animated ? (tick + base) % FURNITURE_FRAMES : base % FURNITURE_FRAMES;
-  return { col, row: 0 };
-};
-
-const SceneFurnitureSprite: React.FC<{
-  object: SceneObject;
-  tick: number;
-  deskActive: boolean;
-  commonsActive: boolean;
-}> = ({ object, tick, deskActive, commonsActive }) => {
-  const frame = getSceneObjectFrame(object, tick, deskActive, commonsActive);
-  const scale = object.scale ?? 1;
-
-  if (object.key === 'computer') {
-    return (
-      <div style={{ position: 'absolute', left: object.x, top: object.y, zIndex: object.z }}>
-        <SpriteDiv src={computerUrl} sheetW={COMPUTER_SHEET_W} sheetH={COMPUTER_SHEET_H} col={frame.col} row={frame.row} frameSize={16} scale={scale} />
-      </div>
-    );
-  }
-  if (object.key === 'watercooler') {
-    return (
-      <div style={{ position: 'absolute', left: object.x, top: object.y, zIndex: object.z }}>
-        <SpriteDiv src={watercoolerUrl} sheetW={COOLER_SHEET_W} sheetH={16} col={frame.col} row={0} frameSize={16} scale={scale} />
-      </div>
-    );
-  }
-  return (
-    <div style={{ position: 'absolute', left: object.x, top: object.y, zIndex: object.z }}>
-      <SpriteDiv src={FURNITURE_SPRITES[object.key as FurnitureKey]} sheetW={FURNITURE_SHEET_W} sheetH={FURNITURE_SHEET_H} col={frame.col} row={0} frameSize={FURNITURE_FRAME} scale={scale} />
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// OfficeScene — the Stardew Valley–style room
-// ---------------------------------------------------------------------------
-
 const OfficeScene: React.FC<{ cards: RealAgentCard[] }> = ({ cards }) => {
-  const tick = useAnimationTick(280);
+  const motions = useMovementSystem(cards);
+  const tick = useAnimationTick(220);
 
-  // Position agents in their zones
-  const positioned = React.useMemo(() => {
-    const zoneUsage: Record<OfficeZone, number> = { desk: 0, bookshelf: 0, commons: 0 };
-    return cards.map((card) => {
-      const zone = ZONES[card.zone];
-      const index = zoneUsage[card.zone];
-      const anchor = zone.anchors[index] ?? zone.anchors[zone.anchors.length - 1];
-      zoneUsage[card.zone] = index + 1;
-      return { card, x: anchor.x, y: anchor.y };
-    });
-  }, [cards]);
-
-  // Check if any agent is in each zone (for object animations)
-  const hasAgentInDesk = cards.some((c) => c.zone === 'desk');
-  const hasAgentInBookshelf = cards.some((c) => c.zone === 'bookshelf');
-  const hasAgentInCommons = cards.some((c) => c.zone === 'commons');
-
-  const roomHasActiveAgent = React.useCallback((roomId: RoomId) => {
-    return cards.some((card) => ZONE_ROOM_MAP[card.zone].includes(roomId));
-  }, [cards]);
   return (
-    <div
-      style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: SCENE_W,
-        height: SCENE_H,
-        border: '2px solid var(--interactive-border)',
-        borderRadius: 4,
-        overflow: 'hidden',
-        imageRendering: 'pixelated',
-        margin: '0 auto',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: 'color-mix(in oklab, var(--surface-muted) 45%, var(--surface-background))',
-        }}
-      />
-
-      <div style={{ position: 'absolute', left: 0, top: CORRIDOR.horizontalY, width: SCENE_W, height: CORRIDOR.thickness, backgroundColor: CORRIDOR.color, zIndex: 0 }} />
-      <div style={{ position: 'absolute', left: CORRIDOR.verticalX, top: 0, width: CORRIDOR.thickness, height: SCENE_H, backgroundColor: CORRIDOR.color, zIndex: 0 }} />
-
-      <div style={{ position: 'absolute', left: 0, top: CORRIDOR.horizontalY, width: SCENE_W, height: 1, backgroundColor: CORRIDOR.borderColor, zIndex: 1 }} />
-      <div style={{ position: 'absolute', left: 0, top: CORRIDOR.horizontalY + CORRIDOR.thickness - 1, width: SCENE_W, height: 1, backgroundColor: CORRIDOR.borderColor, zIndex: 1 }} />
-      <div style={{ position: 'absolute', left: CORRIDOR.verticalX, top: 0, width: 1, height: SCENE_H, backgroundColor: CORRIDOR.borderColor, zIndex: 1 }} />
-      <div style={{ position: 'absolute', left: CORRIDOR.verticalX + CORRIDOR.thickness - 1, top: 0, width: 1, height: SCENE_H, backgroundColor: CORRIDOR.borderColor, zIndex: 1 }} />
-
-      {ROOMS.map((room) => (
-        <React.Fragment key={room.id}>
-          <div style={{
-            position: 'absolute', left: room.x, top: room.y,
-            width: room.w, height: room.wallHeight,
-            backgroundColor: room.wallColor,
-            backgroundImage: `linear-gradient(to right, color-mix(in oklab, var(--interactive-border) 15%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--interactive-border) 15%, transparent) 1px, transparent 1px)`,
-            backgroundSize: '12px 10px',
-            zIndex: 2,
-          }} />
-          <div style={{
-            position: 'absolute', left: room.x, top: room.y + room.wallHeight,
-            width: room.w, height: 3,
-            backgroundColor: room.baseboardColor,
-            borderTop: '1px solid color-mix(in oklab, var(--interactive-border) 80%, transparent)',
-            borderBottom: '1px solid color-mix(in oklab, var(--interactive-border) 60%, transparent)',
-            zIndex: 3,
-          }} />
-          <div style={{
-            position: 'absolute', left: room.x, top: room.y + room.wallHeight + 3,
-            width: room.w, height: room.h - room.wallHeight - 3,
-            backgroundColor: room.floorColor,
-            backgroundImage: `linear-gradient(to right, color-mix(in oklab, var(--interactive-border) 20%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--interactive-border) 12%, transparent) 1px, transparent 1px)`,
-            backgroundSize: `${TILE}px ${TILE}px`,
-            zIndex: 1,
-          }} />
-
-          {ROOM_OBJECTS[room.id].map((obj, idx) => (
-            <SceneFurnitureSprite
-              key={`${room.id}-${obj.key}-${idx}`}
-              object={{ ...obj, x: room.x + obj.x, y: room.y + obj.y }}
-              tick={tick}
-              deskActive={hasAgentInDesk}
-              commonsActive={hasAgentInCommons && roomHasActiveAgent(room.id)}
-            />
-          ))}
-        </React.Fragment>
-      ))}
-
-      {hasAgentInBookshelf && (
-        <div style={{
-          position: 'absolute',
-          left: 50,
-          top: 230,
-          width: 18,
-          height: 14,
-          zIndex: 6,
-          background: 'radial-gradient(circle, color-mix(in oklab, var(--status-warning) 24%, transparent), transparent 70%)',
-          animation: 'pixelOfficePulse 2.4s ease-in-out infinite',
-        }} />
-      )}
-
-      {positioned.map(({ card, x, y }) => (
-        <AgentSprite key={card.slotId} card={card} x={x} y={y} tick={tick} />
-      ))}
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// AgentCards — compact list below the scene
-// ---------------------------------------------------------------------------
-
-const AgentCards: React.FC<{ cards: RealAgentCard[] }> = ({ cards }) => {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 36, overflowY: 'auto' }}>
-      {cards.slice(0, 2).map((card) => {
-        const action = resolveAgentAction(card);
-        const label = getActionLabel(card, action);
+    <div style={{ position: 'relative', width: SCENE_W, height: SCENE_H, border: '2px solid #4a3f31', overflow: 'hidden', imageRendering: 'pixelated', backgroundColor: '#7b6a56' }}>
+      {(['main_office', 'meeting_room', 'small_office', 'reception', 'garden'] as const).map((zone) => {
+        const room = ROOMS[zone];
         return (
-          <div
-            key={card.slotId}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 4,
-              padding: '1px 4px',
-              border: '1px solid var(--interactive-border)',
-              backgroundColor: card.isLead ? 'var(--interactive-selection)' : 'var(--surface-elevated)',
-              color: card.isLead ? 'var(--interactive-selection-foreground)' : 'var(--surface-foreground)',
-              borderRadius: 2,
-            }}
-          >
-            <span className="typography-micro" style={{ fontSize: 8 }}>
-              @{card.agentName}
-            </span>
-            <span className="typography-micro" style={{ fontSize: 8, opacity: 0.82 }}>
-              {label}
-            </span>
-          </div>
+          <React.Fragment key={zone}>
+            <div style={{ position: 'absolute', left: Math.round(room.x), top: Math.round(room.y), width: Math.round(room.w), height: Math.round(room.wallHeight), backgroundColor: room.wallColor, border: `2px solid ${room.borderColor}`, boxSizing: 'border-box', zIndex: 1 }} />
+            <div style={{ position: 'absolute', left: Math.round(room.x), top: Math.round(room.y + room.wallHeight), width: Math.round(room.w), height: Math.round(room.h - room.wallHeight), backgroundColor: room.floorColor, borderLeft: `2px solid ${room.borderColor}`, borderRight: `2px solid ${room.borderColor}`, borderBottom: `2px solid ${room.borderColor}`, boxSizing: 'border-box', zIndex: 1 }} />
+          </React.Fragment>
         );
       })}
+
+      <div style={{ position: 'absolute', left: Math.round(ROOMS.corridor.x), top: Math.round(ROOMS.corridor.y), width: Math.round(ROOMS.corridor.w), height: Math.round(ROOMS.corridor.h), backgroundColor: ROOMS.corridor.floorColor, borderTop: `2px solid ${ROOMS.corridor.borderColor}`, borderBottom: `2px solid ${ROOMS.corridor.borderColor}`, zIndex: 2 }} />
+
+      {(Object.keys(ROOM_OBJECTS) as NewOfficeZone[]).flatMap((zone) => ROOM_OBJECTS[zone]).map((obj, idx) => (
+        <SceneFurnitureSprite key={`${obj.key}-${idx}`} object={obj} tick={tick} />
+      ))}
+
+      {motions.map((motion) => <AgentSprite key={motion.card.sessionId} motion={motion} tick={tick} />)}
     </div>
   );
 };
 
-// ---------------------------------------------------------------------------
-// PixelOfficePanel — main exported component
-// ---------------------------------------------------------------------------
-
-export const PixelOfficePanel: React.FC = () => {
+const PixelOfficeRoot: React.FC = () => {
   const { t } = useI18n();
   const state = usePixelOfficeState();
-
   return (
     <div style={{ width: '100%' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <OfficeScene cards={state.cards} />
-
-        {state.speechBubble && (
-          <div
-            style={{
-              border: '1px solid var(--interactive-border)',
-              backgroundColor: 'var(--surface-elevated)',
-              padding: '3px 6px',
-              borderRadius: 4,
-              animation: 'pixelOfficeFloat 2s ease-in-out infinite',
-            }}
-          >
-            <div className="typography-micro" style={{ fontSize: 8, color: 'var(--surface-foreground)', lineHeight: 1.15 }}>
-              💬 {state.speechBubble}
-            </div>
-          </div>
-        )}
-
-        <div
-          className="typography-micro"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr',
-            gap: 2,
-            fontSize: 8,
-          }}
-        >
-          <span style={{ color: 'var(--surface-muted-foreground)' }}>
-            {t('pixelOffice.zoneLabel')}: {t(`pixelOffice.zone.${state.leadZone}`)}
-          </span>
-        </div>
-
-        <AgentCards cards={state.cards} />
+      {state.speechBubble && (
+        <div style={{ marginTop: 6, border: '1px solid #6a583f', borderRadius: 4, backgroundColor: '#f2e2bf', color: '#2f2518', padding: '4px 8px', fontSize: 9, lineHeight: 1.2 }}>{state.speechBubble}</div>
+      )}
+      <div style={{ marginTop: 6, fontSize: 8, color: '#6a5438' }}>
+        {t('pixelOffice.zoneLabel')}: {t(`pixelOffice.zone.${state.leadZone}`)}
       </div>
+    </div>
+  );
+};
 
-      <style>{`
-        @keyframes pixelOfficeFloat {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-1px); }
-        }
+export const PixelOfficePanel: React.FC = () => {
+  const wrapperRef = React.useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = React.useState(1);
+  const [height, setHeight] = React.useState(SCENE_H);
 
-        @keyframes pixelOfficeBounce {
-          0%, 100% { transform: translateY(0); }
-          25% { transform: translateY(-2px); }
-          75% { transform: translateY(1px); }
-        }
+  React.useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const update = (w: number) => {
+      const next = w > 0 ? Math.min(1, w / SCENE_W) : 1;
+      setScale(next);
+      setHeight(Math.round(SCENE_H * next));
+    };
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) update(entry.contentRect.width);
+    });
+    observer.observe(wrapper);
+    update(wrapper.clientWidth);
+    return () => observer.disconnect();
+  }, []);
 
-        @keyframes pixelOfficePulse {
-          0%, 100% { transform: scale(1); opacity: 0.35; }
-          50% { transform: scale(1.08); opacity: 0.7; }
-        }
-      `}</style>
+  return (
+    <div ref={wrapperRef} style={{ width: '100%' }}>
+      <div style={{ position: 'relative', width: '100%', height, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', left: '50%', top: 0, width: SCENE_W, height: SCENE_H, transform: `translateX(-50%) scale(${scale})`, transformOrigin: 'top center' }}>
+          <PixelOfficeRoot />
+        </div>
+      </div>
     </div>
   );
 };

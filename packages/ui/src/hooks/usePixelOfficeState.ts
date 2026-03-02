@@ -15,10 +15,7 @@ export type OfficeZone =
   | 'corridor'
   | 'small_office'
   | 'reception'
-  | 'garden'
-  | 'desk'
-  | 'bookshelf'
-  | 'commons';
+  | 'garden';
 export type AgentConfidence = 'confirmed' | 'inferred' | 'unknown';
 
 export interface AgentActivity {
@@ -64,10 +61,11 @@ const toolToZone = (toolName: string | null): OfficeZone => {
   const t = toolName.toLowerCase();
   if (['write', 'edit', 'multiedit', 'apply_patch'].includes(t)) return 'main_office';
   if (['read', 'grep', 'glob', 'list'].includes(t)) return 'small_office';
-  if (['webfetch', 'websearch', 'codesearch', 'skill', 'task', 'todowrite', 'todoread'].includes(t)) return 'meeting_room';
+  if (['webfetch', 'websearch', 'codesearch'].includes(t)) return 'meeting_room';
+  if (['skill', 'task', 'todowrite', 'todoread'].includes(t)) return 'meeting_room';
   if (t === 'bash') return 'reception';
   if (t === 'question') return 'corridor';
-  return 'reception';
+  return 'garden';
 };
 
 const toolToLabel = (toolName: string | null): string => {
