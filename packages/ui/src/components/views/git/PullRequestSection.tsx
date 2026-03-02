@@ -1485,7 +1485,7 @@ export const PullRequestSection: React.FC<{
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="w-8 px-0"
+                                  className="h-7 w-7 px-0"
                                   onClick={() => {
                                     setIsEditingPr(false);
                                     setEditTitle(pr.title || '');
@@ -1503,7 +1503,7 @@ export const PullRequestSection: React.FC<{
                               <TooltipTrigger asChild>
                                 <Button
                                   size="sm"
-                                  className="w-8 px-0"
+                                  className="h-7 w-7 px-0"
                                   onClick={() => updatePr(pr)}
                                   disabled={isUpdating || !editTitle.trim()}
                                   aria-label="Save PR title and description"
@@ -1520,7 +1520,7 @@ export const PullRequestSection: React.FC<{
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="w-8 px-0"
+                                className="h-7 w-7 px-0"
                                 onClick={() => setIsEditingPr(true)}
                                 aria-label="Edit PR title and description"
                               >
@@ -1538,7 +1538,7 @@ export const PullRequestSection: React.FC<{
                             <Button
                               variant="outline"
                               size="sm"
-                              className="w-8 px-0"
+                              className="h-7 w-7 px-0"
                               onClick={openChecksDialog}
                               disabled={isLoadingCheckDetails}
                               aria-label="Open checks details"
@@ -1556,7 +1556,7 @@ export const PullRequestSection: React.FC<{
                             <Button
                               variant="outline"
                               size="sm"
-                              className="w-8 px-0 border-[var(--status-success-border)] bg-[var(--status-success-background)] text-[var(--status-success)]"
+                              className="h-7 w-7 px-0 border-[var(--status-success-border)] bg-[var(--status-success-background)] text-[var(--status-success)]"
                               onClick={sendFailedChecksToChat}
                               aria-label="Resolve failed checks with agent"
                             >
@@ -1572,7 +1572,7 @@ export const PullRequestSection: React.FC<{
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-8 px-0"
+                            className="h-7 w-7 px-0"
                             onClick={openCommentsDialog}
                             aria-label="Open PR comments"
                           >
@@ -1587,7 +1587,7 @@ export const PullRequestSection: React.FC<{
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-8 px-0 border-[var(--status-success-border)] bg-[var(--status-success-background)] text-[var(--status-success)]"
+                            className="h-7 w-7 px-0 border-[var(--status-success-border)] bg-[var(--status-success-background)] text-[var(--status-success)]"
                             onClick={sendCommentsToChat}
                             aria-label="Share comments with agent"
                           >
@@ -1603,7 +1603,7 @@ export const PullRequestSection: React.FC<{
                             <Button
                               variant="outline"
                               size="sm"
-                              className="w-8 px-0"
+                              className="h-7 w-7 px-0"
                               onClick={() => markReady(pr)}
                               disabled={isMarkingReady || isMerging || isUpdating || isEditingPr}
                               aria-label="Mark PR ready for review"
@@ -1624,7 +1624,7 @@ export const PullRequestSection: React.FC<{
                             onValueChange={(value) => setMergeMethod(value as MergeMethod)}
                             disabled={isMerging || pr.state !== 'open'}
                           >
-                            <SelectTrigger size="lg" className="h-8 w-auto min-w-0">
+                            <SelectTrigger size="lg" className="h-7 w-auto min-w-0">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1637,7 +1637,7 @@ export const PullRequestSection: React.FC<{
                             <TooltipTrigger asChild>
                               <Button
                                 size="sm"
-                                className="w-8 px-0"
+                                className="h-7 w-7 px-0"
                                 onClick={() => mergePr(pr)}
                                 disabled={isMerging || isMarkingReady || pr.state !== 'open' || pr.draft || isUpdating || isEditingPr}
                                 aria-label="Merge pull request"
@@ -1663,7 +1663,7 @@ export const PullRequestSection: React.FC<{
                     </div>
                   </div>
                   {repoUrl ? (
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" className="h-7 px-2 py-0" asChild>
                       <a href={repoUrl} target="_blank" rel="noopener noreferrer">
                         <RiExternalLinkLine className="size-4" />
                         Repo
@@ -1833,6 +1833,7 @@ export const PullRequestSection: React.FC<{
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-7 px-2 py-0"
                     onClick={generateDescription}
                     disabled={isGenerating || isCreating}
                   >
@@ -1842,7 +1843,7 @@ export const PullRequestSection: React.FC<{
                   <div className="flex-1" />
                   <Button
                     size="sm"
-                    className="min-w-[7.5rem] justify-center gap-2"
+                    className="h-7 min-w-[7.5rem] justify-center gap-2 px-2 py-0"
                     onClick={createPr}
                     disabled={isCreating || !isConnected || !targetBaseBranch.trim() || targetBaseBranch.trim() === branch}
                   >

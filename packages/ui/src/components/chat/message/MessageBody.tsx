@@ -223,7 +223,7 @@ const UserShellActionPart: React.FC<{ part: ShellActionPartLike }> = ({ part }) 
                             onClick={() => {
                                 void copyOutputToClipboard();
                             }}
-                            aria-label={copiedOutput ? 'Copied' : 'Copy output'}
+                            aria-label={copiedOutput ? t('chat.message.copied') : t('chat.message.copyOutput')}
                             title={copiedOutput ? t('chat.message.copied') : t('chat.message.copyOutput')}
                         >
                             {copiedOutput ? <RiCheckLine className="h-3.5 w-3.5" /> : <RiFileCopyLine className="h-3.5 w-3.5" />}
@@ -289,6 +289,8 @@ interface MessageBodyProps {
     onRevert?: () => void;
     onFork?: () => void;
     errorMessage?: string;
+    userActionsMode?: 'inline' | 'external-content' | 'external-actions';
+    stickyUserHeaderEnabled?: boolean;
 }
 
 const UserMessageBody: React.FC<{
@@ -303,7 +305,9 @@ const UserMessageBody: React.FC<{
     agentMention?: AgentMentionInfo;
     onRevert?: () => void;
     onFork?: () => void;
-}> = ({ messageId, parts, isMobile, hasTouchInput, hasTextContent, onCopyMessage, copiedMessage, onShowPopup, agentMention, onRevert, onFork }) => {
+    userActionsMode?: 'inline' | 'external-content' | 'external-actions';
+    stickyUserHeaderEnabled?: boolean;
+}> = ({ messageId, parts, isMobile, hasTouchInput, hasTextContent, onCopyMessage, copiedMessage, onShowPopup, agentMention, onRevert, onFork, userActionsMode = 'inline', stickyUserHeaderEnabled = true }) => {
     const { t } = useI18n();
     const [copyHintVisible, setCopyHintVisible] = React.useState(false);
     const copyHintTimeoutRef = React.useRef<number | null>(null);
@@ -330,6 +334,8 @@ const UserMessageBody: React.FC<{
     const isMessageCopied = Boolean(copiedMessage);
     const isTouchContext = Boolean(hasTouchInput ?? isMobile);
     const hasCopyableText = Boolean(hasTextContent);
+    const showUserContent = userActionsMode !== 'external-actions';
+    const showUserActions = userActionsMode !== 'external-content';
 
     const clearCopyHintTimeout = React.useCallback(() => {
         if (copyHintTimeoutRef.current !== null && typeof window !== 'undefined') {
@@ -374,6 +380,113 @@ const UserMessageBody: React.FC<{
         },
         [hasCopyableText, isTouchContext, onCopyMessage, revealCopyHint]
     );
+
+    const actionsBlock = ((canCopyMessage && hasCopyableText) || onRevert || onFork) && showUserActions ? (
+        <div className={cn(
+            'group/user-actions',
+            isMobile
+                ? userActionsMode === 'inline'
+                    ? 'flex items-center justify-end pt-2 pb-3'
+                    : stickyUserHeaderEnabled
+                        ? 'flex h-9 items-start justify-end pt-0'
+                        : 'flex h-11 items-start justify-end pt-0'
+                : userActionsMode === 'inline'
+                    ? 'absolute top-full left-0 right-0 z-10 pt-5'
+                    : 'flex h-8 items-start justify-end pt-2'
+        )}>
+            <div
+                className={cn(
+                    'flex items-center justify-end gap-1',
+                    isMobile
+                        ? userActionsMode === 'inline'
+                            ? 'translate-x-5'
+                            : 'translate-x-0'
+                        : userActionsMode === 'inline'
+                            ? 'translate-x-5'
+                            : 'translate-x-0',
+                    isMobile
+                        ? 'pointer-events-auto opacity-100'
+                        : 'pointer-events-none opacity-0 transition-opacity duration-150 group-hover/message:pointer-events-auto group-hover/message:opacity-100 group-hover/user-actions:pointer-events-auto group-hover/user-actions:opacity-100 group-hover/user-shell:pointer-events-auto group-hover/user-shell:opacity-100'
+                )}
+            >
+                {onRevert && (
+                    <Tooltip delayDuration={1000}>
+                        <TooltipTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
+                                aria-label={t('chat.tooltip.revertFromHere')}
+                                onPointerDown={(event) => event.stopPropagation()}
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onRevert();
+                                }}
+                            >
+                                <RiArrowGoBackLine className="h-3 w-3" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent sideOffset={6}>{t('chat.tooltip.revertFromHere')}</TooltipContent>
+                    </Tooltip>
+                )}
+                {onFork && (
+                    <Tooltip delayDuration={1000}>
+                        <TooltipTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
+                                aria-label={t('chat.tooltip.forkFromHere')}
+                                onPointerDown={(event) => event.stopPropagation()}
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onFork();
+                                }}
+                            >
+                                <RiGitBranchLine className="h-3 w-3" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent sideOffset={6}>{t('chat.tooltip.forkFromHere')}</TooltipContent>
+                    </Tooltip>
+                )}
+                {canCopyMessage && hasCopyableText && (
+                    <Tooltip delayDuration={1000}>
+                        <TooltipTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                data-visible={copyHintVisible || isMessageCopied ? 'true' : undefined}
+                                className="h-6 w-6 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
+                                aria-label={t('chat.tooltip.copyMessage')}
+                                onPointerDown={(event) => event.stopPropagation()}
+                                onClick={handleCopyButtonClick}
+                                onFocus={() => setCopyHintVisible(true)}
+                                onBlur={() => {
+                                    if (!isMessageCopied) {
+                                        setCopyHintVisible(false);
+                                    }
+                                }}
+                            >
+                                {isMessageCopied ? (
+                                    <RiCheckLine className="h-3 w-3 text-[color:var(--status-success)]" />
+                                ) : (
+                                    <RiFileCopyLine className="h-3 w-3" />
+                                )}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent sideOffset={6}>{t('chat.tooltip.copyMessage')}</TooltipContent>
+                    </Tooltip>
+                )}
+            </div>
+        </div>
+    ) : null;
+
+    if (!showUserContent) {
+        return <>{actionsBlock}</>;
+    }
 
     return (
         <div
@@ -420,92 +533,7 @@ const UserMessageBody: React.FC<{
                 })}
             </div>
             <MessageFilesDisplay files={parts} onShowPopup={onShowPopup} compact />
-            {(canCopyMessage && hasCopyableText) || onRevert || onFork ? (
-                <div className={cn(
-                    "absolute top-full left-0 right-0 z-10 group/user-actions",
-                    isMobile ? "pt-2 pb-3" : "pt-5"
-                )}>
-                    <div
-                        className={cn(
-                            "flex translate-x-5 items-center justify-end gap-1",
-                            isMobile
-                                ? "pointer-events-auto opacity-100"
-                                : "pointer-events-none opacity-0 transition-opacity duration-150 group-hover/message:pointer-events-auto group-hover/message:opacity-100 group-hover/user-actions:pointer-events-auto group-hover/user-actions:opacity-100"
-                        )}
-                    >
-                    {onRevert && (
-                        <Tooltip delayDuration={1000}>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
-                                    aria-label="Revert to this message"
-                                    onPointerDown={(event) => event.stopPropagation()}
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        onRevert();
-                                    }}
-                                >
-                                    <RiArrowGoBackLine className="h-3 w-3" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent sideOffset={6}>{t('chat.tooltip.revertFromHere')}</TooltipContent>
-                        </Tooltip>
-                    )}
-                    {onFork && (
-                        <Tooltip delayDuration={1000}>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
-                                    onPointerDown={(event) => event.stopPropagation()}
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        onFork();
-                                    }}
-                                >
-                                    <RiGitBranchLine className="h-3 w-3" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent sideOffset={6}>{t('chat.tooltip.forkFromHere')}</TooltipContent>
-                        </Tooltip>
-                    )}
-                    {canCopyMessage && hasCopyableText && (
-                        <Tooltip delayDuration={1000}>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    data-visible={copyHintVisible || isMessageCopied ? 'true' : undefined}
-                                    className="h-6 w-6 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
-                                    aria-label="Copy message text"
-                                    onPointerDown={(event) => event.stopPropagation()}
-                                    onClick={handleCopyButtonClick}
-                                    onFocus={() => setCopyHintVisible(true)}
-                                    onBlur={() => {
-                                        if (!isMessageCopied) {
-                                            setCopyHintVisible(false);
-                                        }
-                                    }}
-                                >
-                                    {isMessageCopied ? (
-                                        <RiCheckLine className="h-3 w-3 text-[color:var(--status-success)]" />
-                                    ) : (
-                                        <RiFileCopyLine className="h-3 w-3" />
-                                    )}
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent sideOffset={6}>{t('chat.tooltip.copyMessage')}</TooltipContent>
-                        </Tooltip>
-                    )}
-                    </div>
-                </div>
-            ) : null}
+            {actionsBlock}
         </div>
     );
 };
@@ -1218,7 +1246,7 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                                   !hasCopyableText && 'opacity-50'
                               )}
                               disabled={!hasCopyableText}
-                              aria-label="Copy message text"
+                              aria-label={t('chat.tooltip.copyAnswer')}
                               aria-hidden={!hasCopyableText}
                               onPointerDown={(event) => event.stopPropagation()}
                               onClick={handleCopyButtonClick}
@@ -1308,7 +1336,7 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                                  'h-8 w-8 bg-transparent hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
                                  isTTSPlaying ? 'text-green-500' : 'text-muted-foreground hover:text-foreground'
                              )}
-                             aria-label={isTTSPlaying ? 'Stop speaking' : 'Read aloud'}
+                             aria-label={isTTSPlaying ? t('chat.tooltip.stopSpeaking') : readAloudTooltip}
                              onPointerDown={(event) => event.stopPropagation()}
                              onClick={handleTTSClick}
                          >
@@ -1426,6 +1454,8 @@ const MessageBody: React.FC<MessageBodyProps> = ({ isUser, ...props }) => {
                 agentMention={props.agentMention}
                 onRevert={props.onRevert}
                 onFork={props.onFork}
+                userActionsMode={props.userActionsMode}
+                stickyUserHeaderEnabled={props.stickyUserHeaderEnabled}
             />
         );
     }

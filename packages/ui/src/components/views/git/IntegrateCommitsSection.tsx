@@ -383,7 +383,7 @@ Important:
 
             <DropdownMenu open={branchDropdownOpen} onOpenChange={setBranchDropdownOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
+                <Button variant="outline" size="sm" className="h-7 px-2 py-0 gap-1.5">
                   {t('views.git.integrate.target')}
                   <span className="max-w-[160px] truncate font-mono text-xs text-muted-foreground">{targetBranch}</span>
                   <RiArrowDownSLine className="size-4 opacity-60" />
@@ -422,15 +422,15 @@ Important:
             </DropdownMenu>
 
             {ui.kind === 'ready' ? (
-              <Button size="sm" onClick={() => void handleMove()} disabled={!isEligible || ui.plan.commits.length === 0}>
-                {t('views.git.integrate.move')}
+              <Button size="sm" className="h-7 px-2 py-0" onClick={() => void handleMove()} disabled={!isEligible || ui.plan.commits.length === 0}>
+                {t('views.git.integrate.moveCommits')}
               </Button>
             ) : ui.kind === 'loading' ? (
-              <Button size="sm" variant="outline" disabled>
+              <Button size="sm" variant="outline" className="h-7 px-2 py-0" disabled>
                 {t('views.git.integrate.checking')}
               </Button>
             ) : ui.kind === 'running' ? (
-              <Button size="sm" variant="outline" disabled>
+              <Button size="sm" variant="outline" className="h-7 px-2 py-0" disabled>
                 {t('views.git.integrate.moving')}
               </Button>
             ) : null}
