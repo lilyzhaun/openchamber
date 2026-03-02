@@ -9,7 +9,16 @@ import { parseSessionActivity } from '@/lib/messages/parseSessionActivity';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 
-export type OfficeZone = 'desk' | 'bookshelf' | 'commons';
+export type OfficeZone =
+  | 'main_office'
+  | 'meeting_room'
+  | 'corridor'
+  | 'small_office'
+  | 'reception'
+  | 'garden'
+  | 'desk'
+  | 'bookshelf'
+  | 'commons';
 export type AgentConfidence = 'confirmed' | 'inferred' | 'unknown';
 
 export interface AgentActivity {
@@ -26,6 +35,7 @@ export interface RealAgentCard {
   agentName: string;
   confidence: AgentConfidence;
   zone: OfficeZone;
+  previousZone: OfficeZone | null;
   activityLabel: string;
   activity: AgentActivity;
   colorVar: string;
@@ -50,12 +60,14 @@ export interface PixelOfficeState {
 }
 
 const toolToZone = (toolName: string | null): OfficeZone => {
-  if (!toolName) return 'commons';
+  if (!toolName) return 'garden';
   const t = toolName.toLowerCase();
-  if (['read', 'grep', 'glob', 'list', 'webfetch', 'websearch', 'codesearch'].includes(t)) return 'bookshelf';
-  if (['write', 'edit', 'multiedit', 'apply_patch'].includes(t)) return 'desk';
-  if (t === 'bash') return 'commons';
-  return 'commons';
+  if (['write', 'edit', 'multiedit', 'apply_patch'].includes(t)) return 'main_office';
+  if (['read', 'grep', 'glob', 'list'].includes(t)) return 'small_office';
+  if (['webfetch', 'websearch', 'codesearch', 'skill', 'task', 'todowrite', 'todoread'].includes(t)) return 'meeting_room';
+  if (t === 'bash') return 'reception';
+  if (t === 'question') return 'corridor';
+  return 'reception';
 };
 
 const toolToLabel = (toolName: string | null): string => {
@@ -103,6 +115,7 @@ export function usePixelOfficeState(): PixelOfficeState {
   const currentAgentContext = useSessionStore((state) => state.currentAgentContext);
   const agents = useConfigStore((state) => state.agents);
   const messages = useSessionStore((state) => state.messages);
+  const previousZonesRef = React.useRef<Map<string, OfficeZone>>(new Map());
 
   const fallbackAgent = React.useMemo(() => agents[0]?.name ?? 'agent', [agents]);
 
@@ -119,15 +132,19 @@ export function usePixelOfficeState(): PixelOfficeState {
   const cards = React.useMemo<RealAgentCard[]>(() => {
     if (!currentSession) {
       const fallbackTool = working.activeToolName ?? null;
-      const zone = fallbackTool ? toolToZone(fallbackTool) : 'commons';
+      const sessionKey = currentSessionId ?? 'no-session';
+      const previousZone = previousZonesRef.current.get(sessionKey) ?? null;
+      const zone = fallbackTool ? toolToZone(fallbackTool) : 'garden';
+      previousZonesRef.current.set(sessionKey, zone);
       return [
         {
           slotId: 'lead',
-          sessionId: currentSessionId ?? 'no-session',
+          sessionId: sessionKey,
           sessionTitle: 'Current session',
           agentName: fallbackAgent,
           confidence: 'unknown',
           zone,
+          previousZone,
           activityLabel: fallbackTool ? `tool:${toolToLabel(fallbackTool)}` : `session:${working.activity}`,
           activity: {
             toolName: fallbackTool,
@@ -184,7 +201,9 @@ export function usePixelOfficeState(): PixelOfficeState {
         source = 'fallback';
       }
 
-      const zone = toolName ? toolToZone(toolName) : (statusType === 'idle' ? 'commons' : 'desk');
+      const storedPreviousZone = previousZonesRef.current.get(session.id) ?? null;
+      const zone: OfficeZone = toolName ? toolToZone(toolName) : statusType === 'idle' ? 'garden' : 'main_office';
+      previousZonesRef.current.set(session.id, zone);
 
       const activityLabel =
         source === 'tool'
@@ -202,6 +221,7 @@ export function usePixelOfficeState(): PixelOfficeState {
         agentName: resolved.name,
         confidence: resolved.confidence,
         zone,
+        previousZone: storedPreviousZone,
         activityLabel,
         activity: {
           toolName,
@@ -236,7 +256,7 @@ export function usePixelOfficeState(): PixelOfficeState {
     working.statusText,
   ]);
 
-  const leadZone = cards[0]?.zone ?? 'commons';
+  const leadZone = cards[0]?.zone ?? 'garden';
 
   const speechBubble = React.useMemo(() => {
     const raw = working.statusText?.trim();

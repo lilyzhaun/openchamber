@@ -25,7 +25,15 @@ const TARGET_FILES = [
   'rug.png',
   'small_table.png',
   'trash_can.png',
-  'ceiling_lamp.png'
+  'ceiling_lamp.png',
+  'garden_bench.png',
+  'arc_sofa.png',
+  'blue_orb.png',
+  'tall_plant.png',
+  'reception_counter.png',
+  'fridge.png',
+  'wine_sofa.png',
+  'retro_monitor.png'
 ];
 
 const args = process.argv.slice(2);
@@ -96,6 +104,11 @@ C = {
     'lamp_glow': (255, 230, 100, 255),
     'trash_bag': (210, 230, 240, 255),
     'shadow': (36, 28, 18, 255), # Ensure shadow uses an existing color so we don't use alpha. The prompt says NO semi-transparent alpha, only 0 or 255
+    'bench_red': (139, 34, 82, 255),
+    'arc_brown': (122, 80, 48, 255),
+    'orb_blue': (64, 192, 255, 255),
+    'fridge_gray': (160, 160, 176, 255),
+    'monitor_cyan': (64, 224, 208, 255),
 }
 
 def frame_sheet(draw_fn):
@@ -713,6 +726,116 @@ def ceiling_lamp(d, i):
         
     draw_outline(d, 9, 8, 22, 18)
 
+def garden_bench(d, i):
+    # Backrest
+    d.rectangle([4, 10, 27, 15], fill=C['bench_red'])
+    d.rectangle([4, 10, 27, 11], fill=C['wood_light']) # highlight
+    d.rectangle([4, 14, 27, 15], fill=C['wood_dark']) # shadow
+    # Seat
+    d.rectangle([4, 16, 27, 19], fill=C['bench_red'])
+    d.rectangle([4, 16, 27, 16], fill=C['wood_light']) # highlight
+    # Legs
+    d.rectangle([6, 19, 8, 25], fill=C['metal_dark'])
+    d.rectangle([23, 19, 25, 25], fill=C['metal_dark'])
+    draw_outline(d, 4, 10, 27, 25)
+
+def arc_sofa(d, i):
+    pulse = 1 if i in (1, 3) else 0
+    # Main Body
+    d.rectangle([4, 10, 27, 24], fill=C['arc_brown'])
+    # Left and Right Arms
+    d.rectangle([4, 10, 8, 24], fill=C['wood_dark']) 
+    d.rectangle([23, 10, 27, 24], fill=C['wood_dark'])
+    # Seat highlight
+    d.rectangle([8, 16, 23, 18], fill=C['wood_light'])
+    draw_outline(d, 4, 10, 27, 24)
+
+def blue_orb(d, i):
+    float_y = i % 2
+    oy = 10 + float_y
+    # Base
+    d.rectangle([12, 25, 19, 28], fill=C['metal_dark'])
+    # Orb
+    d.ellipse([9, oy, 22, oy + 13], fill=C['orb_blue'])
+    d.ellipse([11, oy + 2, 15, oy + 6], fill=C['monitor_glow'])
+    draw_outline(d, 12, 25, 19, 28)
+
+def tall_plant(d, i):
+    sway = (i % 3) - 1
+    # White Pot
+    d.rectangle([10, 18, 21, 28], fill=C['printer_white'])
+    d.rectangle([18, 18, 21, 28], fill=C['printer_gray']) # shadow
+    # Plant stems & leaves
+    d.rectangle([14, 6 + sway, 17, 18], fill=C['leaf_dark'])
+    d.rectangle([11, 8 + sway, 14, 15], fill=C['leaf_mid'])
+    d.rectangle([17, 9 - sway, 20, 16], fill=C['leaf_light'])
+    d.rectangle([13, 4 + sway, 18, 9 + sway], fill=C['leaf_mid'])
+    draw_outline(d, 10, 18, 21, 28)
+
+def reception_counter(d, i):
+    # Front counter
+    d.rectangle([3, 14, 28, 28], fill=C['wood_mid'])
+    d.rectangle([3, 14, 28, 16], fill=C['wood_light'])
+    d.rectangle([3, 26, 28, 28], fill=C['wood_dark'])
+    # Top tier
+    d.rectangle([3, 10, 28, 13], fill=C['wood_light'])
+    d.rectangle([3, 13, 28, 14], fill=C['wood_dark'])
+    # Counter detail
+    d.rectangle([8, 18, 23, 24], fill=C['wood_dark'])
+    draw_outline(d, 3, 10, 28, 28)
+
+def fridge(d, i):
+    # Main body
+    d.rectangle([7, 4, 24, 28], fill=C['fridge_gray'])
+    d.rectangle([7, 4, 10, 28], fill=C['printer_white']) # highlight
+    d.rectangle([22, 4, 24, 28], fill=C['printer_gray']) # shadow
+    # Top door
+    d.rectangle([8, 5, 23, 14], fill=C['fridge_gray'])
+    d.rectangle([9, 6, 12, 13], fill=C['printer_white']) # reflection
+    # Bottom door
+    d.rectangle([8, 16, 23, 27], fill=C['fridge_gray'])
+    d.rectangle([9, 17, 12, 26], fill=C['printer_white']) # reflection
+    # Handles
+    d.rectangle([20, 9, 21, 13], fill=C['metal_dark'])
+    d.rectangle([20, 17, 21, 22], fill=C['metal_dark'])
+    draw_outline(d, 7, 4, 24, 28)
+
+def wine_sofa(d, i):
+    pulse = 1 if i in (1, 3) else 0
+    # Back
+    d.rectangle([4, 8, 27, 16], fill=C['bench_red'])
+    # Seat
+    d.rectangle([4, 16, 27, 24], fill=C['bench_red'])
+    # Cushions
+    d.rectangle([11, 18 + pulse, 20, 21 + pulse], fill=C['fabric_dark'])
+    # Armrests
+    d.rectangle([3, 14, 7, 25], fill=C['bench_red'])
+    d.rectangle([24, 14, 28, 25], fill=C['bench_red'])
+    # Base/Legs
+    d.rectangle([6, 25, 9, 28], fill=C['wood_dark'])
+    d.rectangle([22, 25, 25, 28], fill=C['wood_dark'])
+    draw_outline(d, 3, 8, 28, 28)
+
+def retro_monitor(d, i):
+    flicker = i % 2
+    # Monitor shell
+    d.rectangle([5, 6, 26, 22], fill=C['paper'])
+    d.rectangle([5, 6, 26, 8], fill=C['printer_white'])
+    d.rectangle([24, 6, 26, 22], fill=C['printer_gray'])
+    # Screen
+    d.rectangle([7, 8, 24, 19], fill=C['monitor_cyan'])
+    # Screen content
+    if flicker == 0:
+        d.rectangle([9, 10, 20, 11], fill=C['printer_white'])
+        d.rectangle([9, 13, 16, 14], fill=C['printer_white'])
+    else:
+        d.rectangle([9, 10, 18, 11], fill=C['printer_white'])
+        d.rectangle([9, 13, 21, 14], fill=C['printer_white'])
+    # Base
+    d.rectangle([11, 22, 20, 27], fill=C['metal_mid'])
+    d.rectangle([13, 27, 18, 28], fill=C['metal_dark'])
+    draw_outline(d, 5, 6, 26, 28)
+
 SPRITES = {
     'desk_large.png': desk,
     'chair_office.png': chair,
@@ -732,6 +855,14 @@ SPRITES = {
     'small_table.png': small_table,
     'trash_can.png': trash_can,
     'ceiling_lamp.png': ceiling_lamp,
+    'garden_bench.png': garden_bench,
+    'arc_sofa.png': arc_sofa,
+    'blue_orb.png': blue_orb,
+    'tall_plant.png': tall_plant,
+    'reception_counter.png': reception_counter,
+    'fridge.png': fridge,
+    'wine_sofa.png': wine_sofa,
+    'retro_monitor.png': retro_monitor,
 }
 
 for name, painter in SPRITES.items():
