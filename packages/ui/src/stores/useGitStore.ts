@@ -7,14 +7,14 @@ import type {
   GitIdentitySummary,
 } from '@/lib/api/types';
 
-const GIT_POLL_BASE_INTERVAL = 5000;
-const GIT_POLL_MAX_INTERVAL = 10000;
-const GIT_POLL_BACKOFF_STEP = 5000;
+const GIT_POLL_BASE_INTERVAL = 15000;
+const GIT_POLL_MAX_INTERVAL = 60000;
+const GIT_POLL_BACKOFF_STEP = 15000;
 const LOG_STALE_THRESHOLD = 10000;
-const DIFF_PREFETCH_MAX_FILES = 25;
-const DIFF_PREFETCH_FOCUS_MAX_FILES = 40;
-const DIFF_PREFETCH_CONCURRENCY = 4;
-const DIFF_PREFETCH_TIMEOUT_MS = 15000;
+const DIFF_PREFETCH_MAX_FILES = 8;
+const DIFF_PREFETCH_FOCUS_MAX_FILES = 12;
+const DIFF_PREFETCH_CONCURRENCY = 2;
+const DIFF_PREFETCH_TIMEOUT_MS = 8000;
 const RECENT_DIRECTORIES_LIMIT = 3;
 
 // Diff cache limits to prevent memory bloat with many modified files
@@ -671,8 +671,6 @@ export const useGitStore = create<GitStore>()(
                 anyStatusChanged = true;
                 if (targetDirectory === activeDirectory) {
                   await get().fetchLog(activeDirectory, git);
-                  // Pre-fetch all diffs so they're ready when user opens Diff tab
-                  void get().fetchAllDiffs(activeDirectory, git);
                 }
               }
             }
