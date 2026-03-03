@@ -69,7 +69,7 @@ function getAudioContext(): AudioContext {
   return sharedAudioContext;
 }
 
-export function useServerTTS(): UseServerTTSReturn {
+export function useServerTTS(options?: { autoCheck?: boolean }): UseServerTTSReturn {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,10 +102,15 @@ export function useServerTTS(): UseServerTTSReturn {
     }
   }, [openaiApiKey]);
 
+  const autoCheck = options?.autoCheck ?? true;
+
   // Check availability on mount and when API key changes
   useEffect(() => {
+    if (!autoCheck) {
+      return;
+    }
     checkAvailability();
-  }, [checkAvailability]);
+  }, [autoCheck, checkAvailability]);
 
   // Stop current playback
   const stop = useCallback(() => {

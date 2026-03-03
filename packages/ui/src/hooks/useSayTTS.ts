@@ -61,7 +61,7 @@ function getAudioContext(): AudioContext {
   return sharedAudioContext;
 }
 
-export function useSayTTS(): UseSayTTSReturn {
+export function useSayTTS(options?: { autoCheck?: boolean }): UseSayTTSReturn {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
   const [voices, setVoices] = useState<Array<{ name: string; locale: string }>>([]);
@@ -116,10 +116,15 @@ export function useSayTTS(): UseSayTTSReturn {
     }
   }, []);
 
+  const autoCheck = options?.autoCheck ?? true;
+
   // Check availability on mount
   useEffect(() => {
+    if (!autoCheck) {
+      return;
+    }
     checkAvailability();
-  }, [checkAvailability]);
+  }, [autoCheck, checkAvailability]);
 
   // Stop current playback
   const stop = useCallback(() => {

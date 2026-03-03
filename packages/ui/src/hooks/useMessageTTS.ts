@@ -36,8 +36,8 @@ export function useMessageTTS(): UseMessageTTSReturn {
         summarizeCharacterThreshold,
     } = useConfigStore();
     
-    const { speak: speakServerTTS, stop: stopServerTTS, isAvailable: isServerTTSAvailable } = useServerTTS();
-    const { speak: speakSayTTS, stop: stopSayTTS, isAvailable: isSayTTSAvailable } = useSayTTS();
+    const { speak: speakServerTTS, stop: stopServerTTS, isAvailable: isServerTTSAvailable, checkAvailability: checkServerTTSAvailability } = useServerTTS({ autoCheck: false });
+    const { speak: speakSayTTS, stop: stopSayTTS, isAvailable: isSayTTSAvailable, checkAvailability: checkSayTTSAvailability } = useSayTTS({ autoCheck: false });
     
     const stop = useCallback(() => {
         setIsPlaying(false);
@@ -66,22 +66,30 @@ export function useMessageTTS(): UseMessageTTSReturn {
                 textToSpeak = sanitizeForTTS(text);
             }
             
-            if (voiceProvider === 'openai' && isServerTTSAvailable) {
-                await speakServerTTS(textToSpeak, {
-                    voice: openaiVoice,
-                    speed: speechRate,
-                    summarize: false, // We already summarized client-side
-                    onEnd: () => setIsPlaying(false),
-                    onError: () => setIsPlaying(false),
-                });
-            } else if (voiceProvider === 'say' && isSayTTSAvailable) {
-                const wordsPerMinute = Math.round(100 + (speechRate - 0.5) * 200);
-                await speakSayTTS(textToSpeak, {
-                    voice: sayVoice,
-                    rate: wordsPerMinute,
-                    onEnd: () => setIsPlaying(false),
-                    onError: () => setIsPlaying(false),
-                });
+            if (voiceProvider === 'openai') {
+                const available = isServerTTSAvailable || await checkServerTTSAvailability();
+                if (available) {
+                    await speakServerTTS(textToSpeak, {
+                        voice: openaiVoice,
+                        speed: speechRate,
+                        summarize: false, // We already summarized client-side
+                        onEnd: () => setIsPlaying(false),
+                        onError: () => setIsPlaying(false),
+                    });
+                    return;
+                }
+            } else if (voiceProvider === 'say') {
+                const available = isSayTTSAvailable || await checkSayTTSAvailability();
+                if (available) {
+                    const wordsPerMinute = Math.round(100 + (speechRate - 0.5) * 200);
+                    await speakSayTTS(textToSpeak, {
+                        voice: sayVoice,
+                        rate: wordsPerMinute,
+                        onEnd: () => setIsPlaying(false),
+                        onError: () => setIsPlaying(false),
+                    });
+                    return;
+                }
             } else {
                 // Browser TTS
                 await browserVoiceService.waitForVoices();
@@ -97,7 +105,22 @@ export function useMessageTTS(): UseMessageTTSReturn {
                         voiceName: browserVoice || undefined,
                     }
                 );
+                return;
             }
+
+            await browserVoiceService.waitForVoices();
+            await browserVoiceService.resumeAudioContext();
+            await browserVoiceService.speakText(
+                textToSpeak,
+                navigator.language || 'en-US',
+                () => setIsPlaying(false),
+                {
+                    rate: speechRate,
+                    pitch: speechPitch,
+                    volume: speechVolume,
+                    voiceName: browserVoice || undefined,
+                }
+            );
         } catch (err) {
             console.error('[useMessageTTS] Playback error:', err);
             setIsPlaying(false);
@@ -114,6 +137,8 @@ export function useMessageTTS(): UseMessageTTSReturn {
         summarizeCharacterThreshold,
         isServerTTSAvailable,
         isSayTTSAvailable,
+        checkServerTTSAvailability,
+        checkSayTTSAvailability,
         speakServerTTS,
         speakSayTTS,
         stop,
