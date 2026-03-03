@@ -486,6 +486,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   const [childrenByDir, setChildrenByDir] = React.useState<Record<string, FileNode[]>>({});
   const loadedDirsRef = React.useRef<Set<string>>(new Set());
   const inFlightDirsRef = React.useRef<Set<string>>(new Set());
+  const lastDirectoryListFetchRef = React.useRef<Map<string, number>>(new Map());
 
   const [searchResults, setSearchResults] = React.useState<FileNode[]>([]);
   const [searching, setSearching] = React.useState(false);
@@ -697,6 +698,12 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
       return;
     }
 
+    const now = Date.now();
+    const lastFetchAt = lastDirectoryListFetchRef.current.get(normalizedDir) ?? 0;
+    if (now - lastFetchAt < 2000) {
+      return;
+    }
+
     inFlightDirsRef.current = new Set(inFlightDirsRef.current);
     inFlightDirsRef.current.add(normalizedDir);
 
@@ -719,6 +726,8 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
 
         loadedDirsRef.current = new Set(loadedDirsRef.current);
         loadedDirsRef.current.add(normalizedDir);
+        lastDirectoryListFetchRef.current = new Map(lastDirectoryListFetchRef.current);
+        lastDirectoryListFetchRef.current.set(normalizedDir, Date.now());
         setChildrenByDir((prev) => ({ ...prev, [normalizedDir]: mapped }));
       })
       .catch(() => {
@@ -740,6 +749,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
 
     loadedDirsRef.current = new Set();
     inFlightDirsRef.current = new Set();
+    lastDirectoryListFetchRef.current = new Map();
     setChildrenByDir((prev) => (Object.keys(prev).length === 0 ? prev : {}));
 
     await loadDirectory(root);
@@ -774,6 +784,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
       lastFilesViewTreeKeyRef.current = treeKey;
       loadedDirsRef.current = new Set();
       inFlightDirsRef.current = new Set();
+      lastDirectoryListFetchRef.current = new Map();
       setChildrenByDir((prev) => (Object.keys(prev).length === 0 ? prev : {}));
       void loadDirectory(root);
     }

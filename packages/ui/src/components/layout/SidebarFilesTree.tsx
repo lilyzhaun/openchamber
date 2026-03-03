@@ -306,6 +306,7 @@ export const SidebarFilesTree: React.FC = () => {
   const [childrenByDir, setChildrenByDir] = React.useState<Record<string, FileNode[]>>({});
   const loadedDirsRef = React.useRef<Set<string>>(new Set());
   const inFlightDirsRef = React.useRef<Set<string>>(new Set());
+  const lastDirectoryListFetchRef = React.useRef<Map<string, number>>(new Map());
 
   const EMPTY_PATHS: string[] = React.useMemo(() => [], []);
   const expandedPaths = useFilesViewTabsStore((state) => (root ? (state.byRoot[root]?.expandedPaths ?? EMPTY_PATHS) : EMPTY_PATHS));
@@ -372,6 +373,10 @@ export const SidebarFilesTree: React.FC = () => {
 
     if (loadedDirsRef.current.has(normalizedDir) || inFlightDirsRef.current.has(normalizedDir)) return;
 
+    const now = Date.now();
+    const lastFetchAt = lastDirectoryListFetchRef.current.get(normalizedDir) ?? 0;
+    if (now - lastFetchAt < 2000) return;
+
     inFlightDirsRef.current = new Set(inFlightDirsRef.current);
     inFlightDirsRef.current.add(normalizedDir);
 
@@ -394,6 +399,8 @@ export const SidebarFilesTree: React.FC = () => {
 
         loadedDirsRef.current = new Set(loadedDirsRef.current);
         loadedDirsRef.current.add(normalizedDir);
+        lastDirectoryListFetchRef.current = new Map(lastDirectoryListFetchRef.current);
+        lastDirectoryListFetchRef.current.set(normalizedDir, Date.now());
         setChildrenByDir((prev) => ({ ...prev, [normalizedDir]: mapped }));
       })
       .catch(() => {
@@ -413,6 +420,7 @@ export const SidebarFilesTree: React.FC = () => {
 
     loadedDirsRef.current = new Set();
     inFlightDirsRef.current = new Set();
+    lastDirectoryListFetchRef.current = new Map();
     setChildrenByDir((prev) => (Object.keys(prev).length === 0 ? prev : {}));
 
     await loadDirectory(root);
@@ -423,6 +431,7 @@ export const SidebarFilesTree: React.FC = () => {
 
     loadedDirsRef.current = new Set();
     inFlightDirsRef.current = new Set();
+    lastDirectoryListFetchRef.current = new Map();
     setChildrenByDir((prev) => (Object.keys(prev).length === 0 ? prev : {}));
     void loadDirectory(root);
   }, [loadDirectory, root, showHidden, showGitignored]);
