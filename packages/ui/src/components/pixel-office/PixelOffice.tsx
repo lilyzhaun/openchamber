@@ -103,7 +103,9 @@ interface RoomLayout {
   h: number;
   wallHeight: number;
   wallColor: string;
+  wallShade: string;
   floorColor: string;
+  floorShade: string;
   borderColor: string;
 }
 
@@ -126,12 +128,12 @@ interface AgentMotion {
 }
 
 const ROOMS: Record<NewOfficeZone, RoomLayout> = {
-  main_office: { x: 0, y: 0, w: 275, h: 220, wallHeight: 52, wallColor: '#d8ccb9', floorColor: '#b99973', borderColor: '#5f4a33' },
-  meeting_room: { x: 285, y: 0, w: 275, h: 220, wallHeight: 52, wallColor: '#c3d6de', floorColor: '#8daac1', borderColor: '#486176' },
-  corridor: { x: 0, y: 228, w: 560, h: 24, wallHeight: 0, wallColor: '#8f8a7b', floorColor: '#7e7868', borderColor: '#4d493d' },
-  small_office: { x: 0, y: 260, w: 135, h: 120, wallHeight: 40, wallColor: '#d6c8b0', floorColor: '#b49a79', borderColor: '#5f4f38' },
-  reception: { x: 145, y: 260, w: 275, h: 120, wallHeight: 40, wallColor: '#d2c2a7', floorColor: '#b4875f', borderColor: '#66492b' },
-  garden: { x: 430, y: 260, w: 130, h: 120, wallHeight: 40, wallColor: '#9abd86', floorColor: '#6ea35b', borderColor: '#36562a' },
+  main_office: { x: 0, y: 0, w: 275, h: 220, wallHeight: 52, wallColor: '#d8ccb9', wallShade: '#c4b59f', floorColor: '#b99973', floorShade: '#8f6f4d', borderColor: '#5f4a33' },
+  meeting_room: { x: 285, y: 0, w: 275, h: 220, wallHeight: 52, wallColor: '#c3d6de', wallShade: '#a8bec8', floorColor: '#8daac1', floorShade: '#67879f', borderColor: '#486176' },
+  corridor: { x: 0, y: 228, w: 560, h: 24, wallHeight: 0, wallColor: '#8f8a7b', wallShade: '#7e7868', floorColor: '#7e7868', floorShade: '#615c4f', borderColor: '#4d493d' },
+  small_office: { x: 0, y: 260, w: 135, h: 120, wallHeight: 40, wallColor: '#d6c8b0', wallShade: '#c0b195', floorColor: '#b49a79', floorShade: '#8b7255', borderColor: '#5f4f38' },
+  reception: { x: 145, y: 260, w: 275, h: 120, wallHeight: 40, wallColor: '#d2c2a7', wallShade: '#baa88c', floorColor: '#b4875f', floorShade: '#8c6440', borderColor: '#66492b' },
+  garden: { x: 430, y: 260, w: 130, h: 120, wallHeight: 40, wallColor: '#9abd86', wallShade: '#84a770', floorColor: '#6ea35b', floorShade: '#4d7e3d', borderColor: '#36562a' },
 };
 
 const DOORWAYS: Record<NewOfficeZone, Point> = {
@@ -144,8 +146,8 @@ const DOORWAYS: Record<NewOfficeZone, Point> = {
 };
 
 const ZONE_ANCHORS: Record<NewOfficeZone, Point[]> = {
-  main_office: [{ x: 64, y: 120 }, { x: 112, y: 132 }, { x: 168, y: 122 }, { x: 220, y: 136 }, { x: 92, y: 172 }, { x: 188, y: 174 }],
-  meeting_room: [{ x: 330, y: 118 }, { x: 378, y: 130 }, { x: 430, y: 120 }, { x: 488, y: 132 }, { x: 360, y: 174 }, { x: 462, y: 172 }],
+  main_office: [{ x: 42, y: 122 }, { x: 112, y: 122 }, { x: 182, y: 122 }, { x: 42, y: 192 }, { x: 112, y: 192 }, { x: 182, y: 192 }],
+  meeting_room: [{ x: 380, y: 90 }, { x: 412, y: 90 }, { x: 444, y: 90 }, { x: 380, y: 152 }, { x: 412, y: 152 }, { x: 444, y: 152 }],
   corridor: [{ x: 200, y: 240 }, { x: 240, y: 240 }, { x: 280, y: 240 }, { x: 320, y: 240 }, { x: 360, y: 240 }, { x: 400, y: 240 }],
   small_office: [{ x: 36, y: 320 }, { x: 64, y: 330 }, { x: 92, y: 320 }, { x: 120, y: 334 }, { x: 56, y: 360 }, { x: 108, y: 358 }],
   reception: [{ x: 176, y: 320 }, { x: 220, y: 334 }, { x: 268, y: 322 }, { x: 316, y: 336 }, { x: 364, y: 324 }, { x: 240, y: 360 }],
@@ -183,24 +185,50 @@ const FURNITURE_SPRITES: Record<Exclude<SceneFurnitureKey, 'computer' | 'waterco
 
 const ROOM_OBJECTS: Record<NewOfficeZone, SceneObject[]> = {
   main_office: [
-    { key: 'desk_large', x: 28, y: 78, z: 8, scale: 1.05 },
-    { key: 'chair_office', x: 40, y: 126, z: 9 },
-    { key: 'retro_monitor', x: 96, y: 66, z: 7 },
-    { key: 'computer', x: 86, y: 78, z: 10, animated: true },
-    { key: 'filing_cabinet', x: 176, y: 76, z: 8 },
-    { key: 'printer', x: 186, y: 120, z: 9, animated: true },
-    { key: 'blue_orb', x: 236, y: 66, z: 7, animated: true },
-    { key: 'clock_wall', x: 130, y: 14, z: 7, animated: true },
+    // 第一排工位（3个），使用desk帧1-3自带电脑
+    { key: 'desk_large', x: 18, y: 72, z: 8, frameOffset: 1 },
+    { key: 'chair_office', x: 18, y: 104, z: 10 },
+    { key: 'desk_large', x: 88, y: 72, z: 8, frameOffset: 2 },
+    { key: 'chair_office', x: 88, y: 104, z: 10, frameOffset: 1 },
+    { key: 'desk_large', x: 158, y: 72, z: 8, frameOffset: 3 },
+    { key: 'chair_office', x: 158, y: 104, z: 10, frameOffset: 2 },
+    // 第二排工位（3个）
+    { key: 'desk_large', x: 18, y: 142, z: 8, frameOffset: 2 },
+    { key: 'chair_office', x: 18, y: 174, z: 10, frameOffset: 3 },
+    { key: 'desk_large', x: 88, y: 142, z: 8, frameOffset: 3 },
+    { key: 'chair_office', x: 88, y: 174, z: 10 },
+    { key: 'desk_large', x: 158, y: 142, z: 8, frameOffset: 1 },
+    { key: 'chair_office', x: 158, y: 174, z: 10, frameOffset: 1 },
+    // 侧面家具
+    { key: 'filing_cabinet', x: 236, y: 72, z: 8 },
+    { key: 'printer', x: 236, y: 112, z: 9, animated: true },
+    { key: 'retro_monitor', x: 236, y: 152, z: 8 },
+    { key: 'clock_wall', x: 124, y: 14, z: 7, animated: true },
   ],
   meeting_room: [
-    { key: 'conference_table', x: 328, y: 86, z: 8, scale: 1.12 },
-    { key: 'chair_office', x: 314, y: 136, z: 9 },
-    { key: 'chair_office', x: 372, y: 136, z: 9, frameOffset: 1 },
-    { key: 'wall_monitor', x: 470, y: 22, z: 7, animated: true },
-    { key: 'whiteboard_wall', x: 360, y: 20, z: 7 },
-    { key: 'arc_sofa', x: 470, y: 96, z: 8 },
-    { key: 'wine_sofa', x: 486, y: 152, z: 9 },
-    { key: 'chart_board', x: 318, y: 18, z: 7, animated: true },
+    // 长桌（3个conference_table横向拼接，使用水平帧）
+    { key: 'conference_table', x: 366, y: 110, z: 8, frameOffset: 1 },
+    { key: 'conference_table', x: 398, y: 110, z: 8, frameOffset: 1 },
+    { key: 'conference_table', x: 430, y: 110, z: 8, frameOffset: 1 },
+    // 上侧椅子（面朝下，frameOffset=0）
+    { key: 'chair_office', x: 370, y: 80, z: 9 },
+    { key: 'chair_office', x: 402, y: 80, z: 9 },
+    { key: 'chair_office', x: 434, y: 80, z: 9 },
+    // 下侧椅子（面朝上，frameOffset=2）
+    { key: 'chair_office', x: 370, y: 142, z: 9, frameOffset: 2 },
+    { key: 'chair_office', x: 402, y: 142, z: 9, frameOffset: 2 },
+    { key: 'chair_office', x: 434, y: 142, z: 9, frameOffset: 2 },
+    // 左端椅子（面朝右，frameOffset=1）
+    { key: 'chair_office', x: 338, y: 110, z: 9, frameOffset: 1 },
+    // 右端椅子（面朝左，frameOffset=3）
+    { key: 'chair_office', x: 462, y: 110, z: 9, frameOffset: 3 },
+    // 墙面装饰
+    { key: 'whiteboard_wall', x: 360, y: 18, z: 7 },
+    { key: 'wall_monitor', x: 470, y: 18, z: 7, animated: true },
+    { key: 'chart_board', x: 304, y: 18, z: 7, animated: true },
+    // 角落装饰
+    { key: 'plant_pot', x: 296, y: 186, z: 9, animated: true },
+    { key: 'plant_pot', x: 530, y: 186, z: 9, frameOffset: 2, animated: true },
   ],
   corridor: [
     { key: 'plant_pot', x: 26, y: 214, z: 6, animated: true },
@@ -211,6 +239,7 @@ const ROOM_OBJECTS: Record<NewOfficeZone, SceneObject[]> = {
     { key: 'plant_pot', x: 376, y: 214, z: 6, frameOffset: 1, animated: true },
     { key: 'ceiling_lamp', x: 446, y: 196, z: 5, frameOffset: 2, animated: true },
     { key: 'wall_frame', x: 514, y: 198, z: 5 },
+    { key: 'plant_pot', x: 540, y: 214, z: 6, animated: true },
   ],
   small_office: [
     { key: 'bookshelf_tall', x: 10, y: 286, z: 8 },
@@ -288,28 +317,71 @@ const normalizeZone = (zone: RealAgentCard['zone']): NewOfficeZone => {
 const roundPoint = (p: Point): Point => ({ x: Math.round(p.x), y: Math.round(p.y) });
 
 const actionToSpriteRow = (action: AgentAction, direction: Direction, isMoving: boolean): { row: number; speed: number } => {
+  const rowFromDirection = (dir: Direction): number => {
+    if (dir === 'down') return 0;
+    if (dir === 'left') return 1;
+    if (dir === 'right') return 2;
+    return 3;
+  };
   if (isMoving) {
-    if (direction === 'right') return { row: 0, speed: 1.1 };
-    if (direction === 'left') return { row: 1, speed: 1.1 };
-    if (direction === 'down') return { row: 2, speed: 1.1 };
-    return { row: 3, speed: 1.1 };
+    return { row: rowFromDirection(direction), speed: 1.1 };
   }
   switch (action) {
-    case 'writing': return { row: 4, speed: 1.0 };
-    case 'running': return { row: 9, speed: 1.7 };
-    case 'thinking': return { row: 8, speed: 0.3 };
-    case 'composing': return { row: 4, speed: 0.6 };
-    case 'retrying': return { row: 9, speed: 2.0 };
-    case 'reviewing': return { row: 7, speed: 0.25 };
-    case 'delegating': return { row: 3, speed: 0.6 };
-    case 'reading': return { row: 6, speed: 0.4 };
-    case 'searching': return { row: 6, speed: 0.6 };
-    case 'browsing': return { row: 8, speed: 0.5 };
-    case 'arriving': return { row: 2, speed: 0.5 };
+    case 'writing': return { row: 3, speed: 0.35 };
+    case 'reading': return { row: 3, speed: 0.3 };
+    case 'searching': return { row: 3, speed: 0.45 };
+    case 'reviewing': return { row: 3, speed: 0.28 };
+    case 'running': return { row: rowFromDirection(direction), speed: 1.6 };
+    case 'retrying': return { row: rowFromDirection(direction), speed: 1.8 };
+    case 'thinking': return { row: 0, speed: 0.2 };
+    case 'composing': return { row: 0, speed: 0.25 };
+    case 'delegating': return { row: 0, speed: 0.35 };
+    case 'browsing': return { row: 2, speed: 0.35 };
+    case 'arriving': return { row: rowFromDirection(direction), speed: 0.5 };
     case 'idle':
     default:
-      return { row: direction === 'left' ? 7 : direction === 'right' ? 6 : 8, speed: 0.2 };
+      return { row: rowFromDirection(direction), speed: 0.18 };
   }
+};
+
+const FLOOR_TILE_SIZE = 16;
+const DOOR_WIDTH = 26;
+const DOOR_DEPTH = 8;
+
+const isUpperRoom = (room: RoomLayout): boolean => room.y < CORRIDOR_Y;
+
+const renderDoorway = (zone: Exclude<NewOfficeZone, 'corridor'>) => {
+  const room = ROOMS[zone];
+  const doorway = DOORWAYS[zone];
+  const top = isUpperRoom(room) ? room.y + room.h - DOOR_DEPTH : room.y - 2;
+  return (
+    <React.Fragment key={`door-${zone}`}>
+      <div
+        style={{
+          position: 'absolute',
+          left: Math.round(doorway.x - DOOR_WIDTH / 2),
+          top: Math.round(top),
+          width: DOOR_WIDTH,
+          height: DOOR_DEPTH,
+          backgroundColor: '#4a3a2a',
+          border: '1px solid #2d2218',
+          boxSizing: 'border-box',
+          zIndex: 4,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: Math.round(doorway.x - DOOR_WIDTH / 2 + 2),
+          top: Math.round(top + 2),
+          width: DOOR_WIDTH - 4,
+          height: DOOR_DEPTH - 4,
+          backgroundColor: '#8a6848',
+          zIndex: 5,
+        }}
+      />
+    </React.Fragment>
+  );
 };
 
 const getActionLabel = (card: RealAgentCard, action: AgentAction): string => {
@@ -549,7 +621,7 @@ const AgentSprite: React.FC<{ motion: AgentMotion; tick: number }> = ({ motion, 
   const action = resolveAgentAction(motion.card);
   const { row, speed } = actionToSpriteRow(action, motion.direction, motion.isMoving);
   const effectiveTick = Math.floor((tick + motion.phase) * speed);
-  const col = motion.isMoving ? effectiveTick % WORKER_COLS : effectiveTick % 2;
+  const col = 0;
   const spriteUrl = WORKER_SPRITES[spriteIndexFromName(motion.card.agentName, motion.card.isLead)];
   const label = getActionLabel(motion.card, action);
 
@@ -605,15 +677,63 @@ const OfficeScene: React.FC<{ cards: RealAgentCard[] }> = ({ cards }) => {
     <div style={{ position: 'relative', width: SCENE_W, height: SCENE_H, border: '2px solid #4a3f31', overflow: 'hidden', imageRendering: 'pixelated', backgroundColor: '#7b6a56' }}>
       {(['main_office', 'meeting_room', 'small_office', 'reception', 'garden'] as const).map((zone) => {
         const room = ROOMS[zone];
+        const floorTop = room.y + room.wallHeight;
+        const floorHeight = room.h - room.wallHeight;
         return (
           <React.Fragment key={zone}>
-            <div style={{ position: 'absolute', left: Math.round(room.x), top: Math.round(room.y), width: Math.round(room.w), height: Math.round(room.wallHeight), backgroundColor: room.wallColor, border: `2px solid ${room.borderColor}`, boxSizing: 'border-box', zIndex: 1 }} />
-            <div style={{ position: 'absolute', left: Math.round(room.x), top: Math.round(room.y + room.wallHeight), width: Math.round(room.w), height: Math.round(room.h - room.wallHeight), backgroundColor: room.floorColor, borderLeft: `2px solid ${room.borderColor}`, borderRight: `2px solid ${room.borderColor}`, borderBottom: `2px solid ${room.borderColor}`, boxSizing: 'border-box', zIndex: 1 }} />
+            <div
+              style={{
+                position: 'absolute',
+                left: Math.round(room.x),
+                top: Math.round(room.y),
+                width: Math.round(room.w),
+                height: Math.round(room.wallHeight),
+                backgroundColor: room.wallColor,
+                backgroundImage: `linear-gradient(180deg, ${room.wallShade} 0 1px, transparent 1px 100%)`,
+                backgroundSize: `100% 8px`,
+                border: `2px solid ${room.borderColor}`,
+                boxSizing: 'border-box',
+                zIndex: 1,
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: Math.round(room.x),
+                top: Math.round(floorTop),
+                width: Math.round(room.w),
+                height: Math.round(floorHeight),
+                backgroundColor: room.floorColor,
+                backgroundImage: `linear-gradient(0deg, ${room.floorShade} 1px, transparent 1px), linear-gradient(90deg, ${room.floorShade} 1px, transparent 1px)`,
+                backgroundSize: `${FLOOR_TILE_SIZE}px ${FLOOR_TILE_SIZE}px`,
+                borderLeft: `2px solid ${room.borderColor}`,
+                borderRight: `2px solid ${room.borderColor}`,
+                borderBottom: `2px solid ${room.borderColor}`,
+                boxSizing: 'border-box',
+                zIndex: 1,
+              }}
+            />
           </React.Fragment>
         );
       })}
 
-      <div style={{ position: 'absolute', left: Math.round(ROOMS.corridor.x), top: Math.round(ROOMS.corridor.y), width: Math.round(ROOMS.corridor.w), height: Math.round(ROOMS.corridor.h), backgroundColor: ROOMS.corridor.floorColor, borderTop: `2px solid ${ROOMS.corridor.borderColor}`, borderBottom: `2px solid ${ROOMS.corridor.borderColor}`, zIndex: 2 }} />
+      <div
+        style={{
+          position: 'absolute',
+          left: Math.round(ROOMS.corridor.x),
+          top: Math.round(ROOMS.corridor.y),
+          width: Math.round(ROOMS.corridor.w),
+          height: Math.round(ROOMS.corridor.h),
+          backgroundColor: ROOMS.corridor.floorColor,
+          backgroundImage: `linear-gradient(0deg, ${ROOMS.corridor.floorShade} 1px, transparent 1px), linear-gradient(90deg, ${ROOMS.corridor.floorShade} 1px, transparent 1px)`,
+          backgroundSize: `${FLOOR_TILE_SIZE}px ${FLOOR_TILE_SIZE}px`,
+          borderTop: `2px solid ${ROOMS.corridor.borderColor}`,
+          borderBottom: `2px solid ${ROOMS.corridor.borderColor}`,
+          zIndex: 2,
+        }}
+      />
+
+      {(['main_office', 'meeting_room', 'small_office', 'reception', 'garden'] as const).map((zone) => renderDoorway(zone))}
 
       {(Object.keys(ROOM_OBJECTS) as NewOfficeZone[]).flatMap((zone) => ROOM_OBJECTS[zone]).map((obj, idx) => (
         <SceneFurnitureSprite key={`${obj.key}-${idx}`} object={obj} tick={tick} />
