@@ -6,6 +6,7 @@ import { isDesktopShell, isVSCodeRuntime } from '@/lib/desktop';
 import { syncDesktopSettings, initializeAppearancePreferences } from '@/lib/persistence';
 import { applyPersistedDirectoryPreferences } from '@/lib/directoryPersistence';
 import { DesktopHostSwitcherInline } from '@/components/desktop/DesktopHostSwitcher';
+import { OpenChamberLogo } from '@/components/ui/OpenChamberLogo';
 import { useI18n } from '@/contexts/useI18n';
 
 const STATUS_CHECK_ENDPOINT = '/auth/session';
@@ -62,12 +63,10 @@ const AuthShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </div>
 );
 
-const LoadingScreen: React.FC<{ message: string }> = ({ message }) => (
-  <AuthShell>
-    <div className="w-full max-w-sm rounded-3xl border border-border/40 bg-card/90 px-6 py-5 text-center shadow-none backdrop-blur">
-      <p className="typography-ui-label text-muted-foreground">{message}</p>
-    </div>
-  </AuthShell>
+const LoadingScreen: React.FC = () => (
+  <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+    <OpenChamberLogo width={120} height={120} isAnimated />
+  </div>
 );
 
 const ErrorScreen: React.FC<ErrorScreenProps> = ({ onRetry, errorType = 'network', retryAfter }) => {
@@ -129,6 +128,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
       return;
     }
 
+    // 检查 cookie 是否存在
     const cookies = document.cookie;
     const hasAccessToken = cookies.includes('oc_ui_session=');
     const hasRefreshToken = cookies.includes('oc_ui_refresh=');
@@ -237,6 +237,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
       const response = await submitPassword(password);
       if (response.ok) {
         console.log('[Frontend Auth] Login successful');
+        // 检查登录后 cookie 是否被设置
         const cookies = document.cookie;
         const hasAccessToken = cookies.includes('oc_ui_session=');
         const hasRefreshToken = cookies.includes('oc_ui_refresh=');
@@ -280,7 +281,7 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
   };
 
   if (state === 'pending') {
-    return <LoadingScreen message={t('auth.loading.preparingWorkspace')} />;
+    return <LoadingScreen />;
   }
 
   if (state === 'error') {
@@ -297,11 +298,11 @@ export const SessionAuthGate: React.FC<SessionAuthGateProps> = ({ children }) =>
         <div className="flex flex-col items-center gap-6 w-full max-w-xs">
           <div className="flex flex-col items-center gap-1 text-center">
             <h1 className="text-xl font-semibold text-foreground">
-              {isTunnelLocked ? t('auth.locked.tunnelTitle') : t('auth.locked.title')}
+              {isTunnelLocked ? t('auth.locked.tunnelAccessRequired') : t('auth.locked.title')}
             </h1>
             <p className="typography-meta text-muted-foreground">
               {isTunnelLocked
-                ? t('auth.locked.tunnelSubtitle')
+                ? t('auth.locked.tunnelAccessHint')
                 : t('auth.locked.subtitle')}
             </p>
           </div>

@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui';
+import { useI18n } from '@/contexts/useI18n';
 
 import { UpdateDialog } from '@/components/ui/UpdateDialog';
 import { ProjectEditDialog } from '@/components/layout/ProjectEditDialog';
@@ -48,8 +49,8 @@ import { isDesktopLocalOriginActive, isDesktopShell, isTauriShell, requestDirect
 import { useLongPress } from '@/hooks/useLongPress';
 import { formatShortcutForDisplay, getEffectiveShortcutCombo } from '@/lib/shortcuts';
 import { sessionEvents } from '@/lib/sessionEvents';
+import { useThemeSystem } from '@/contexts/useThemeSystem';
 import type { ProjectEntry } from '@/lib/api/types';
-import { useI18n } from '@/contexts/useI18n';
 
 const normalize = (value: string): string => {
   if (!value) return '';
@@ -259,10 +260,16 @@ const ProjectTile: React.FC<{
   onClose: () => void;
 }> = ({ project, isActive, hasStreaming, hasUnread, label, expanded, projectTextVisible, onClick, onEdit, onClose }) => {
   const { t } = useI18n();
+  const { currentTheme } = useThemeSystem();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [iconImageFailed, setIconImageFailed] = React.useState(false);
   const ProjectIcon = project.icon ? PROJECT_ICON_MAP[project.icon] : null;
-  const projectIconImageUrl = !iconImageFailed ? getProjectIconImageUrl(project) : null;
+  const projectIconImageUrl = !iconImageFailed
+    ? getProjectIconImageUrl(project, {
+      themeVariant: currentTheme.metadata.variant,
+      iconColor: currentTheme.colors.surface.foreground,
+    })
+    : null;
   const projectColorVar = project.color ? (PROJECT_COLOR_MAP[project.color] ?? null) : null;
   const showStreamingDots = hasStreaming;
   const showAttentionDots = !hasStreaming && hasUnread;
@@ -649,7 +656,7 @@ export const NavRail: React.FC<NavRailProps> = ({ className, mobile }) => {
         console.error('Failed to select directory:', error);
         toast.error(t('layout.nav.failedToSelectDirectory'));
       });
-  }, [addProject, tauriIpcAvailable, t]);
+  }, [addProject, tauriIpcAvailable]);
 
   const handleEditProject = React.useCallback(
     (projectId: string) => {

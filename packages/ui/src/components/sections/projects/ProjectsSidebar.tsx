@@ -10,6 +10,7 @@ import { RiAddLine, RiFolderLine } from '@remixicon/react';
 import { isDesktopLocalOriginActive, isTauriShell, isVSCodeRuntime, requestDirectoryAccess } from '@/lib/desktop';
 import { sessionEvents } from '@/lib/sessionEvents';
 import { toast } from '@/components/ui';
+import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useI18n } from '@/contexts/useI18n';
 
 export const ProjectsSidebar: React.FC<{ onItemSelect?: () => void }> = ({ onItemSelect }) => {
@@ -18,6 +19,7 @@ export const ProjectsSidebar: React.FC<{ onItemSelect?: () => void }> = ({ onIte
   const addProject = useProjectsStore((state) => state.addProject);
   const selectedId = useUIStore((state) => state.settingsProjectsSelectedId);
   const setSelectedId = useUIStore((state) => state.setSettingsProjectsSelectedId);
+  const { currentTheme } = useThemeSystem();
   const [brokenIconIds, setBrokenIconIds] = React.useState<Set<string>>(new Set());
 
   const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
@@ -50,7 +52,7 @@ export const ProjectsSidebar: React.FC<{ onItemSelect?: () => void }> = ({ onIte
         console.error('Failed to select directory:', error);
         toast.error(t('session.toast.selectDirectoryFailed'));
       });
-  }, [addProject, setSelectedId, tauriIpcAvailable, t]);
+  }, [addProject, setSelectedId, tauriIpcAvailable]);
 
   React.useEffect(() => {
     if (projects.length === 0) {
@@ -70,9 +72,9 @@ export const ProjectsSidebar: React.FC<{ onItemSelect?: () => void }> = ({ onIte
       variant="background"
       header={
         <div className={cn('border-b px-3', 'pt-4 pb-3')}>
-          <h2 className="text-base font-semibold text-foreground mb-3">{t('session.projects')}</h2>
+          <h2 className="text-base font-semibold text-foreground mb-3">{t('settings.projectsSidebar.title')}</h2>
           <div className="flex items-center justify-between gap-2">
-            <span className="typography-meta text-muted-foreground">{t('projects.totalCount', { count: projects.length })}</span>
+            <span className="typography-meta text-muted-foreground">{t('settings.projectsSidebar.totalCount', { count: projects.length })}</span>
             {!isVSCode && (
               <Button
                 type="button"
@@ -80,7 +82,7 @@ export const ProjectsSidebar: React.FC<{ onItemSelect?: () => void }> = ({ onIte
                 size="icon"
                 className="h-7 w-7 -my-1 text-muted-foreground"
                 onClick={handleAddProject}
-                aria-label={t('session.project.addProject')}
+                aria-label={t('nav.addProject')}
               >
                 <RiAddLine className="size-4" />
               </Button>
@@ -93,7 +95,12 @@ export const ProjectsSidebar: React.FC<{ onItemSelect?: () => void }> = ({ onIte
         const selected = project.id === selectedId;
         const Icon = project.icon ? PROJECT_ICON_MAP[project.icon] : null;
         const imageFailureKey = `${project.id}:${project.iconImage?.updatedAt ?? 0}`;
-        const imageUrl = brokenIconIds.has(imageFailureKey) ? null : getProjectIconImageUrl(project);
+        const imageUrl = brokenIconIds.has(imageFailureKey)
+          ? null
+          : getProjectIconImageUrl(project, {
+            themeVariant: currentTheme.metadata.variant,
+            iconColor: currentTheme.colors.surface.foreground,
+          });
         const color = project.color ? (PROJECT_COLOR_MAP[project.color] ?? null) : null;
         const icon = imageUrl
           ? (

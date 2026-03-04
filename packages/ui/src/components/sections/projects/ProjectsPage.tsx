@@ -10,6 +10,7 @@ import { PROJECT_COLORS, PROJECT_ICONS, PROJECT_COLOR_MAP as COLOR_MAP, getProje
 import { RiCloseLine } from '@remixicon/react';
 import { WorktreeSectionContent } from '@/components/sections/openchamber/WorktreeSectionContent';
 import { ProjectActionsSection } from '@/components/sections/projects/ProjectActionsSection';
+import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useI18n } from '@/contexts/useI18n';
 
 export const ProjectsPage: React.FC = () => {
@@ -21,6 +22,7 @@ export const ProjectsPage: React.FC = () => {
   const discoverProjectIcon = useProjectsStore((state) => state.discoverProjectIcon);
   const selectedId = useUIStore((state) => state.settingsProjectsSelectedId);
   const setSelectedId = useUIStore((state) => state.setSettingsProjectsSelectedId);
+  const { currentTheme } = useThemeSystem();
 
   const selectedProject = React.useMemo(() => {
     if (!selectedId) return null;
@@ -108,10 +110,10 @@ export const ProjectsPage: React.FC = () => {
       const uploadResult = await uploadProjectIcon(selectedProject.id, pendingUploadIconFile);
       setIsUploadingIcon(false);
       if (!uploadResult.ok) {
-        toast.error(uploadResult.error || 'Failed to upload project icon');
+        toast.error(uploadResult.error || t('settings.projectsPage.failedUploadProjectIcon'));
         return;
       }
-      toast.success('Project icon updated');
+      toast.success(t('settings.projectsPage.projectIconUpdated'));
       clearPendingUploadIcon();
       setPendingRemoveImageIcon(false);
     }
@@ -123,10 +125,10 @@ export const ProjectsPage: React.FC = () => {
       const removeResult = await removeProjectIcon(selectedProject.id);
       setIsRemovingCustomIcon(false);
       if (!removeResult.ok) {
-        toast.error(removeResult.error || 'Failed to remove project icon');
+        toast.error(removeResult.error || t('settings.projectsPage.failedRemoveProjectIcon'));
         return;
       }
-      toast.success('Project icon removed');
+      toast.success(t('settings.projectsPage.customProjectIconRemoved'));
       setPendingRemoveImageIcon(false);
       setIconBackground(null);
     }
@@ -161,7 +163,10 @@ export const ProjectsPage: React.FC = () => {
     ? (hasPendingUploadImageIcon
       ? pendingUploadIconPreviewUrl
       : (selectedProject && hasStoredImageIcon && !pendingRemoveImageIcon
-        ? getProjectIconImageUrl(selectedProject)
+        ? getProjectIconImageUrl(selectedProject, {
+          themeVariant: currentTheme.metadata.variant,
+          iconColor: currentTheme.colors.surface.foreground,
+        })
         : null))
     : null;
 
@@ -388,7 +393,7 @@ export const ProjectsPage: React.FC = () => {
                     value={iconBackground ?? '#000000'}
                     onChange={(event) => setIconBackground(event.target.value)}
                     className="h-7 w-9 cursor-pointer rounded border border-border bg-transparent p-1"
-                    aria-label="Project icon background color"
+                    aria-label={t('settings.projectsPage.iconBackgroundColorAria')}
                   />
                   <Input
                     value={iconBackground ?? ''}
@@ -402,7 +407,7 @@ export const ProjectsPage: React.FC = () => {
                     variant="outline"
                     onClick={() => setIconBackground(null)}
                     className="h-7 w-7 p-0"
-                    aria-label="Clear icon background"
+                    aria-label={t('settings.projectsPage.clearIconBackgroundAria')}
                     title={t('settings.projectsPage.clearBackground')}
                     disabled={!iconBackground}
                   >

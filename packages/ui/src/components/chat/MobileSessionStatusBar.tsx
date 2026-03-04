@@ -50,8 +50,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { ProjectEditDialog } from '@/components/layout/ProjectEditDialog';
 import { useDrawerSwipe } from '@/hooks/useDrawerSwipe';
-import { useI18n } from '@/contexts/useI18n';
 import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';
+import { useThemeSystem } from '@/contexts/useThemeSystem';
+import { useI18n } from '@/contexts/useI18n';
 
 interface MobileSessionStatusBarProps {
   onSessionSwitch?: (sessionId: string) => void;
@@ -170,7 +171,8 @@ function useSessionGrouping(
 function useSessionHelpers(
   agents: Array<{ name: string }>,
   sessionStatus: Map<string, { type: string }> | undefined,
-  sessionAttentionStates: Map<string, { needsAttention: boolean }> | undefined
+  sessionAttentionStates: Map<string, { needsAttention: boolean }> | undefined,
+  t: (key: string) => string,
 ) {
   const getSessionAgentName = React.useCallback((session: Session): string => {
     const agent = (session as { agent?: string }).agent;
@@ -185,8 +187,8 @@ function useSessionHelpers(
   const getSessionTitle = React.useCallback((session: Session): string => {
     const title = session.title;
     if (title && title.trim()) return title;
-    return 'New session';
-  }, []);
+    return t('session.untitled');
+  }, [t]);
 
   const isRunning = React.useCallback((sessionId: string): boolean => {
     const status = sessionStatus?.get(sessionId);
@@ -607,6 +609,7 @@ function SortableProjectItem({
   onDelete,
   formatProjectLabel,
 }: SortableProjectItemProps) {
+  const { currentTheme } = useThemeSystem();
   const {
     attributes,
     listeners,
@@ -624,7 +627,12 @@ function SortableProjectItem({
 
   const [imageFailed, setImageFailed] = React.useState(false);
   const ProjectIcon = project.icon ? PROJECT_ICON_MAP[project.icon] : null;
-  const projectIconImageUrl = !imageFailed ? getProjectIconImageUrl(project) : null;
+  const projectIconImageUrl = !imageFailed
+    ? getProjectIconImageUrl(project, {
+      themeVariant: currentTheme.metadata.variant,
+      iconColor: currentTheme.colors.surface.foreground,
+    })
+    : null;
   const projectColorVar = project.color ? (PROJECT_COLOR_MAP[project.color] ?? null) : null;
 
   return (
@@ -738,6 +746,7 @@ function ProjectEditPanel({
   onDelete,
   homeDirectory,
 }: ProjectEditPanelProps) {
+  const { t } = useI18n();
   const [localProjects, setLocalProjects] = React.useState(projects);
 
   React.useEffect(() => {
@@ -790,10 +799,10 @@ function ProjectEditPanel({
     <MobileOverlayPanel
       open={isOpen}
       onClose={onClose}
-      title="Edit Projects"
+      title={t('mobileSessionStatus.editProjects')}
       footer={
         <p className="text-xs text-[var(--surface-mutedForeground)] text-center">
-          Drag items to reorder, or use arrows to move. Tap edit to change details.
+          {t('mobileSessionStatus.editProjectsHint')}
         </p>
       }
     >
@@ -825,7 +834,7 @@ function ProjectEditPanel({
 
         {localProjects.length === 0 && (
           <div className="text-center py-8 text-[var(--surface-mutedForeground)]">
-            No projects to edit
+            {t('mobileSessionStatus.noProjectsToEdit')}
           </div>
         )}
       </div>
@@ -853,9 +862,15 @@ function ProjectButton({
   onOpenEditPanel,
   formatProjectLabel,
 }: ProjectButtonProps) {
+  const { currentTheme } = useThemeSystem();
   const [imageFailed, setImageFailed] = React.useState(false);
   const ProjectIcon = project.icon ? PROJECT_ICON_MAP[project.icon] : null;
-  const projectIconImageUrl = !imageFailed ? getProjectIconImageUrl(project) : null;
+  const projectIconImageUrl = !imageFailed
+    ? getProjectIconImageUrl(project, {
+      themeVariant: currentTheme.metadata.variant,
+      iconColor: currentTheme.colors.surface.foreground,
+    })
+    : null;
 
   React.useEffect(() => {
     setImageFailed(false);
@@ -945,6 +960,7 @@ function ProjectBar({
   onRemoveProject,
   homeDirectory
 }: ProjectBarProps) {
+  const { t } = useI18n();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [editPanelOpen, setEditPanelOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -999,12 +1015,12 @@ function ProjectBar({
   if (projects.length === 0) {
     return (
       <div className="flex items-center gap-2 px-2 py-1 border-b border-[var(--interactive-border)] bg-transparent">
-        <span className="text-[11px] text-[var(--surface-mutedForeground)]">No projects</span>
+        <span className="text-[11px] text-[var(--surface-mutedForeground)]">{t('mobileSessionStatus.noProjects')}</span>
         <button
           type="button"
           onClick={onAddProject}
           className="flex items-center justify-center !py-1.5 px-2 rounded-md border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 !min-h-0"
-          aria-label="Add project"
+          aria-label={t('nav.addProject')}
         >
           <RiAddLine className="h-3 w-3" />
         </button>
@@ -1080,7 +1096,7 @@ function ProjectBar({
         type="button"
         onClick={onAddProject}
         className="flex items-center justify-center !py-1.5 px-2 rounded-md border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 shrink-0 !min-h-0"
-        aria-label="Add project"
+        aria-label={t('nav.addProject')}
       >
         <RiAddLine className="h-3.5 w-3.5" />
       </button>
@@ -1089,17 +1105,17 @@ function ProjectBar({
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Remove Project</DialogTitle>
+            <DialogTitle>{t('session.common.removeProject')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove <span className="font-medium text-foreground">{projectToDelete?.label || formatDirectoryName(projectToDelete?.path || '', homeDirectory)}</span>?
+              {t('session.common.removeProjectConfirmPrefix')} <span className="font-medium text-foreground">{projectToDelete?.label || formatDirectoryName(projectToDelete?.path || '', homeDirectory)}</span>?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
+              {t('settings.common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
-              Remove
+              {t('session.common.remove')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1165,6 +1181,7 @@ function CollapsedView({
   contextUsage: SessionContextUsage | null;
   childIndicators?: Array<{ session: Session; isRunning: boolean }>;
 }) {
+  const { t } = useI18n();
   const { handleTouchStart, handleTouchMove, handleTouchEnd } = useDrawerSwipe();
 
   return (
@@ -1208,7 +1225,7 @@ function CollapsedView({
           }}
           className="flex items-center gap-0.5 px-2 py-1 text-[12px] leading-tight !min-h-0 rounded border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 self-center"
         >
-          New
+          {t('session.common.new')}
         </button>
       </div>
     </div>
@@ -1274,6 +1291,7 @@ function ExpandedView({
   homeDirectory: string | null;
   childIndicators?: Array<{ session: Session; isRunning: boolean }>;
 }) {
+  const { t } = useI18n();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [collapsedHeight, setCollapsedHeight] = React.useState<number | null>(null);
   const [hasMeasured, setHasMeasured] = React.useState(false);
@@ -1367,7 +1385,7 @@ function ExpandedView({
             }}
             className="flex items-center gap-0.5 px-2 py-1 text-[12px] leading-tight !min-h-0 rounded border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 self-start"
           >
-            New
+            {t('session.common.new')}
           </button>
         </div>
       </div>
@@ -1391,7 +1409,7 @@ function ExpandedView({
       >
         {displaySessions.length === 0 ? (
           <div className="flex items-center justify-center py-3 text-[11px] text-[var(--surface-mutedForeground)]">
-            <span>No sessions in this project</span>
+            <span>{t('mobileSessionStatus.noSessionsInProject')}</span>
           </div>
         ) : (
           displaySessions.map((session) => (
@@ -1417,6 +1435,7 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   cornerRadius,
 }) => {
   const { t } = useI18n();
+  const { currentTheme } = useThemeSystem();
   const sessions = useSessionStore((state) => state.sessions);
   const currentSessionId = useSessionStore((state) => state.currentSessionId);
   const sessionStatus = useSessionStore((state) => state.sessionStatus);
@@ -1441,7 +1460,7 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const homeDirectory = useDirectoryStore((state) => state.homeDirectory);
 
   const { sessions: sortedSessions, totalRunning, totalUnread, totalCount } = useSessionGrouping(sessions, sessionStatus, sessionAttentionStates);
-  const { getSessionAgentName, getSessionTitle, needsAttention } = useSessionHelpers(agents, sessionStatus, sessionAttentionStates);
+  const { getSessionAgentName, getSessionTitle, needsAttention } = useSessionHelpers(agents, sessionStatus, sessionAttentionStates, t);
   const getProjectStatus = useProjectStatus(sessions, sessionStatus, sessionAttentionStates, currentSessionId);
 
   const currentSession = sessions.find((s) => s.id === currentSessionId);
@@ -1456,7 +1475,12 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   const activeProject = getActiveProject();
   const currentProjectLabel = activeProject?.label || formatDirectoryName(activeProject?.path || '', homeDirectory);
   const currentProjectIcon = activeProject?.icon;
-  const currentProjectIconImageUrl = activeProject ? getProjectIconImageUrl(activeProject) : null;
+  const currentProjectIconImageUrl = activeProject
+    ? getProjectIconImageUrl(activeProject, {
+      themeVariant: currentTheme.metadata.variant,
+      iconColor: currentTheme.colors.surface.foreground,
+    })
+    : null;
   const currentProjectIconBackground = activeProject?.iconBackground ?? null;
   const currentProjectColor = activeProject?.color;
 
