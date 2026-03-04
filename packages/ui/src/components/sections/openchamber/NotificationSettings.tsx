@@ -455,7 +455,7 @@ export const NotificationSettings: React.FC = () => {
           applicationServerKey: base64UrlToUint8Array(key.publicKey),
         }),
         15000,
-        'Push subscription timed out'
+        t('settings.notifications.errors.pushSubscriptionTimedOut')
       );
 
       const json = subscription.toJSON();
@@ -474,7 +474,7 @@ export const NotificationSettings: React.FC = () => {
           origin: typeof window !== 'undefined' ? window.location.origin : undefined,
         }),
         15000,
-        'Push subscribe request timed out'
+        t('settings.notifications.errors.pushSubscribeRequestTimedOut')
       );
 
       if (!ok?.ok) {

@@ -8,6 +8,7 @@ import { useConfigStore } from '@/stores/useConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/contexts/useI18n';
 
 const getDisplayModel = (
   storedModel: string | undefined
@@ -23,6 +24,7 @@ const getDisplayModel = (
 };
 
 export const DefaultsSettings: React.FC = () => {
+  const { t } = useI18n();
   const setProvider = useConfigStore((state) => state.setProvider);
   const setModel = useConfigStore((state) => state.setModel);
   const setAgent = useConfigStore((state) => state.setAgent);
@@ -287,8 +289,8 @@ export const DefaultsSettings: React.FC = () => {
             }
           }}
         >
-          <Checkbox checked={showDeletionDialog} onChange={setShowDeletionDialog} ariaLabel="Show deletion dialog" />
-          <span className="typography-ui-label text-foreground">Show Deletion Dialog</span>
+          <Checkbox checked={showDeletionDialog} onChange={setShowDeletionDialog} ariaLabel={t('settings.defaults.showDeletionDialogAria')} />
+          <span className="typography-ui-label text-foreground">{t('settings.defaults.showDeletionDialog')}</span>
         </div>
 
       </section>

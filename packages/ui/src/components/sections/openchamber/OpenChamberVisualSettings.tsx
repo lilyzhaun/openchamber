@@ -800,7 +800,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                                 ariaLabel={t('settings.behavior.userMessageRenderingOptionAria', { label: option.label })}
                                                             />
                                                             <span className={cn('typography-ui-label font-normal', selected ? 'text-foreground' : 'text-foreground/50')}>
-                                                                {option.label}
+                                                                {option.id === 'markdown' ? t('settings.behavior.userMessageRenderingOption.markdown') : t('settings.behavior.userMessageRenderingOption.plain')}
                                                             </span>
                                                         </div>
                                                     );
@@ -836,7 +836,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                                 ariaLabel={t('settings.behavior.mermaidRenderingOptionAria', { label: option.label })}
                                                             />
                                                             <span className={cn('typography-ui-label font-normal', selected ? 'text-foreground' : 'text-foreground/50')}>
-                                                                {option.label}
+                                                                {option.id === 'svg' ? t('settings.behavior.mermaidRenderingOption.svg') : t('settings.behavior.mermaidRenderingOption.ascii')}
                                                             </span>
                                                         </div>
                                                     );
@@ -872,7 +872,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                                 ariaLabel={t('settings.behavior.diffLayoutOptionAria', { label: option.label })}
                                                             />
                                                             <span className={cn('typography-ui-label font-normal', selected ? 'text-foreground' : 'text-foreground/50')}>
-                                                                {option.label}
+                                                                {option.id === 'dynamic' ? t('settings.behavior.diffLayoutOption.dynamic') : option.id === 'inline' ? t('settings.behavior.diffLayoutOption.inline') : t('settings.behavior.diffLayoutOption.sideBySide')}
                                                             </span>
                                                         </div>
                                                     );
@@ -908,7 +908,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                                 ariaLabel={t('settings.behavior.diffViewModeOptionAria', { label: option.label })}
                                                             />
                                                             <span className={cn('typography-ui-label font-normal', selected ? 'text-foreground' : 'text-foreground/50')}>
-                                                                {option.label}
+                                                                {option.id === 'single' ? t('settings.behavior.diffViewModeOption.single') : t('settings.behavior.diffViewModeOption.stacked')}
                                                             </span>
                                                         </div>
                                                     );

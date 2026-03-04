@@ -4,8 +4,10 @@ import { updateDesktopSettings } from '@/lib/persistence';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { setFilesViewShowGitignored, useFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
+import { useI18n } from '@/contexts/useI18n';
 
 export const GitSettings: React.FC = () => {
+  const { t } = useI18n();
   const settingsGitmojiEnabled = useConfigStore((state) => state.settingsGitmojiEnabled);
   const setSettingsGitmojiEnabled = useConfigStore((state) => state.setSettingsGitmojiEnabled);
   const showGitignored = useFilesViewShowGitignored();
@@ -127,9 +129,9 @@ export const GitSettings: React.FC = () => {
           <Checkbox
             checked={showGitignored}
             onChange={setFilesViewShowGitignored}
-            ariaLabel="Display gitignored files"
+            ariaLabel={t('settings.git.showIgnoredFilesAria')}
           />
-          <span className="typography-ui-label text-foreground">Display Gitignored Files</span>
+          <span className="typography-ui-label text-foreground">{t('settings.git.showIgnoredFiles')}</span>
         </div>
       </section>
     </div>

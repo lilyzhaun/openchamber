@@ -357,7 +357,7 @@ export const TunnelSettings: React.FC = () => {
     } catch {
       if (!signal.aborted) {
         setState('error');
-        setErrorMessage('Failed to check tunnel availability');
+        setErrorMessage(t('settings.tunnelSettings.failedCheckTunnelAvailability'));
       }
     }
   }, []);
@@ -1103,7 +1103,7 @@ export const TunnelSettings: React.FC = () => {
                                     token: tokenToSave,
                                   });
                                 }}
-                                placeholder={hasSavedToken ? 'Saved token available (optional to replace)' : 'Paste token for this tunnel'}
+                                placeholder={hasSavedToken ? t('settings.tunnelSettings.savedTokenAvailableOptional') : t('settings.tunnelSettings.pasteTokenForTunnel')}
                                 className="h-7"
                                 disabled={state === 'starting' || state === 'stopping'}
                               />
@@ -1202,7 +1202,7 @@ export const TunnelSettings: React.FC = () => {
                     <button
                       type="button"
                       className="rounded p-0.5 text-muted-foreground/70 hover:text-foreground"
-                      aria-label="Named tunnel token info"
+                      aria-label={t('settings.tunnelSettings.namedTunnelTokenInfo')}
                     >
                       <RiInformationLine className="h-3.5 w-3.5" />
                     </button>
@@ -1284,7 +1284,7 @@ export const TunnelSettings: React.FC = () => {
               >
                 {state === 'starting'
                   ? <><RiLoader4Line className="size-3.5 animate-spin" /> Starting tunnel...</>
-                  : 'Start Tunnel'}
+                  : t('settings.tunnelSettings.startTunnel')}
               </ButtonSmall>
             </div>
           )}
@@ -1356,8 +1356,8 @@ export const TunnelSettings: React.FC = () => {
                 className="gap-2 text-[var(--status-error)]"
               >
                 {state === 'stopping'
-                  ? <><RiLoader4Line className="size-3.5 animate-spin" /> Stopping...</>
-                  : 'Stop Tunnel'}
+                  ? <><RiLoader4Line className="size-3.5 animate-spin" /> {t('settings.tunnelSettings.stopping')}</>
+                  : t('settings.tunnelSettings.stopTunnel')}
               </ButtonSmall>
             </div>
           </div>
