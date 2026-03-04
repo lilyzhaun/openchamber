@@ -214,7 +214,7 @@ export const DefaultsSettings: React.FC = () => {
     <div className="mb-6">
       <div className="mb-0.5 px-1">
         <div className="flex items-center gap-2">
-          <h3 className="typography-ui-header font-medium text-foreground">Session Defaults</h3>
+          <h3 className="typography-ui-header font-medium text-foreground">{t('settings.defaults.sessionDefaultsTitle')}</h3>
         </div>
       </div>
 
@@ -239,7 +239,7 @@ export const DefaultsSettings: React.FC = () => {
 
         <div className={cn('flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:gap-8')}>
           <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
-            <span className="typography-ui-label text-foreground">Default Model</span>
+            <span className="typography-ui-label text-foreground">{t('settings.defaults.defaultModel')}</span>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:w-fit sm:flex-initial">
             <ModelSelector providerId={parsedModel.providerId} modelId={parsedModel.modelId} onChange={handleModelChange} />
@@ -248,7 +248,7 @@ export const DefaultsSettings: React.FC = () => {
 
         <div className="flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:gap-8">
           <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
-            <span className="typography-ui-label text-foreground">Default Thinking</span>
+            <span className="typography-ui-label text-foreground">{t('settings.defaults.defaultThinking')}</span>
           </div>
           <div className="flex items-center gap-2 sm:w-fit">
             <Select value={defaultVariant ?? DEFAULT_VARIANT_VALUE} onValueChange={handleVariantChange} disabled={!supportsVariants}>
@@ -256,7 +256,7 @@ export const DefaultsSettings: React.FC = () => {
                 <SelectValue placeholder="Thinking" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={DEFAULT_VARIANT_VALUE}>Default</SelectItem>
+                <SelectItem value={DEFAULT_VARIANT_VALUE}>{t('settings.defaults.default')}</SelectItem>
                 {availableVariants.map((variant) => (
                   <SelectItem key={variant} value={variant}>
                     {variant}
@@ -269,7 +269,7 @@ export const DefaultsSettings: React.FC = () => {
 
         <div className="flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:gap-8">
           <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
-            <span className="typography-ui-label text-foreground">Default Agent</span>
+            <span className="typography-ui-label text-foreground">{t('settings.defaults.defaultAgent')}</span>
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:w-fit sm:flex-initial">
             <AgentSelector agentName={defaultAgent || ''} onChange={handleAgentChange} />

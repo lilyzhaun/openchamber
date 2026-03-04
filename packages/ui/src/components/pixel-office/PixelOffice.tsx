@@ -186,18 +186,24 @@ const ROOM_OBJECTS: Record<NewOfficeZone, SceneObject[]> = {
   main_office: [
     // 第一排工位（3个），使用desk帧1-3自带电脑
     { key: 'desk_large', x: 18, y: 72, z: 8, frameOffset: 1 },
-    { key: 'chair_office', x: 18, y: 104, z: 10 },
+    { key: 'computer', x: 30, y: 78, z: 9, frameOffset: 0, animated: true, scale: 1.2 },
+    { key: 'chair_office', x: 18, y: 96, z: 10 },
     { key: 'desk_large', x: 88, y: 72, z: 8, frameOffset: 2 },
-    { key: 'chair_office', x: 88, y: 104, z: 10, frameOffset: 1 },
+    { key: 'computer', x: 100, y: 78, z: 9, frameOffset: 2, animated: true, scale: 1.2 },
+    { key: 'chair_office', x: 88, y: 96, z: 10, frameOffset: 1 },
     { key: 'desk_large', x: 158, y: 72, z: 8, frameOffset: 3 },
-    { key: 'chair_office', x: 158, y: 104, z: 10, frameOffset: 2 },
+    { key: 'computer', x: 170, y: 78, z: 9, frameOffset: 4, animated: true, scale: 1.2 },
+    { key: 'chair_office', x: 158, y: 96, z: 10, frameOffset: 2 },
     // 第二排工位（3个）
     { key: 'desk_large', x: 18, y: 142, z: 8, frameOffset: 2 },
-    { key: 'chair_office', x: 18, y: 174, z: 10, frameOffset: 3 },
+    { key: 'computer', x: 30, y: 148, z: 9, frameOffset: 1, animated: true, scale: 1.2 },
+    { key: 'chair_office', x: 18, y: 166, z: 10, frameOffset: 3 },
     { key: 'desk_large', x: 88, y: 142, z: 8, frameOffset: 3 },
-    { key: 'chair_office', x: 88, y: 174, z: 10 },
+    { key: 'computer', x: 100, y: 148, z: 9, frameOffset: 3, animated: true, scale: 1.2 },
+    { key: 'chair_office', x: 88, y: 166, z: 10 },
     { key: 'desk_large', x: 158, y: 142, z: 8, frameOffset: 1 },
-    { key: 'chair_office', x: 158, y: 174, z: 10, frameOffset: 1 },
+    { key: 'computer', x: 170, y: 148, z: 9, frameOffset: 0, animated: true, scale: 1.2 },
+    { key: 'chair_office', x: 158, y: 166, z: 10, frameOffset: 1 },
     // 侧面家具
     { key: 'filing_cabinet', x: 236, y: 72, z: 8 },
     { key: 'printer', x: 236, y: 112, z: 9, animated: true },
@@ -205,10 +211,9 @@ const ROOM_OBJECTS: Record<NewOfficeZone, SceneObject[]> = {
     { key: 'clock_wall', x: 124, y: 14, z: 7, animated: true },
   ],
   meeting_room: [
-    // 长桌（3个conference_table横向拼接，使用水平帧）
-    { key: 'conference_table', x: 366, y: 110, z: 8, frameOffset: 1 },
-    { key: 'conference_table', x: 398, y: 110, z: 8, frameOffset: 1 },
-    { key: 'conference_table', x: 430, y: 110, z: 8, frameOffset: 1 },
+    { key: 'conference_table', x: 366, y: 110, z: 8, frameOffset: 0 },
+    { key: 'conference_table', x: 398, y: 110, z: 8, frameOffset: 0 },
+    { key: 'conference_table', x: 430, y: 110, z: 8, frameOffset: 0 },
     // 上侧椅子（面朝下，frameOffset=0）
     { key: 'chair_office', x: 370, y: 80, z: 9 },
     { key: 'chair_office', x: 402, y: 80, z: 9 },
@@ -352,7 +357,7 @@ const isUpperRoom = (room: RoomLayout): boolean => room.y < CORRIDOR_Y;
 const renderDoorway = (zone: Exclude<NewOfficeZone, 'corridor'>) => {
   const room = ROOMS[zone];
   const doorway = DOORWAYS[zone];
-  const top = isUpperRoom(room) ? room.y + room.h - DOOR_DEPTH : room.y - 2;
+  const top = isUpperRoom(room) ? room.y + room.h - DOOR_DEPTH : room.y + room.wallHeight - DOOR_DEPTH;
   return (
     <React.Fragment key={`door-${zone}`}>
       <div
@@ -462,6 +467,7 @@ const useAnimationTick = (intervalMs = 240): number => {
 const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
   const [positions, setPositions] = React.useState<Record<string, Point>>({});
   const [directions, setDirections] = React.useState<Record<string, Direction>>({});
+  const directionsRef = React.useRef<Record<string, Direction>>({});
   const routesRef = React.useRef<Record<string, Point[]>>({});
   const zonesRef = React.useRef<Record<string, NewOfficeZone>>({});
   const phaseRef = React.useRef<Record<string, number>>({});
@@ -497,8 +503,9 @@ const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
 
       setPositions((prev) => {
         const next = { ...prev };
-        const nextDir: Record<string, Direction> = { ...directions };
+        const nextDir: Record<string, Direction> = { ...directionsRef.current };
         let changed = false;
+        let directionChanged = false;
         for (const card of cards) {
           const id = card.sessionId;
           const route = routesRef.current[id] ?? [];
@@ -510,6 +517,7 @@ const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
           const dist = Math.hypot(dx, dy);
           const step = speed * delta;
           const dir = getDirection(current, target, nextDir[id] ?? 'down');
+          if (nextDir[id] !== dir) directionChanged = true;
           nextDir[id] = dir;
           if (dist <= step || dist === 0) {
             next[id] = roundPoint(target);
@@ -520,7 +528,10 @@ const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
           phaseRef.current[id] = (phaseRef.current[id] ?? 0) + 1;
           changed = true;
         }
-        setDirections(nextDir);
+        if (directionChanged) {
+          directionsRef.current = nextDir;
+          setDirections(nextDir);
+        }
         return changed ? next : prev;
       });
 
@@ -532,7 +543,7 @@ const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
       window.cancelAnimationFrame(rafId);
       lastTsRef.current = null;
     };
-  }, [cards, directions]);
+  }, [cards]);
 
   return React.useMemo(() => {
     const usage: Record<NewOfficeZone, number> = { main_office: 0, meeting_room: 0, corridor: 0, small_office: 0, reception: 0, garden: 0 };
