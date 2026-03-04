@@ -23,6 +23,7 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { useQuotaAutoRefresh, useQuotaStore } from '@/stores/useQuotaStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
+import { useFilesViewTabsStore } from '@/stores/useFilesViewTabsStore';
 
 import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
@@ -312,6 +313,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
   const showDesktopHeaderContextUsage = !isVSCode && activeMainTab === 'chat' && !!stableDesktopContextUsage && stableDesktopContextUsage.totalTokens > 0;
+  const desktopHeaderDisplayPercentage = stableDesktopContextUsage && stableDesktopContextUsage.contextLimit > 0
+    ? Math.min(999, (stableDesktopContextUsage.totalTokens / stableDesktopContextUsage.contextLimit) * 100)
+    : 0;
 
   const refreshCurrentInstanceLabel = React.useCallback(async () => {
     if (typeof window === 'undefined' || !isDesktopApp) {
@@ -509,6 +513,14 @@ export const Header: React.FC<HeaderProps> = ({
   const openDirectory = React.useMemo(() => {
     return worktreeDirectory || sessionDirectory || draftDirectory;
   }, [draftDirectory, sessionDirectory, worktreeDirectory]);
+
+  const selectedFilePath = useFilesViewTabsStore((state) => {
+    const directory = normalize(openDirectory || '');
+    if (!directory) {
+      return null;
+    }
+    return state.byRoot[directory]?.selectedPath ?? null;
+  });
 
   const actionDirectory = React.useMemo(() => {
     return normalize(openDirectory || activeProject?.path || '');
@@ -1058,7 +1070,8 @@ export const Header: React.FC<HeaderProps> = ({
         {showDesktopHeaderContextUsage && stableDesktopContextUsage && (
           <ContextUsageDisplay
             totalTokens={stableDesktopContextUsage.totalTokens}
-            percentage={stableDesktopContextUsage.percentage}
+            percentage={desktopHeaderDisplayPercentage}
+            colorPercentage={stableDesktopContextUsage.percentage}
             contextLimit={stableDesktopContextUsage.contextLimit}
             outputLimit={stableDesktopContextUsage.outputLimit ?? 0}
             size="compact"
@@ -1088,7 +1101,7 @@ export const Header: React.FC<HeaderProps> = ({
             </TooltipContent>
           </Tooltip>
         )}
-        <OpenInAppButton directory={openDirectory} className="mr-1" />
+        <OpenInAppButton directory={openDirectory} activeFilePath={selectedFilePath} className="mr-1" />
         <DropdownMenu
             open={isDesktopServicesOpen}
             onOpenChange={(open) => {

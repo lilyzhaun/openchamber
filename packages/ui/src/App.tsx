@@ -16,11 +16,13 @@ import { useSessionAutoCleanup } from '@/hooks/useSessionAutoCleanup';
 import { useQueuedMessageAutoSend } from '@/hooks/useQueuedMessageAutoSend';
 import { useRouter } from '@/hooks/useRouter';
 import { usePushVisibilityBeacon } from '@/hooks/usePushVisibilityBeacon';
+import { usePwaManifestSync } from '@/hooks/usePwaManifestSync';
+import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
 import { useWindowTitle } from '@/hooks/useWindowTitle';
 import { GitPollingProvider } from '@/hooks/useGitPolling';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { hasModifier } from '@/lib/utils';
-import { isDesktopLocalOriginActive, isDesktopShell, isTauriShell } from '@/lib/desktop';
+import { isDesktopLocalOriginActive, isDesktopShell } from '@/lib/desktop';
 import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
@@ -319,6 +321,8 @@ function App({ apis }: AppProps) {
   useServerSessionStatus({ enabled: embeddedBackgroundWorkEnabled });
 
   usePushVisibilityBeacon({ enabled: embeddedBackgroundWorkEnabled });
+  usePwaManifestSync();
+  usePwaInstallPrompt();
 
   useWindowTitle();
 
@@ -331,25 +335,6 @@ function App({ apis }: AppProps) {
   }, []);
 
   useMenuActions(handleToggleMemoryDebug);
-
-  const settingsAutoCreateWorktree = useConfigStore((state) => state.settingsAutoCreateWorktree);
-  React.useEffect(() => {
-    if (embeddedSessionChat) {
-      return;
-    }
-
-    if (!isTauriShell()) {
-      return;
-    }
-    const tauri = (window as unknown as { __TAURI__?: { core?: { invoke?: (cmd: string, args?: Record<string, unknown>) => Promise<unknown> } } }).__TAURI__;
-    if (typeof tauri?.core?.invoke !== 'function') {
-      return;
-    }
-
-    void tauri.core.invoke('desktop_set_auto_worktree_menu', { enabled: settingsAutoCreateWorktree });
-  }, [embeddedSessionChat, settingsAutoCreateWorktree]);
-
-
 
   useSessionStatusBootstrap({ enabled: embeddedBackgroundWorkEnabled });
   useSessionAutoCleanup({ enabled: embeddedBackgroundWorkEnabled });

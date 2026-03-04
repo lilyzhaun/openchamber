@@ -48,6 +48,7 @@ import { cn } from '@/lib/utils';
 import { opencodeClient } from '@/lib/opencode/client';
 import { FileTypeIcon } from '@/components/icons/FileTypeIcon';
 import { useI18n } from '@/contexts/useI18n';
+import { getContextFileOpenFailureMessage, validateContextFileOpen } from '@/lib/contextFileOpenGuard';
 
 type FileNode = {
   name: string;
@@ -309,13 +310,20 @@ export const SidebarFilesTree: React.FC = () => {
   const lastDirectoryListFetchRef = React.useRef<Map<string, number>>(new Map());
 
   const EMPTY_PATHS: string[] = React.useMemo(() => [], []);
+  const EMPTY_CONTEXT_TABS: Array<{ mode: string; targetPath: string | null }> = React.useMemo(() => [], []);
   const expandedPaths = useFilesViewTabsStore((state) => (root ? (state.byRoot[root]?.expandedPaths ?? EMPTY_PATHS) : EMPTY_PATHS));
-  const openPaths = useFilesViewTabsStore((state) => (root ? (state.byRoot[root]?.openPaths ?? EMPTY_PATHS) : EMPTY_PATHS));
   const selectedPath = useFilesViewTabsStore((state) => (root ? (state.byRoot[root]?.selectedPath ?? null) : null));
   const setSelectedPath = useFilesViewTabsStore((state) => state.setSelectedPath);
   const addOpenPath = useFilesViewTabsStore((state) => state.addOpenPath);
   const removeOpenPathsByPrefix = useFilesViewTabsStore((state) => state.removeOpenPathsByPrefix);
   const toggleExpandedPath = useFilesViewTabsStore((state) => state.toggleExpandedPath);
+  const contextTabs = useUIStore((state) => (root ? (state.contextPanelByDirectory[root]?.tabs ?? EMPTY_CONTEXT_TABS) : EMPTY_CONTEXT_TABS));
+  const openContextFilePaths = React.useMemo(() => new Set(
+    contextTabs
+      .map((tab) => (tab.mode === 'file' ? tab.targetPath : null))
+      .filter((targetPath): targetPath is string => typeof targetPath === 'string' && targetPath.length > 0)
+      .map((targetPath) => normalizePath(targetPath))
+  ), [contextTabs]);
 
   // Context menu state
   const [contextMenuPath, setContextMenuPath] = React.useState<string | null>(null);
@@ -450,50 +458,6 @@ export const SidebarFilesTree: React.FC = () => {
 
   // --- Fuzzy search scoring (matching FilesView) ---
 
-  const fuzzyScore = React.useCallback((query: string, candidate: string): number | null => {
-    const q = query.trim().toLowerCase();
-    if (!q) return 0;
-
-    const c = candidate.toLowerCase();
-    let score = 0;
-    let lastIndex = -1;
-    let consecutive = 0;
-
-    for (let i = 0; i < q.length; i += 1) {
-      const ch = q[i];
-      if (!ch || ch === ' ') continue;
-
-      const idx = c.indexOf(ch, lastIndex + 1);
-      if (idx === -1) return null;
-
-      const gap = idx - lastIndex - 1;
-      if (gap === 0) {
-        consecutive += 1;
-      } else {
-        consecutive = 0;
-      }
-
-      score += 10;
-      score += Math.max(0, 18 - idx);
-      score -= Math.max(0, gap);
-
-      if (idx === 0) {
-        score += 12;
-      } else {
-        const prev = c[idx - 1];
-        if (prev === '/' || prev === '_' || prev === '-' || prev === '.' || prev === ' ') {
-          score += 10;
-        }
-      }
-
-      score += consecutive > 0 ? 12 : 0;
-      lastIndex = idx;
-    }
-
-    score += Math.max(0, 24 - Math.round(c.length / 3));
-    return score;
-  }, []);
-
   React.useEffect(() => {
     if (!currentDirectory) {
       setSearchResults([]);
@@ -508,34 +472,20 @@ export const SidebarFilesTree: React.FC = () => {
       return;
     }
 
-    const normalizedQueryLower = trimmedQuery.toLowerCase();
     let cancelled = false;
     setSearching(true);
 
     searchFiles(currentDirectory, trimmedQuery, 150, {
       includeHidden: showHidden,
       respectGitignore: !showGitignored,
+      type: 'file',
     })
       .then((hits) => {
         if (cancelled) return;
 
         const filtered = hits.filter((hit) => showGitignored || !shouldIgnorePath(hit.path));
 
-        const ranked = filtered
-          .map((hit) => {
-            const label = hit.relativePath || hit.name || hit.path;
-            const score = fuzzyScore(normalizedQueryLower, label);
-            return score === null ? null : { hit, score, labelLength: label.length };
-          })
-          .filter(Boolean) as Array<{ hit: typeof hits[0]; score: number; labelLength: number }>;
-
-        ranked.sort((a, b) => (
-          b.score - a.score
-          || a.labelLength - b.labelLength
-          || a.hit.path.localeCompare(b.hit.path)
-        ));
-
-        const mapped: FileNode[] = ranked.map(({ hit }) => ({
+        const mapped: FileNode[] = filtered.map((hit) => ({
           name: hit.name,
           path: normalizePath(hit.path),
           type: 'file',
@@ -559,12 +509,12 @@ export const SidebarFilesTree: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [currentDirectory, debouncedSearchQuery, fuzzyScore, searchFiles, showHidden, showGitignored]);
+  }, [currentDirectory, debouncedSearchQuery, searchFiles, showHidden, showGitignored]);
 
   // --- Git status helpers (matching FilesView) ---
 
   const getFileStatus = React.useCallback((path: string): FileStatus | null => {
-    if (openPaths.includes(path)) return 'open';
+    if (openContextFilePaths.has(path)) return 'open';
 
     if (gitStatus?.files) {
       const relative = path.startsWith(root + '/') ? path.slice(root.length + 1) : path;
@@ -576,7 +526,7 @@ export const SidebarFilesTree: React.FC = () => {
       }
     }
     return null;
-  }, [openPaths, gitStatus, root]);
+  }, [openContextFilePaths, gitStatus, root]);
 
   const getFolderBadge = React.useCallback((dirPath: string): { modified: number; added: number } | null => {
     if (!gitStatus?.files) return null;
@@ -595,13 +545,19 @@ export const SidebarFilesTree: React.FC = () => {
 
   // --- File operations ---
 
-  const handleOpenFile = React.useCallback((node: FileNode) => {
+  const handleOpenFile = React.useCallback(async (node: FileNode) => {
     if (!root) return;
+
+    const openValidation = await validateContextFileOpen(files, node.path);
+    if (!openValidation.ok) {
+      toast.error(getContextFileOpenFailureMessage(openValidation.reason));
+      return;
+    }
 
     setSelectedPath(root, node.path);
     addOpenPath(root, node.path);
     openContextFile(root, node.path);
-  }, [addOpenPath, openContextFile, root, setSelectedPath]);
+  }, [addOpenPath, files, openContextFile, root, setSelectedPath]);
 
   const toggleDirectory = React.useCallback(async (dirPath: string) => {
     const normalized = normalizePath(dirPath);

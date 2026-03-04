@@ -43,7 +43,6 @@ const CORRIDOR_Y = 240;
 
 const WORKER_SPRITES = [worker1Url, worker2Url, worker3Url, worker4Url] as const;
 const WORKER_FRAME = 16;
-const WORKER_COLS = 4;
 const WORKER_SHEET_W = 64;
 const WORKER_SHEET_H = 160;
 const WORKER_SCALE = 1.5;
@@ -617,10 +616,9 @@ const SceneFurnitureSprite: React.FC<{ object: SceneObject; tick: number }> = ({
   return <div style={{ position: 'absolute', left, top, zIndex: object.z }}><SpriteDiv src={FURNITURE_SPRITES[object.key]} sheetW={FURNITURE_SHEET_W} sheetH={FURNITURE_SHEET_H} col={frame.col} row={0} frameSize={FURNITURE_FRAME} scale={scale} /></div>;
 };
 
-const AgentSprite: React.FC<{ motion: AgentMotion; tick: number }> = ({ motion, tick }) => {
+const AgentSprite: React.FC<{ motion: AgentMotion; tick: number }> = ({ motion }) => {
   const action = resolveAgentAction(motion.card);
-  const { row, speed } = actionToSpriteRow(action, motion.direction, motion.isMoving);
-  const effectiveTick = Math.floor((tick + motion.phase) * speed);
+  const { row } = actionToSpriteRow(action, motion.direction, motion.isMoving);
   const col = 0;
   const spriteUrl = WORKER_SPRITES[spriteIndexFromName(motion.card.agentName, motion.card.isLead)];
   const label = getActionLabel(motion.card, action);

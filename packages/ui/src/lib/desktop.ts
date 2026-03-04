@@ -110,7 +110,8 @@ export type DesktopSettings = {
   zenModel?: string;
   gitProviderId?: string;
   gitModelId?: string;
-  toolCallExpansion?: 'collapsed' | 'activity' | 'detailed';
+  pwaAppName?: string;
+  toolCallExpansion?: 'collapsed' | 'activity' | 'detailed' | 'changes';
   userMessageRenderingMode?: 'markdown' | 'plain';
   stickyUserHeader?: boolean;
   fontSize?: number;
@@ -431,6 +432,40 @@ export const openDesktopPath = async (path: string, app?: string | null): Promis
     return true;
   } catch (error) {
     console.warn('Failed to open path (tauri)', error);
+    return false;
+  }
+};
+
+export const openDesktopProjectInApp = async (
+  projectPath: string,
+  appId: string,
+  appName: string,
+  filePath?: string | null,
+): Promise<boolean> => {
+  if (!isTauriShell() || !isDesktopLocalOriginActive()) {
+    return false;
+  }
+
+  const trimmedProjectPath = projectPath?.trim();
+  const trimmedAppId = appId?.trim();
+  const trimmedAppName = appName?.trim();
+  const trimmedFilePath = typeof filePath === 'string' ? filePath.trim() : '';
+
+  if (!trimmedProjectPath || !trimmedAppId || !trimmedAppName) {
+    return false;
+  }
+
+  try {
+    const tauri = (window as unknown as { __TAURI__?: TauriGlobal }).__TAURI__;
+    await tauri?.core?.invoke?.('desktop_open_in_app', {
+      projectPath: trimmedProjectPath,
+      appId: trimmedAppId,
+      appName: trimmedAppName,
+      filePath: trimmedFilePath.length > 0 ? trimmedFilePath : undefined,
+    });
+    return true;
+  } catch (error) {
+    console.warn('Failed to open project in app (tauri)', error);
     return false;
   }
 };
