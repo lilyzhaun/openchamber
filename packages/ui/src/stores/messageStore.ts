@@ -13,7 +13,7 @@ import {
     clearLifecycleTimersForIds,
     clearLifecycleCompletionTimer
 } from "./utils/streamingUtils";
-import { extractTextFromPart, normalizeStreamingPart } from "./utils/messageUtils";
+import { extractTextFromPart, normalizeStreamingPart, sanitizeParts } from "./utils/messageUtils";
 import { getSafeStorage } from "./utils/safeStorage";
 import { useFileStore } from "./fileStore";
 import { useSessionStore } from "./sessionStore";
@@ -541,7 +541,7 @@ export const useMessageStore = create<MessageStore>()(
                                     userMessageMarker: message.info.role === "user" ? true : (message.info as any)?.userMessageMarker,
                                 } as any;
 
-                                const serverParts = (Array.isArray(message.parts) ? message.parts : []).map((part) => {
+                                const serverParts = sanitizeParts(message.parts).map((part) => {
                                     if (part?.type === 'text') {
                                         const raw = (part as any).text ?? (part as any).content ?? '';
                                         if (isExecutionForkMetaText(raw)) {
@@ -2236,7 +2236,7 @@ export const useMessageStore = create<MessageStore>()(
                                         : (message.info as any)?.animationSettled,
                             } as any;
 
-                            const serverParts = (Array.isArray(message.parts) ? message.parts : []).map((part) => {
+                            const serverParts = sanitizeParts(message.parts).map((part) => {
                                 if (part?.type === 'text') {
                                     const raw = (part as any).text ?? (part as any).content ?? '';
                                     if (isExecutionForkMetaText(raw)) {

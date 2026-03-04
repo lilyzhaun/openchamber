@@ -419,7 +419,7 @@ const getToolDescription = (part: ToolPartType, state: ToolStateUnion, currentDi
     const stateWithData = state as ToolStateWithMetadata;
     const metadata = stateWithData.metadata;
     const input = stateWithData.input;
-    const tool = part.tool.toLowerCase();
+    const tool = typeof part.tool === 'string' ? part.tool.toLowerCase() : '';
 
     if (tool === 'structuredoutput' || tool === 'structured_output') {
         return formatStructuredOutputDescription(input, stateWithData.output);
@@ -1539,10 +1539,17 @@ const ToolPart: React.FC<ToolPartProps> = ({
     hasNextTool = false,
 }) => {
     const state = part.state;
+    const safeToolName = typeof part.tool === 'string' ? part.tool : 'tool';
+    const normalizedToolName = safeToolName.toLowerCase();
+    const togglePart = () => {
+        if (typeof part.id === 'string' && part.id.trim().length > 0) {
+            onToggle(part.id);
+        }
+    };
     const currentDirectory = useDirectoryStore((s) => s.currentDirectory);
     const showActivityHeaderTimestamps = useUIStore((store) => store.showActivityHeaderTimestamps);
 
-    const isTaskTool = part.tool.toLowerCase() === 'task';
+    const isTaskTool = normalizedToolName === 'task';
 
     const status = state.status as string | undefined;
     const isFinalized = status === 'completed' || status === 'error';
@@ -1717,17 +1724,17 @@ const ToolPart: React.FC<ToolPartProps> = ({
         onContentChange?.('structural');
     }, [isTaskTool, onContentChange, taskSummaryEntries.length]);
 
-    const diffStats = (part.tool === 'edit' || part.tool === 'multiedit' || part.tool === 'apply_patch') ? parseDiffStats(metadata) : null;
+    const diffStats = (safeToolName === 'edit' || safeToolName === 'multiedit' || safeToolName === 'apply_patch') ? parseDiffStats(metadata) : null;
     const descriptionPath = getToolDescriptionPath(part, state, currentDirectory);
     const description = getToolDescription(part, state, currentDirectory);
-    const displayName = getToolMetadata(part.tool).displayName;
+    const displayName = getToolMetadata(safeToolName).displayName;
     
     // Get justification text (tool title/description) when setting is enabled
     const showTextJustificationActivity = useUIStore((state) => state.showTextJustificationActivity);
     const justificationText = React.useMemo(() => {
         if (!showTextJustificationActivity) return null;
-        if (part.tool === 'apply_patch') return null;
-        if (part.tool.toLowerCase() === 'structuredoutput' || part.tool.toLowerCase() === 'structured_output') return null;
+        if (safeToolName === 'apply_patch') return null;
+        if (normalizedToolName === 'structuredoutput' || normalizedToolName === 'structured_output') return null;
         // Get title or description from state - this is the "yapping" text like "Shows system information"
         const title = (stateWithData as { title?: string }).title;
         if (typeof title === 'string' && title.trim().length > 0) {
@@ -1744,28 +1751,28 @@ const ToolPart: React.FC<ToolPartProps> = ({
 
     const handleMainClick = (e: { stopPropagation: () => void }) => {
         if (isTaskTool || !runtime?.editor) {
-            onToggle(part.id);
+            togglePart();
             return;
         }
 
         let filePath: unknown;
         let targetLine: number | undefined;
         let toolDiff: string | undefined;
-        if (part.tool === 'edit' || part.tool === 'multiedit') {
+        if (safeToolName === 'edit' || safeToolName === 'multiedit') {
             filePath = input?.filePath || input?.file_path || input?.path || metadata?.filePath || metadata?.file_path || metadata?.path;
-            targetLine = getFirstChangedLineFromMetadata(part.tool, metadata);
+            targetLine = getFirstChangedLineFromMetadata(safeToolName, metadata);
             if (typeof filePath === 'string') {
-                toolDiff = getPrimaryDiffFromMetadata(part.tool, metadata, filePath);
+                toolDiff = getPrimaryDiffFromMetadata(safeToolName, metadata, filePath);
             }
-        } else if (part.tool === 'apply_patch') {
+        } else if (safeToolName === 'apply_patch') {
             const files = Array.isArray(metadata?.files) ? metadata?.files : [];
             const firstFile = files[0] as { relativePath?: string; filePath?: string } | undefined;
             filePath = firstFile?.relativePath || firstFile?.filePath;
-            targetLine = getFirstChangedLineFromMetadata(part.tool, metadata);
+            targetLine = getFirstChangedLineFromMetadata(safeToolName, metadata);
             if (typeof filePath === 'string') {
-                toolDiff = getPrimaryDiffFromMetadata(part.tool, metadata, filePath);
+                toolDiff = getPrimaryDiffFromMetadata(safeToolName, metadata, filePath);
             }
-        } else if (['write', 'create', 'file_write', 'read', 'view', 'file_read', 'cat'].includes(part.tool)) {
+        } else if (['write', 'create', 'file_write', 'read', 'view', 'file_read', 'cat'].includes(safeToolName)) {
             filePath = input?.filePath || input?.file_path || input?.path || metadata?.filePath || metadata?.file_path || metadata?.path;
         }
 
@@ -1775,14 +1782,14 @@ const ToolPart: React.FC<ToolPartProps> = ({
             if (!filePath.startsWith('/')) {
                 absolutePath = currentDirectory.endsWith('/') ? currentDirectory + filePath : currentDirectory + '/' + filePath;
             }
-            if (runtime.runtime.isVSCode && toolDiff && (part.tool === 'edit' || part.tool === 'multiedit' || part.tool === 'apply_patch')) {
+            if (runtime.runtime.isVSCode && toolDiff && (safeToolName === 'edit' || safeToolName === 'multiedit' || safeToolName === 'apply_patch')) {
                 const label = `${getRelativePath(absolutePath, currentDirectory)} (changes)`;
                 void runtime.editor.openDiff('', absolutePath, label, { line: targetLine, patch: toolDiff });
                 return;
             }
             runtime.editor.openFile(absolutePath, targetLine);
         } else {
-            onToggle(part.id);
+            togglePart();
         }
     };
 
@@ -1814,7 +1821,7 @@ const ToolPart: React.FC<ToolPartProps> = ({
                     {}
                     <div
                         className="relative h-3.5 w-3.5 flex-shrink-0 cursor-pointer"
-                        onClick={(event) => { event.stopPropagation(); onToggle(part.id); }}
+                        onClick={(event) => { event.stopPropagation(); togglePart(); }}
                     >
                         {}
                         <div
@@ -1825,7 +1832,7 @@ const ToolPart: React.FC<ToolPartProps> = ({
                             )}
                             style={!isTaskTool && isError ? { color: 'var(--status-error)' } : { color: 'var(--tools-icon)' }}
                         >
-                            {getToolIcon(part.tool)}
+                            {getToolIcon(safeToolName)}
                         </div>
                         {}
                         <div

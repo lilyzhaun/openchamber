@@ -1,5 +1,9 @@
 import type { Part } from "@opencode-ai/sdk/v2";
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === 'object' && value !== null;
+};
+
 const extractTextFromDelta = (delta: unknown): string => {
     if (!delta) return '';
     if (typeof delta === 'string') return delta;
@@ -65,4 +69,39 @@ export const normalizeStreamingPart = (incoming: Part, existing?: Part): Part =>
     }
 
     return normalized as Part;
+};
+
+export const sanitizeParts = (rawParts: unknown): Part[] => {
+    if (!Array.isArray(rawParts)) {
+        return [];
+    }
+
+    const sanitized: Part[] = [];
+
+    for (const rawPart of rawParts) {
+        if (!isRecord(rawPart)) {
+            continue;
+        }
+
+        const normalizedType = typeof rawPart.type === 'string' && rawPart.type.trim().length > 0
+            ? rawPart.type
+            : 'text';
+
+        const normalized = {
+            ...rawPart,
+            type: normalizedType,
+        } as Part;
+
+        if (normalizedType === 'text') {
+            sanitized.push({
+                ...normalized,
+                text: extractTextFromPart(normalized),
+            } as Part);
+            continue;
+        }
+
+        sanitized.push(normalized);
+    }
+
+    return sanitized;
 };
