@@ -63,6 +63,24 @@ const FURNITURE_SHEET_H = 32;
 type Direction = 'up' | 'down' | 'left' | 'right';
 type AgentAction = 'writing' | 'reading' | 'searching' | 'browsing' | 'running' | 'thinking' | 'composing' | 'delegating' | 'reviewing' | 'retrying' | 'arriving' | 'idle';
 type Point = { x: number; y: number };
+type ScenePose = 'stand' | 'sit' | 'lean';
+interface AmbientScene {
+  zone: NewOfficeZone;
+  point: Point;
+  direction: Direction;
+  label: string;
+  reaction: string;
+  pose?: ScenePose;
+  patrolRadius?: number;
+}
+
+interface StagedTarget {
+  targetZone: NewOfficeZone;
+  target: Point;
+  ambientScene: AmbientScene | null;
+  direction?: Direction;
+  pose?: ScenePose;
+}
 type SceneFurnitureKey =
   | 'desk_large'
   | 'chair_office'
@@ -124,6 +142,10 @@ interface AgentMotion {
   direction: Direction;
   isMoving: boolean;
   phase: number;
+  targetZone: NewOfficeZone;
+  ambientScene: AmbientScene | null;
+  doorwayZone: Exclude<NewOfficeZone, 'corridor'> | null;
+  pose: ScenePose;
 }
 
 const ROOMS: Record<NewOfficeZone, RoomLayout> = {
@@ -143,6 +165,86 @@ const DOORWAYS: Record<NewOfficeZone, Point> = {
   reception: { x: 282, y: 260 },
   garden: { x: 495, y: 260 },
 };
+
+const IDLE_SCENES: readonly AmbientScene[] = [
+  { zone: 'garden', point: { x: 454, y: 312 }, direction: 'right', label: '花园散步', reaction: '🌿', pose: 'stand', patrolRadius: 12 },
+  { zone: 'garden', point: { x: 488, y: 336 }, direction: 'left', label: '长椅发呆', reaction: '🪑', pose: 'sit' },
+  { zone: 'garden', point: { x: 466, y: 296 }, direction: 'right', label: '沙发放空', reaction: '🛋️', pose: 'sit' },
+  { zone: 'garden', point: { x: 528, y: 344 }, direction: 'left', label: '看着光球', reaction: '✨', pose: 'lean', patrolRadius: 8 },
+  { zone: 'reception', point: { x: 198, y: 320 }, direction: 'right', label: '靠着前台缓口气', reaction: '📋', pose: 'lean' },
+  { zone: 'reception', point: { x: 224, y: 350 }, direction: 'right', label: '前台等消息', reaction: '💬', pose: 'sit' },
+  { zone: 'reception', point: { x: 338, y: 344 }, direction: 'left', label: '翻看公告', reaction: '🗂️', pose: 'lean' },
+  { zone: 'small_office', point: { x: 52, y: 314 }, direction: 'right', label: '靠书架歇一会', reaction: '📚', pose: 'lean' },
+  { zone: 'small_office', point: { x: 78, y: 350 }, direction: 'right', label: '泡咖啡休息', reaction: '☕', pose: 'stand', patrolRadius: 8 },
+  { zone: 'small_office', point: { x: 112, y: 348 }, direction: 'left', label: '靠椅伸懒腰', reaction: '🛋️', pose: 'sit' },
+  { zone: 'corridor', point: { x: 236, y: 240 }, direction: 'right', label: '走廊溜达', reaction: '🚶', pose: 'stand', patrolRadius: 10 },
+  { zone: 'corridor', point: { x: 356, y: 240 }, direction: 'left', label: '接水放空', reaction: '💧', pose: 'lean', patrolRadius: 6 },
+];
+
+const ACTIVITY_SCENES: Record<Exclude<AgentAction, 'idle' | 'arriving'>, readonly Omit<AmbientScene, 'reaction'>[]> = {
+  writing: [
+    { zone: 'main_office', point: { x: 42, y: 122 }, direction: 'down', label: '工位改稿' },
+    { zone: 'main_office', point: { x: 112, y: 122 }, direction: 'down', label: '键盘赶工' },
+    { zone: 'main_office', point: { x: 182, y: 122 }, direction: 'down', label: '桌前收尾' },
+  ],
+  reading: [
+    { zone: 'small_office', point: { x: 54, y: 316 }, direction: 'right', label: '书架旁查阅', pose: 'lean' },
+    { zone: 'small_office', point: { x: 98, y: 346 }, direction: 'left', label: '椅边翻资料', pose: 'sit' },
+    { zone: 'meeting_room', point: { x: 338, y: 110 }, direction: 'right', label: '会议纪要翻阅', pose: 'sit' },
+  ],
+  searching: [
+    { zone: 'small_office', point: { x: 80, y: 332 }, direction: 'right', label: '资料角检索' },
+    { zone: 'corridor', point: { x: 236, y: 240 }, direction: 'right', label: '走廊交叉搜索' },
+    { zone: 'meeting_room', point: { x: 462, y: 110 }, direction: 'left', label: '白板前定位线索' },
+  ],
+  browsing: [
+    { zone: 'meeting_room', point: { x: 338, y: 110 }, direction: 'right', label: '会议对齐资料' },
+    { zone: 'meeting_room', point: { x: 462, y: 110 }, direction: 'left', label: '远程查证' },
+    { zone: 'garden', point: { x: 504, y: 322 }, direction: 'left', label: '花园里看参考' },
+  ],
+  running: [
+    { zone: 'reception', point: { x: 198, y: 320 }, direction: 'right', label: '前台跑命令' },
+    { zone: 'main_office', point: { x: 182, y: 192 }, direction: 'down', label: '工位执行流程' },
+    { zone: 'corridor', point: { x: 320, y: 240 }, direction: 'left', label: '边走边等输出' },
+  ],
+  thinking: [
+    { zone: 'garden', point: { x: 466, y: 296 }, direction: 'right', label: '花园里想方案', pose: 'sit' },
+    { zone: 'reception', point: { x: 336, y: 344 }, direction: 'left', label: '前台边沉思', pose: 'lean' },
+    { zone: 'meeting_room', point: { x: 412, y: 152 }, direction: 'up', label: '会后盘思路', pose: 'sit' },
+  ],
+  composing: [
+    { zone: 'meeting_room', point: { x: 380, y: 152 }, direction: 'up', label: '整理对外回复', pose: 'sit' },
+    { zone: 'main_office', point: { x: 112, y: 192 }, direction: 'down', label: '工位撰写结论' },
+    { zone: 'reception', point: { x: 268, y: 322 }, direction: 'left', label: '前台同步进展' },
+  ],
+  delegating: [
+    { zone: 'meeting_room', point: { x: 412, y: 90 }, direction: 'down', label: '围桌分派任务', pose: 'sit' },
+    { zone: 'meeting_room', point: { x: 444, y: 152 }, direction: 'up', label: '会中协调分工', pose: 'sit' },
+    { zone: 'corridor', point: { x: 280, y: 240 }, direction: 'right', label: '走廊调度协作' },
+  ],
+  reviewing: [
+    { zone: 'meeting_room', point: { x: 380, y: 90 }, direction: 'down', label: '会中复核结果', pose: 'sit' },
+    { zone: 'corridor', point: { x: 356, y: 240 }, direction: 'left', label: '走廊等确认' },
+    { zone: 'small_office', point: { x: 112, y: 348 }, direction: 'left', label: '桌边复看细节' },
+  ],
+  retrying: [
+    { zone: 'main_office', point: { x: 182, y: 122 }, direction: 'down', label: '回到工位重试' },
+    { zone: 'reception', point: { x: 224, y: 350 }, direction: 'right', label: '前台重新推进' },
+    { zone: 'corridor', point: { x: 236, y: 240 }, direction: 'right', label: '边走边重整节奏' },
+  ],
+};
+
+const SCENE_REACTIONS: Record<string, string> = {
+  工位改稿: '📝', 键盘赶工: '⌨️', 桌前收尾: '📄', 书架旁查阅: '📚', 椅边翻资料: '📖', 会议纪要翻阅: '📘',
+  资料角检索: '🧭', 走廊交叉搜索: '🔎', 白板前定位线索: '📌', 会议对齐资料: '🌐', 远程查证: '🛰️', 花园里看参考: '🗒️',
+  前台跑命令: '🖥️', 工位执行流程: '⚙️', 边走边等输出: '⏳', 花园里想方案: '🤔', 前台边沉思: '💭', 会后盘思路: '🧠',
+  整理对外回复: '💬', 工位撰写结论: '🧾', 前台同步进展: '📣', 围桌分派任务: '📨', 会中协调分工: '🤝', 走廊调度协作: '🧩',
+  会中复核结果: '👓', 走廊等确认: '⌛', 桌边复看细节: '🔍', 回到工位重试: '🔁', 前台重新推进: '🚦', 边走边重整节奏: '🏃',
+};
+
+const OCCUPANCY_OFFSETS = [
+  { x: 0, y: 0 }, { x: -10, y: 0 }, { x: 10, y: 0 }, { x: 0, y: -10 }, { x: 0, y: 10 }, { x: -8, y: -8 }, { x: 8, y: 8 },
+] as const;
 
 const ZONE_ANCHORS: Record<NewOfficeZone, Point[]> = {
   main_office: [{ x: 42, y: 122 }, { x: 112, y: 122 }, { x: 182, y: 122 }, { x: 42, y: 192 }, { x: 112, y: 192 }, { x: 182, y: 192 }],
@@ -320,6 +422,133 @@ const normalizeZone = (zone: RealAgentCard['zone']): NewOfficeZone => {
 
 const roundPoint = (p: Point): Point => ({ x: Math.round(p.x), y: Math.round(p.y) });
 
+const hashString = (value: string): number => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) hash = (hash * 131 + value.charCodeAt(i)) | 0;
+  return Math.abs(hash);
+};
+
+const pointsEqual = (a: Point | null | undefined, b: Point | null | undefined): boolean => !!a && !!b && a.x === b.x && a.y === b.y;
+
+const pushUniquePoint = (points: Point[], point: Point) => {
+  const rounded = roundPoint(point);
+  if (!pointsEqual(points.at(-1), rounded)) points.push(rounded);
+};
+
+const getDoorThresholdPoint = (zone: Exclude<NewOfficeZone, 'corridor'>, side: 'inside' | 'outside'): Point => {
+  const doorway = DOORWAYS[zone];
+  const room = ROOMS[zone];
+  if (isUpperRoom(room)) {
+    return { x: doorway.x, y: side === 'inside' ? room.y + room.h - 18 : CORRIDOR_Y };
+  }
+  return { x: doorway.x, y: side === 'inside' ? room.y + room.wallHeight + 12 : CORRIDOR_Y };
+};
+
+const getRoomTravelLane = (zone: Exclude<NewOfficeZone, 'corridor'>): number => {
+  const room = ROOMS[zone];
+  return isUpperRoom(room) ? room.y + room.h - 18 : room.y + room.wallHeight + 12;
+};
+
+const withOccupancyOffset = (point: Point, slotIndex: number): Point => {
+  const offset = OCCUPANCY_OFFSETS[slotIndex % OCCUPANCY_OFFSETS.length];
+  return roundPoint({ x: point.x + offset.x, y: point.y + offset.y });
+};
+
+const getActionReaction = (action: AgentAction, targetZone: NewOfficeZone): string => {
+  switch (action) {
+    case 'writing': return targetZone === 'main_office' ? '📝' : '📄';
+    case 'reading': return targetZone === 'small_office' ? '📚' : '📖';
+    case 'searching': return '🧭';
+    case 'browsing': return '🌐';
+    case 'running': return targetZone === 'reception' ? '🖥️' : '⚙️';
+    case 'thinking': return '🤔';
+    case 'composing': return '💬';
+    case 'delegating': return '📨';
+    case 'reviewing': return '👓';
+    case 'retrying': return '🔁';
+    case 'arriving': return '🚪';
+    case 'idle':
+    default:
+      return '😌';
+  }
+};
+
+const resolveIdleScene = (card: RealAgentCard, cycle: number): AmbientScene => {
+  const baseIndex = hashString(card.sessionId) % IDLE_SCENES.length;
+  return IDLE_SCENES[(baseIndex + cycle) % IDLE_SCENES.length];
+};
+
+const getPatrolPoint = (scene: AmbientScene, sessionId: string, patrolCycle: number): Point => {
+  const radius = scene.patrolRadius ?? 0;
+  if (radius <= 0) return roundPoint(scene.point);
+  const angleSeed = hashString(`${sessionId}:${scene.label}`) % 360;
+  const step = (patrolCycle + (angleSeed % 4)) % 4;
+  const angle = ((angleSeed + step * 90) * Math.PI) / 180;
+  return roundPoint({
+    x: scene.point.x + Math.cos(angle) * radius,
+    y: scene.point.y + Math.sin(angle) * Math.max(4, radius * 0.55),
+  });
+};
+
+const resolveActivityScene = (
+  card: RealAgentCard,
+  action: Exclude<AgentAction, 'idle' | 'arriving'>,
+  usage: Record<NewOfficeZone, number>,
+): StagedTarget | null => {
+  const scenes = ACTIVITY_SCENES[action];
+  if (!scenes || scenes.length === 0) return null;
+  const baseIndex = hashString(`${card.sessionId}:${action}`) % scenes.length;
+  const scene = scenes[baseIndex];
+  const slotIndex = usage[scene.zone];
+  usage[scene.zone] += 1;
+  const point = withOccupancyOffset(scene.point, slotIndex);
+  return {
+    targetZone: scene.zone,
+    target: point,
+    direction: scene.direction,
+    pose: scene.pose ?? 'stand',
+    ambientScene: { ...scene, point, reaction: SCENE_REACTIONS[scene.label] ?? getActionReaction(action, scene.zone) },
+  };
+};
+
+const resolveMotionTarget = (
+  card: RealAgentCard,
+  usage: Record<NewOfficeZone, number>,
+  idleSceneCycle: number,
+  patrolCycle: number,
+): StagedTarget => {
+  const action = resolveAgentAction(card);
+  if (action === 'idle') {
+    const ambientScene = resolveIdleScene(card, idleSceneCycle);
+    const slotIndex = usage[ambientScene.zone];
+    usage[ambientScene.zone] += 1;
+    const anchoredScene = { ...ambientScene, point: withOccupancyOffset(ambientScene.point, slotIndex) };
+    return {
+      targetZone: anchoredScene.zone,
+      target: getPatrolPoint(anchoredScene, card.sessionId, patrolCycle),
+      direction: anchoredScene.direction,
+      pose: anchoredScene.pose ?? 'stand',
+      ambientScene: anchoredScene,
+    };
+  }
+
+  if (action !== 'arriving') {
+    const sceneTarget = resolveActivityScene(card, action, usage);
+    if (sceneTarget) return sceneTarget;
+  }
+
+  const targetZone = normalizeZone(card.zone);
+  const slotIndex = usage[targetZone];
+  usage[targetZone] += 1;
+  return {
+    targetZone,
+    target: withOccupancyOffset(ZONE_ANCHORS[targetZone][slotIndex % ZONE_ANCHORS[targetZone].length], slotIndex),
+    direction: undefined,
+    pose: 'stand',
+    ambientScene: null,
+  };
+};
+
 const actionToSpriteRow = (action: AgentAction, direction: Direction, isMoving: boolean): { row: number; speed: number } => {
   const rowFromDirection = (dir: Direction): number => {
     if (dir === 'down') return 0;
@@ -388,25 +617,30 @@ const renderDoorway = (zone: Exclude<NewOfficeZone, 'corridor'>) => {
   );
 };
 
-const getActionLabel = (card: RealAgentCard, action: AgentAction): string => {
-  const st = card.activity.statusText?.trim();
-  if (st && st.length > 0) return st.length > 14 ? `${st.slice(0, 12)}…` : st;
+const getActivitySceneLabel = (action: AgentAction, targetZone: NewOfficeZone): string => {
   switch (action) {
-    case 'writing': return '写入文件';
-    case 'reading': return '读取文件';
-    case 'searching': return '搜索代码';
-    case 'browsing': return '查阅资料';
-    case 'running': return '运行命令';
-    case 'thinking': return '思考中';
-    case 'composing': return '编写回复';
-    case 'delegating': return '分派任务';
-    case 'reviewing': return '等待确认';
-    case 'retrying': return '重试中';
-    case 'arriving': return '准备中';
+    case 'writing': return targetZone === 'main_office' ? '工位改稿' : targetZone === 'reception' ? '前台补记' : '整理文档';
+    case 'reading': return targetZone === 'small_office' ? '资料角查阅' : targetZone === 'meeting_room' ? '会议纪要翻阅' : '阅读上下文';
+    case 'searching': return targetZone === 'small_office' ? '书架旁检索' : '交叉搜索';
+    case 'browsing': return targetZone === 'meeting_room' ? '会议对齐资料' : '远程查证';
+    case 'running': return targetZone === 'reception' ? '前台跑命令' : '执行流程';
+    case 'thinking': return targetZone === 'garden' ? '花园里想方案' : '站着思考';
+    case 'composing': return targetZone === 'meeting_room' ? '整理对外回复' : '编写回复';
+    case 'delegating': return targetZone === 'meeting_room' ? '分派协作任务' : '协调分工';
+    case 'reviewing': return targetZone === 'corridor' ? '走廊等确认' : '复核结果';
+    case 'retrying': return '重新推进';
+    case 'arriving': return '准备进场';
     case 'idle':
     default:
       return '休息中';
   }
+};
+
+const getActionLabel = (card: RealAgentCard, action: AgentAction, ambientScene: AmbientScene | null, targetZone: NewOfficeZone): string => {
+  const st = card.activity.statusText?.trim();
+  if (st && st.length > 0) return st.length > 14 ? `${st.slice(0, 12)}…` : st;
+  if (action === 'idle' && ambientScene) return ambientScene.label;
+  return getActivitySceneLabel(action, targetZone);
 };
 
 const resolveAgentAction = (card: RealAgentCard): AgentAction => {
@@ -436,23 +670,42 @@ const getDirection = (from: Point, to: Point, fallback: Direction): Direction =>
 };
 
 const buildRoute = (from: Point, fromZone: NewOfficeZone, to: Point, toZone: NewOfficeZone): Point[] => {
-  if (fromZone === toZone) return [roundPoint(to)];
+  if (fromZone === toZone) {
+    const points: Point[] = [];
+    if (fromZone !== 'corridor' && from.y !== to.y && from.x !== to.x) {
+      const laneY = getRoomTravelLane(fromZone);
+      pushUniquePoint(points, { x: from.x, y: laneY });
+      pushUniquePoint(points, { x: to.x, y: laneY });
+    } else if (fromZone === 'corridor' && from.y !== CORRIDOR_Y) {
+      pushUniquePoint(points, { x: from.x, y: CORRIDOR_Y });
+    }
+    pushUniquePoint(points, to);
+    return points;
+  }
   const points: Point[] = [];
-  
+  if (fromZone === 'corridor') {
+    pushUniquePoint(points, { x: from.x, y: CORRIDOR_Y });
+  }
   if (fromZone !== 'corridor') {
-    points.push(roundPoint(DOORWAYS[fromZone]));
-    points.push(roundPoint({ x: DOORWAYS[fromZone].x, y: CORRIDOR_Y }));
+    const laneY = getRoomTravelLane(fromZone);
+    pushUniquePoint(points, { x: from.x, y: laneY });
+    pushUniquePoint(points, getDoorThresholdPoint(fromZone, 'inside'));
+    pushUniquePoint(points, DOORWAYS[fromZone]);
+    pushUniquePoint(points, getDoorThresholdPoint(fromZone, 'outside'));
   }
-  
-  if (toZone !== 'corridor') {
-    points.push(roundPoint({ x: DOORWAYS[toZone].x, y: CORRIDOR_Y }));
-    points.push(roundPoint(DOORWAYS[toZone]));
-  } else {
-    points.push(roundPoint({ x: to.x, y: CORRIDOR_Y }));
+
+  if (toZone === 'corridor') {
+    pushUniquePoint(points, { x: to.x, y: CORRIDOR_Y });
+    pushUniquePoint(points, to);
+    return points;
   }
-  
-  points.push(roundPoint(to));
-  return points.filter((p, idx) => idx === 0 || p.x !== points[idx - 1].x || p.y !== points[idx - 1].y);
+
+  pushUniquePoint(points, { x: DOORWAYS[toZone].x, y: CORRIDOR_Y });
+  const laneY = getRoomTravelLane(toZone);
+  pushUniquePoint(points, getDoorThresholdPoint(toZone, 'inside'));
+  pushUniquePoint(points, { x: to.x, y: laneY });
+  pushUniquePoint(points, to);
+  return points;
 };
 
 const useAnimationTick = (intervalMs = 240): number => {
@@ -464,13 +717,31 @@ const useAnimationTick = (intervalMs = 240): number => {
   return tick;
 };
 
+const detectDoorwayZone = (position: Point): Exclude<NewOfficeZone, 'corridor'> | null => {
+  for (const zone of ['main_office', 'meeting_room', 'small_office', 'reception', 'garden'] as const) {
+    const doorway = DOORWAYS[zone];
+    const inside = getDoorThresholdPoint(zone, 'inside');
+    const outside = getDoorThresholdPoint(zone, 'outside');
+    const nearDoor = Math.abs(position.x - doorway.x) <= 8 && Math.abs(position.y - doorway.y) <= 12;
+    const nearInside = Math.abs(position.x - inside.x) <= 8 && Math.abs(position.y - inside.y) <= 12;
+    const nearOutside = Math.abs(position.x - outside.x) <= 8 && Math.abs(position.y - outside.y) <= 12;
+    if (nearDoor || nearInside || nearOutside) return zone;
+  }
+  return null;
+};
+
+const isDoorPausePoint = (point: Point): boolean => detectDoorwayZone(point) !== null;
+
 const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
+  const idleSceneCycle = useAnimationTick(7200);
+  const patrolCycle = useAnimationTick(1800);
   const [positions, setPositions] = React.useState<Record<string, Point>>({});
   const [directions, setDirections] = React.useState<Record<string, Direction>>({});
   const directionsRef = React.useRef<Record<string, Direction>>({});
   const routesRef = React.useRef<Record<string, Point[]>>({});
   const zonesRef = React.useRef<Record<string, NewOfficeZone>>({});
   const phaseRef = React.useRef<Record<string, number>>({});
+  const pauseUntilRef = React.useRef<Record<string, number>>({});
   const lastTsRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
@@ -478,20 +749,20 @@ const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
     setPositions((prev) => {
       const next = { ...prev };
       for (const card of cards) {
-        const zone = normalizeZone(card.zone);
-        const index = usage[zone];
-        usage[zone] += 1;
-        const target = roundPoint(ZONE_ANCHORS[zone][index % ZONE_ANCHORS[zone].length]);
+        const { targetZone, target, ambientScene } = resolveMotionTarget(card, usage, idleSceneCycle, patrolCycle);
         const current = next[card.sessionId] ?? target;
-        const currentZone = zonesRef.current[card.sessionId] ?? zone;
-        routesRef.current[card.sessionId] = buildRoute(current, currentZone, target, zone);
-        zonesRef.current[card.sessionId] = zone;
+        const currentZone = zonesRef.current[card.sessionId] ?? targetZone;
+        routesRef.current[card.sessionId] = buildRoute(current, currentZone, target, targetZone);
+        zonesRef.current[card.sessionId] = targetZone;
         next[card.sessionId] = roundPoint(current);
         phaseRef.current[card.sessionId] = phaseRef.current[card.sessionId] ?? 0;
+        if ((routesRef.current[card.sessionId] ?? []).length === 0) {
+          directionsRef.current[card.sessionId] = ambientScene?.direction ?? directionsRef.current[card.sessionId] ?? 'down';
+        }
       }
       return next;
     });
-  }, [cards]);
+  }, [cards, idleSceneCycle, patrolCycle]);
 
   React.useEffect(() => {
     let rafId = 0;
@@ -508,6 +779,8 @@ const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
         let directionChanged = false;
         for (const card of cards) {
           const id = card.sessionId;
+          const pauseUntil = pauseUntilRef.current[id] ?? 0;
+          if (pauseUntil > ts) continue;
           const route = routesRef.current[id] ?? [];
           if (route.length === 0) continue;
           const current = next[id] ?? route[0];
@@ -522,6 +795,9 @@ const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
           if (dist <= step || dist === 0) {
             next[id] = roundPoint(target);
             route.shift();
+            if (isDoorPausePoint(target) && route.length > 0) {
+              pauseUntilRef.current[id] = ts + 170;
+            }
           } else {
             next[id] = roundPoint({ x: current.x + (dx / dist) * step, y: current.y + (dy / dist) * step });
           }
@@ -548,16 +824,16 @@ const useMovementSystem = (cards: RealAgentCard[]): AgentMotion[] => {
   return React.useMemo(() => {
     const usage: Record<NewOfficeZone, number> = { main_office: 0, meeting_room: 0, corridor: 0, small_office: 0, reception: 0, garden: 0 };
     return cards.map((card) => {
-      const zone = normalizeZone(card.zone);
-      const idx = usage[zone];
-      usage[zone] += 1;
-      const fallback = roundPoint(ZONE_ANCHORS[zone][idx % ZONE_ANCHORS[zone].length]);
+      const motionTarget = resolveMotionTarget(card, usage, idleSceneCycle, patrolCycle);
+      const { targetZone, target, ambientScene } = motionTarget;
+      const fallback = target;
       const position = positions[card.sessionId] ?? fallback;
-      const direction = directions[card.sessionId] ?? 'down';
+      const direction = directions[card.sessionId] ?? ambientScene?.direction ?? motionTarget.direction ?? 'down';
       const isMoving = (routesRef.current[card.sessionId] ?? []).length > 0;
-      return { card, position, direction, isMoving, phase: phaseRef.current[card.sessionId] ?? 0 };
+      const doorwayZone = detectDoorwayZone(position);
+      return { card, position, direction, isMoving, phase: phaseRef.current[card.sessionId] ?? 0, targetZone, ambientScene, doorwayZone, pose: motionTarget.pose ?? 'stand' };
     });
-  }, [cards, positions, directions]);
+  }, [cards, idleSceneCycle, patrolCycle, positions, directions]);
 };
 
 interface SpriteDivProps {
@@ -627,12 +903,29 @@ const SceneFurnitureSprite: React.FC<{ object: SceneObject; tick: number }> = ({
   return <div style={{ position: 'absolute', left, top, zIndex: object.z }}><SpriteDiv src={FURNITURE_SPRITES[object.key]} sheetW={FURNITURE_SHEET_W} sheetH={FURNITURE_SHEET_H} col={frame.col} row={0} frameSize={FURNITURE_FRAME} scale={scale} /></div>;
 };
 
-const AgentSprite: React.FC<{ motion: AgentMotion; tick: number }> = ({ motion }) => {
+const getReactionGlyph = (action: AgentAction, ambientScene: AmbientScene | null, targetZone: NewOfficeZone, doorwayZone: Exclude<NewOfficeZone, 'corridor'> | null): string => {
+  if (doorwayZone) return '🚪';
+  if (ambientScene) return ambientScene.reaction;
+  return getActionReaction(action, targetZone);
+};
+
+const AgentSprite: React.FC<{ motion: AgentMotion; tick: number }> = ({ motion, tick }) => {
   const action = resolveAgentAction(motion.card);
   const { row } = actionToSpriteRow(action, motion.direction, motion.isMoving);
   const col = 0;
   const spriteUrl = WORKER_SPRITES[spriteIndexFromName(motion.card.agentName, motion.card.isLead)];
-  const label = getActionLabel(motion.card, action);
+  const label = getActionLabel(motion.card, action, motion.ambientScene, motion.targetZone);
+  const reaction = getReactionGlyph(action, motion.ambientScene, motion.targetZone, motion.doorwayZone);
+  const bobOffset = motion.isMoving ? Math.sin(tick * 0.9 + motion.phase * 0.15) * 1.5 : Math.sin(tick * 0.14 + motion.phase * 0.03) * (action === 'idle' ? 2 : 1);
+  const leanOffset = motion.isMoving ? 0 : Math.sin(tick * 0.09 + motion.phase * 0.04) * (action === 'thinking' || action === 'idle' ? 2.4 : 1.2);
+  const reactionLift = motion.isMoving ? 0 : 3 + Math.sin(tick * 0.12 + motion.phase * 0.05) * 2;
+  const doorwayOverlay = motion.doorwayZone ? 0.55 + Math.sin(tick * 0.25) * 0.15 : 0;
+  const poseYOffset = motion.pose === 'sit' ? 6 : motion.pose === 'lean' ? 2 : 0;
+  const poseScaleY = motion.pose === 'sit' ? 0.9 : 1;
+  const poseSkew = motion.pose === 'lean' ? (motion.direction === 'left' ? -6 : motion.direction === 'right' ? 6 : 0) : 0;
+  const shadowScaleX = motion.pose === 'sit' ? 1.35 : motion.pose === 'lean' ? 1.15 : motion.isMoving ? 0.9 : 1;
+  const labelTop = motion.pose === 'sit' ? -10 : -14;
+  const reactionTop = motion.pose === 'sit' ? -20 : -26;
 
   return (
     <div
@@ -640,7 +933,7 @@ const AgentSprite: React.FC<{ motion: AgentMotion; tick: number }> = ({ motion }
         position: 'absolute',
         left: Math.round(motion.position.x),
         top: Math.round(motion.position.y),
-        transform: 'translate(-50%, -100%)',
+        transform: `translate(-50%, calc(-100% + ${bobOffset}px))`,
         zIndex: 50,
       }}
     >
@@ -653,14 +946,46 @@ const AgentSprite: React.FC<{ motion: AgentMotion; tick: number }> = ({ motion }
           height: 4,
           borderRadius: '50%',
           backgroundColor: '#00000044',
+          transform: `scale(${shadowScaleX}, ${motion.pose === 'sit' ? 0.9 : 1})`,
         }}
       />
-      <SpriteDiv src={spriteUrl} sheetW={WORKER_SHEET_W} sheetH={WORKER_SHEET_H} col={col} row={row} frameSize={16} scale={WORKER_SCALE} />
+      <div style={{ transform: `translateX(${leanOffset}px) translateY(${poseYOffset}px) skewX(${poseSkew}deg) scaleY(${poseScaleY})` }}>
+        <SpriteDiv src={spriteUrl} sheetW={WORKER_SHEET_W} sheetH={WORKER_SHEET_H} col={col} row={row} frameSize={16} scale={WORKER_SCALE} />
+      </div>
+      {motion.doorwayZone && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: Math.round(FRAME_DISPLAY - 18),
+            width: 16,
+            height: 22,
+            transform: 'translateX(-50%)',
+            background: `linear-gradient(180deg, rgba(242, 226, 191, 0) 0%, rgba(242, 226, 191, ${doorwayOverlay}) 100%)`,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+      {!motion.isMoving && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: Math.round(reactionTop - reactionLift),
+            transform: 'translateX(-50%)',
+            fontSize: 9,
+            lineHeight: 1,
+            pointerEvents: 'none',
+          }}
+        >
+          {reaction}
+        </div>
+      )}
       <div
         style={{
           position: 'absolute',
           left: '50%',
-          top: -14,
+          top: labelTop,
           transform: 'translateX(-50%)',
           fontSize: 7,
           lineHeight: 1,
