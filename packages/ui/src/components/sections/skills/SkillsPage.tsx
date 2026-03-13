@@ -325,8 +325,8 @@ const SkillsInstalledPage: React.FC = () => {
       <div className="flex h-full items-center justify-center">
         <div className="text-center text-muted-foreground">
           <RiBookOpenLine className="mx-auto mb-3 h-12 w-12 opacity-50" />
-          <p className="typography-body">Select a skill from the sidebar</p>
-          <p className="typography-meta mt-1 opacity-75">or create a new one</p>
+          <p className="typography-body">{t('settings.skillsPage.emptyStateTitle')}</p>
+          <p className="typography-meta mt-1 opacity-75">{t('settings.skillsPage.emptyStateDesc')}</p>
         </div>
       </div>
     );
@@ -336,7 +336,7 @@ const SkillsInstalledPage: React.FC = () => {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center text-muted-foreground">
-          <p className="typography-body">Loading skill details...</p>
+          <p className="typography-body">{t('settings.skillsPage.loadingDetails')}</p>
         </div>
       </div>
     );
@@ -350,15 +350,15 @@ const SkillsInstalledPage: React.FC = () => {
         <div className="mb-4">
           <div className="min-w-0">
             <h2 className="typography-ui-header font-semibold text-foreground truncate flex items-center gap-2">
-              {isNewSkill ? 'New Skill' : selectedSkillName}
+              {isNewSkill ? t('settings.skillsPage.newSkillTitle') : selectedSkillName}
               {selectedSkill?.source === 'claude' && (
                 <span className="typography-micro font-normal bg-[var(--surface-muted)] text-muted-foreground px-1.5 py-0.5 rounded">
-                  Claude-compatible
+                  {t('settings.skillsSidebar.badge.claude')}
                 </span>
               )}
             </h2>
             <p className="typography-meta text-muted-foreground truncate">
-              {selectedSkill ? `${locationLabel(selectedSkill.scope, selectedSkill.source)} skill` : 'Configure a new skill'}
+              {selectedSkill ? t('settings.skillsPage.locationSummary', { location: locationLabel(selectedSkill.scope, selectedSkill.source) }) : t('settings.skillsPage.configureNewSkill')}
             </p>
           </div>
         </div>
@@ -367,7 +367,7 @@ const SkillsInstalledPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Basic Information
+              {t('settings.skillsPage.basicInformation')}
             </h3>
           </div>
 
@@ -375,8 +375,8 @@ const SkillsInstalledPage: React.FC = () => {
 
             {isNewSkill && (
               <div className="py-1.5">
-                <span className="typography-ui-label text-foreground">Skill Name & Location</span>
-                <span className="typography-meta text-muted-foreground ml-2">Lowercase, numbers, hyphens</span>
+                <span className="typography-ui-label text-foreground">{t('settings.skillsPage.skillNameAndLocation')}</span>
+                <span className="typography-meta text-muted-foreground ml-2">{t('settings.skillsPage.skillNameFormatHint')}</span>
                 <div className="flex items-center gap-2 mt-1.5">
                   <Input
                     value={draftName}
@@ -421,8 +421,8 @@ const SkillsInstalledPage: React.FC = () => {
             )}
 
             <div className="py-1.5">
-              <span className="typography-ui-label text-foreground">Description <span className="text-[var(--status-error)]">*</span></span>
-              <span className="typography-meta text-muted-foreground ml-2">The agent uses this to decide when to load the skill</span>
+              <span className="typography-ui-label text-foreground">{t('settings.skillsPage.descriptionLabel')} <span className="text-[var(--status-error)]">*</span></span>
+              <span className="typography-meta text-muted-foreground ml-2">{t('settings.skillsPage.descriptionHint')}</span>
               <div className="mt-1.5">
                 <Textarea
                   value={description}
@@ -441,7 +441,7 @@ const SkillsInstalledPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Instructions
+              {t('settings.skillsPage.instructionsTitle')}
             </h3>
           </div>
 
@@ -459,10 +459,10 @@ const SkillsInstalledPage: React.FC = () => {
         <div className="mb-2">
           <div className="mb-1 px-1 flex items-center gap-2">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Supporting Files
+              {t('settings.skillsPage.supportingFilesTitle')}
             </h3>
             <ButtonSmall variant="outline" size="xs" className="!font-normal gap-1" onClick={handleAddFile}>
-              <RiAddLine className="h-3.5 w-3.5" /> Add File
+              <RiAddLine className="h-3.5 w-3.5" /> {t('settings.skillsPage.addFile')}
             </ButtonSmall>
           </div>
 
@@ -473,7 +473,7 @@ const SkillsInstalledPage: React.FC = () => {
               if (filesToShow.length === 0) {
                 return (
                   <p className="typography-meta text-muted-foreground py-1.5">
-                    No supporting files. Use "Add File" to include reference materials.
+                    {t('settings.skillsPage.noSupportingFiles')}
                   </p>
                 );
               }
@@ -490,7 +490,7 @@ const SkillsInstalledPage: React.FC = () => {
                       <span className="typography-ui-label text-foreground truncate">{file.path}</span>
                       {isNewSkill && (
                         <span className="typography-micro text-[var(--status-warning)] bg-[var(--status-warning)]/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                          pending
+                          {t('settings.skillsPage.pending')}
                         </span>
                       )}
                       <ButtonSmall
@@ -519,7 +519,7 @@ const SkillsInstalledPage: React.FC = () => {
             size="xs"
             className="!font-normal"
           >
-            {isSaving ? 'Saving...' : isNewSkill ? 'Create Skill' : 'Save Changes'}
+            {isSaving ? t('settings.common.saving') : isNewSkill ? t('settings.skillsPage.createSkill') : t('settings.common.saveChanges')}
           </ButtonSmall>
         </div>
 
@@ -536,9 +536,9 @@ const SkillsInstalledPage: React.FC = () => {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Supporting File</DialogTitle>
+            <DialogTitle>{t('settings.skillsPage.deleteSupportingFileTitle')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deleteFilePath}"?
+              {t('settings.skillsPage.deleteSupportingFileDesc', { filePath: deleteFilePath || '' })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -547,10 +547,10 @@ const SkillsInstalledPage: React.FC = () => {
               onClick={() => setDeleteFilePath(null)}
               disabled={isDeletingFile}
             >
-              Cancel
+              {t('settings.common.cancel')}
             </ButtonLarge>
             <ButtonLarge onClick={handleConfirmDeleteFile} disabled={isDeletingFile} className="bg-[var(--status-error)] hover:bg-[var(--status-error)]/90 text-white border-0">
-              Delete
+              {t('settings.common.delete')}
             </ButtonLarge>
           </DialogFooter>
         </DialogContent>
@@ -562,20 +562,20 @@ const SkillsInstalledPage: React.FC = () => {
       }}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col" keyboardAvoid>
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>{editingFilePath ? 'Edit Supporting File' : 'Add Supporting File'}</DialogTitle>
+            <DialogTitle>{editingFilePath ? t('settings.skillsPage.editSupportingFileTitle') : t('settings.skillsPage.addSupportingFileTitle')}</DialogTitle>
             <DialogDescription>
-              {editingFilePath ? 'Modify the file content' : 'Create a new file in the skill directory'}
+              {editingFilePath ? t('settings.skillsPage.editSupportingFileDesc') : t('settings.skillsPage.addSupportingFileDesc')}
             </DialogDescription>
           </DialogHeader>
           {isLoadingFile ? (
             <div className="flex-1 flex items-center justify-center py-8">
-              <span className="typography-meta text-muted-foreground">Loading file content...</span>
+              <span className="typography-meta text-muted-foreground">{t('settings.skillsPage.loadingFileContent')}</span>
             </div>
           ) : (
             <div className="space-y-4 flex-1 min-h-0 flex flex-col pt-2">
               <div className="space-y-2 flex-shrink-0">
                 <label className="typography-ui-label font-medium text-foreground">
-                  File Path
+                  {t('settings.skillsPage.filePathLabel')}
                 </label>
                 <Input
                   value={newFileName}
@@ -586,13 +586,13 @@ const SkillsInstalledPage: React.FC = () => {
                 />
                 {!editingFilePath && (
                   <p className="typography-micro text-muted-foreground">
-                    Relative path within the skill directory. Subdirectories will be created automatically.
+                    {t('settings.skillsPage.filePathHint')}
                   </p>
                 )}
               </div>
               <div className="space-y-2 flex-1 min-h-0 flex flex-col">
                 <label className="typography-ui-label font-medium text-foreground flex-shrink-0">
-                  Content
+                  {t('settings.skillsPage.contentLabel')}
                 </label>
                 <Textarea
                   value={newFileContent}
@@ -612,10 +612,10 @@ const SkillsInstalledPage: React.FC = () => {
                 setEditingFilePath(null);
               }}
             >
-              Cancel
+              {t('settings.common.cancel')}
             </ButtonLarge>
             <ButtonLarge onClick={handleSaveFile} disabled={isLoadingFile || !hasFileChanges}>
-              {editingFilePath ? 'Save Changes' : 'Create File'}
+              {editingFilePath ? t('settings.common.saveChanges') : t('settings.skillsPage.createFile')}
             </ButtonLarge>
           </DialogFooter>
         </DialogContent>

@@ -283,15 +283,15 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Install from Git repository</DialogTitle>
+            <DialogTitle>{t('settings.installFromRepoDialog.title')}</DialogTitle>
             <DialogDescription>
-              Scan a repository for folders containing <code className="font-mono">SKILL.md</code>, then install selected skills.
+              {t('settings.installFromRepoDialog.descriptionPrefix')} <code className="font-mono">SKILL.md</code>{t('settings.installFromRepoDialog.descriptionSuffix')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 flex-shrink-0">
             <div className="space-y-2">
-              <label className="typography-ui-label font-medium text-foreground">Repository</label>
+              <label className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.repositoryLabel')}</label>
               <div className="flex items-center gap-2">
                 <Input
                   value={source}
@@ -307,17 +307,17 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                   className="gap-2"
                 >
                   <RiGitRepositoryLine className="h-4 w-4" />
-                  {isScanning ? 'Scanning…' : 'Scan'}
+                  {isScanning ? t('settings.common.scanning') : t('settings.installFromRepoDialog.scan')}
                 </Button>
               </div>
               <p className="typography-meta text-muted-foreground">
-                For GitHub shorthand, you can add a subpath like <code className="font-mono">owner/repo/skills</code>.
+                {t('settings.installFromRepoDialog.repositoryHintPrefix')} <code className="font-mono">owner/repo/skills</code>{t('settings.installFromRepoDialog.repositoryHintSuffix')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <label className="typography-ui-label font-medium text-foreground">Optional subpath</label>
+                <label className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.subpathLabel')}</label>
                 <Input
                   value={subpath}
                   onChange={(e) => setSubpath(e.target.value)}
@@ -327,7 +327,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
               </div>
 
               <div className="space-y-2">
-                <label className="typography-ui-label font-medium text-foreground">Target location</label>
+                <label className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.targetLocation')}</label>
                 <Select
                   value={locationValueFrom(scope, targetSource)}
                   onValueChange={(v) => {
@@ -361,9 +361,9 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
             {scope === 'project' && (
               <div className="space-y-2">
-                <label className="typography-ui-label font-medium text-foreground">Project</label>
+                <label className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.projectLabel')}</label>
                 {projects.length === 0 ? (
-                  <p className="typography-meta text-muted-foreground">No projects available</p>
+                  <p className="typography-meta text-muted-foreground">{t('settings.installFromRepoDialog.noProjectsAvailable')}</p>
                 ) : (
                   <Select
                     value={resolvedTargetProjectId ?? ''}
@@ -387,14 +387,14 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
             {identities.length > 0 && !isVSCodeRuntime() ? (
               <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                <div className="typography-ui-label font-medium text-foreground">Authentication required</div>
+                <div className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.authenticationRequired')}</div>
                 <div className="typography-meta text-muted-foreground mt-1">
-                  Select a Git identity (SSH key) that can access this repository.
+                  {t('settings.installFromRepoDialog.authenticationRequiredDesc')}
                 </div>
                 <div className="mt-2">
                   <Select value={gitIdentityId || ''} onValueChange={(v) => setGitIdentityId(v)}>
                     <SelectTrigger size="lg" className="w-full justify-between">
-                      <span>{identities.find((i) => i.id === gitIdentityId)?.name || 'Choose identity'}</span>
+                      <span>{identities.find((i) => i.id === gitIdentityId)?.name || t('settings.installFromRepoDialog.chooseIdentity')}</span>
                     </SelectTrigger>
                     <SelectContent align="start">
                       {identities.map((id) => (
@@ -406,7 +406,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                   </Select>
                 </div>
                 <div className="typography-micro text-muted-foreground mt-2">
-                  Configure identities in Settings → Git Identities.
+                  {t('settings.installFromRepoDialog.configureIdentitiesHint')}
                 </div>
               </div>
             ) : null}
@@ -416,8 +416,8 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
             {items.length === 0 ? (
               <div className="flex h-full items-center justify-center text-center text-muted-foreground">
                 <div>
-                  <p className="typography-body">No scan results yet</p>
-                  <p className="typography-meta mt-1 opacity-75">Scan a repository to discover skills</p>
+                  <p className="typography-body">{t('settings.installFromRepoDialog.noScanResultsTitle')}</p>
+                  <p className="typography-meta mt-1 opacity-75">{t('settings.installFromRepoDialog.noScanResultsDesc')}</p>
                 </div>
               </div>
             ) : (
@@ -430,8 +430,8 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                     className="max-w-sm"
                   />
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => toggleAll(true)}>Select all</Button>
-                    <Button variant="outline" size="sm" onClick={() => toggleAll(false)}>Select none</Button>
+                    <Button variant="outline" size="sm" onClick={() => toggleAll(true)}>{t('settings.common.selectAll')}</Button>
+                    <Button variant="outline" size="sm" onClick={() => toggleAll(false)}>{t('settings.common.selectNone')}</Button>
                   </div>
                 </div>
 
@@ -461,14 +461,14 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                             <div className="typography-ui-label truncate">{item.skillName}</div>
                             {installed ? (
                               <span className="typography-micro text-muted-foreground bg-muted px-1 rounded flex-shrink-0 leading-none pb-px border border-border/50">
-                                installed ({installed.scope}/{installed.source})
+                                {t('settings.installFromRepoDialog.installedBadge', { scope: installed.scope, source: installed.source })}
                               </span>
                             ) : null}
                           </div>
                           {item.description ? (
                             <div className="typography-meta text-muted-foreground mt-0.5 line-clamp-2">{item.description}</div>
                           ) : (
-                            <div className="typography-micro text-muted-foreground mt-0.5">No description provided</div>
+                            <div className="typography-micro text-muted-foreground mt-0.5">{t('settings.common.noDescription')}</div>
                           )}
                           {item.warnings?.length ? (
                             <div className="typography-micro text-muted-foreground mt-1">
@@ -482,7 +482,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                 </ScrollableOverlay>
 
                 <div className="typography-meta text-muted-foreground">
-                  Selected: {selectedDirs.length} / {items.filter((i) => i.installable).length}
+                  {t('settings.installFromRepoDialog.selectedCount', { selected: selectedDirs.length, total: items.filter((i) => i.installable).length })}
                 </div>
               </div>
             )}
@@ -490,13 +490,13 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
           <DialogFooter className="flex-shrink-0">
             <ButtonLarge variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('settings.common.cancel')}
             </ButtonLarge>
             <ButtonLarge
               disabled={isInstalling || selectedDirs.length === 0 || !source.trim() || (scope === 'project' && !directoryOverride)}
               onClick={() => void doInstall({})}
             >
-              {isInstalling ? 'Installing…' : 'Install selected'}
+              {isInstalling ? t('settings.common.installing') : t('settings.installFromRepoDialog.installSelected')}
             </ButtonLarge>
           </DialogFooter>
         </DialogContent>

@@ -134,7 +134,7 @@ export const NotificationSettings: React.FC = () => {
       })
       .catch((error) => {
         if (error?.name !== 'AbortError') {
-          console.warn('Failed to load zen utility models:', error);
+          console.warn(t('settings.notifications.debug.failedLoadZenModels'), error);
         }
       });
 
@@ -168,7 +168,7 @@ export const NotificationSettings: React.FC = () => {
           gitModelId: '',
         });
       } catch (error) {
-        console.warn('Failed to save utility model setting:', error);
+        console.warn(t('settings.notifications.debug.failedSaveUtilityModel'), error);
       }
     },
     [setSettingsZenModel]
@@ -235,7 +235,7 @@ export const NotificationSettings: React.FC = () => {
           });
         }
       } catch (error) {
-        console.error('Failed to request notification permission:', error);
+        console.error(t('settings.notifications.debug.failedRequestPermission'), error);
         toast.error(t('settings.notifications.toast.requestPermissionFailed'));
       }
     } else if (checked && notificationPermission === 'granted') {
@@ -318,7 +318,7 @@ export const NotificationSettings: React.FC = () => {
         onStateChange();
       }),
       15000,
-      'Service worker activation timed out'
+      t('settings.notifications.errors.serviceWorkerActivationTimedOut')
     );
   };
 
@@ -330,7 +330,7 @@ export const NotificationSettings: React.FC = () => {
 
   const registerServiceWorker = async (): Promise<ServiceWorkerRegistration> => {
     if (typeof navigator.serviceWorker.register !== 'function') {
-      throw new Error('navigator.serviceWorker.register unavailable');
+      throw new Error(t('settings.notifications.errors.serviceWorkerRegisterUnavailable'));
     }
 
     const attempts: Array<{ label: string; opts: RegistrationOptions | null }> = [
@@ -354,12 +354,12 @@ export const NotificationSettings: React.FC = () => {
       }
     }
 
-    throw lastError instanceof Error ? lastError : new Error('Service worker registration failed');
+    throw lastError instanceof Error ? lastError : new Error(t('settings.notifications.errors.serviceWorkerRegistrationFailed'));
   };
 
   const getServiceWorkerRegistration = async (): Promise<ServiceWorkerRegistration> => {
     if (!('serviceWorker' in navigator)) {
-      throw new Error('Service worker not supported');
+      throw new Error(t('settings.notifications.errors.serviceWorkerNotSupported'));
     }
 
     const existing = await navigator.serviceWorker.getRegistration();
@@ -446,7 +446,7 @@ export const NotificationSettings: React.FC = () => {
       const existing = await registration.pushManager.getSubscription();
 
       if (!('pushManager' in registration) || !registration.pushManager) {
-        throw new Error('PushManager unavailable (requires installed PWA + iOS 16.4+)');
+        throw new Error(t('settings.notifications.errors.pushManagerUnavailable'));
       }
 
       const subscription = existing ?? await withTimeout(
@@ -461,7 +461,7 @@ export const NotificationSettings: React.FC = () => {
       const json = subscription.toJSON();
       const keys = json.keys;
       if (!json.endpoint || !keys?.p256dh || !keys.auth) {
-        throw new Error('Push subscription missing keys');
+        throw new Error(t('settings.notifications.errors.pushSubscriptionMissingKeys'));
       }
 
       const ok = await withTimeout(

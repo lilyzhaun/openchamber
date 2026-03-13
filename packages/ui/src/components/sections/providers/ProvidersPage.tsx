@@ -679,7 +679,7 @@ export const ProvidersPage: React.FC = () => {
                     return (
                       <div className="space-y-4 border-t border-[var(--surface-subtle)] pt-2">
                         {candidateOAuthMethods.map((method, index) => {
-                          const methodLabel = method.label || method.name || `OAuth method ${index + 1}`;
+                          const methodLabel = method.label || method.name || t('settings.providersPage.oauthMethodFallback', { index: index + 1 });
                           const codeKey = `${candidateProviderId}:${index}`;
                           const isPending =
                             pendingOAuth?.providerId === candidateProviderId && pendingOAuth?.methodIndex === index;
@@ -872,7 +872,7 @@ export const ProvidersPage: React.FC = () => {
                 {oauthAuthMethods.length > 0 && (
                   <div className="space-y-4 border-t border-[var(--surface-subtle)] pt-2">
                     {oauthAuthMethods.map((method, index) => {
-                      const methodLabel = method.label || method.name || `OAuth method ${index + 1}`;
+                      const methodLabel = method.label || method.name || t('settings.providersPage.oauthMethodFallback', { index: index + 1 });
                       const codeKey = `${selectedProvider.id}:${index}`;
                       const isPending =
                         pendingOAuth?.providerId === selectedProvider.id && pendingOAuth?.methodIndex === index;
@@ -1072,9 +1072,9 @@ export const ProvidersPage: React.FC = () => {
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {(contextTokens || outputTokens) && (
                           <span className="typography-micro text-muted-foreground flex-shrink-0 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">
-                            {contextTokens ? `${contextTokens} ctx` : ''}
+                            {contextTokens ? t('settings.providersPage.contextTokensBadge', { count: contextTokens }) : ''}
                             {contextTokens && outputTokens ? ' · ' : ''}
-                            {outputTokens ? `${outputTokens} out` : ''}
+                            {outputTokens ? t('settings.providersPage.outputTokensBadge', { count: outputTokens }) : ''}
                           </span>
                         )}
                         {capabilityIcons.length > 0 && (

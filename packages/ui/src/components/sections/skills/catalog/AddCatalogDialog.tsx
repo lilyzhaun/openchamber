@@ -234,20 +234,20 @@ export const AddCatalogDialog: React.FC<AddCatalogDialogProps> = ({ open, onOpen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl" keyboardAvoid>
         <DialogHeader>
-          <DialogTitle>Add skills catalog</DialogTitle>
+          <DialogTitle>{t('settings.addCatalogDialog.title')}</DialogTitle>
           <DialogDescription>
-            Add a Git repository as a new catalog source. OpenChamber will scan it for folders containing <code className="font-mono">SKILL.md</code>.
+            {t('settings.addCatalogDialog.descriptionPrefix')} <code className="font-mono">SKILL.md</code>{t('settings.addCatalogDialog.descriptionSuffix')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="typography-ui-label text-foreground">Catalog name</label>
+            <label className="typography-ui-label text-foreground">{t('settings.addCatalogDialog.catalogNameLabel')}</label>
             <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t('settings.addCatalogDialog.catalogNamePlaceholder')} />
           </div>
 
           <div className="space-y-2">
-            <label className="typography-ui-label text-foreground">Repository</label>
+            <label className="typography-ui-label text-foreground">{t('settings.addCatalogDialog.repositoryLabel')}</label>
             <Input
               value={source}
               onChange={(e) => {

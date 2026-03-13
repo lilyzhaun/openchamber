@@ -76,25 +76,25 @@ export const OpenCodeCliSettings: React.FC = () => {
     setIsSaving(true);
     try {
       await updateDesktopSettings({ opencodeBinary: value.trim() });
-      await reloadOpenCodeConfiguration({ message: 'Restarting OpenCode…', mode: 'projects', scopes: ['all'] });
+      await reloadOpenCodeConfiguration({ message: t('settings.actions.restartingOpenCode'), mode: 'projects', scopes: ['all'] });
     } finally {
       setIsSaving(false);
     }
-  }, [value]);
+  }, [t, value]);
 
   return (
     <div className="mb-8">
       <div className="mb-1 px-1">
         <div className="flex items-center gap-2">
           <h3 className="typography-ui-header font-medium text-foreground">
-            OpenCode CLI
+            {t('settings.openCodeCli.title')}
           </h3>
           <Tooltip delayDuration={1000}>
             <TooltipTrigger asChild>
               <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
             </TooltipTrigger>
             <TooltipContent sideOffset={8} className="max-w-xs">
-              Optional absolute path to the <code className="font-mono text-xs">opencode</code> binary.
+              {t('settings.openCodeCli.binaryPathTooltipPrefix')} <code className="font-mono text-xs">opencode</code> {t('settings.openCodeCli.binaryPathTooltipSuffix')}
             </TooltipContent>
           </Tooltip>
         </div>
@@ -109,7 +109,7 @@ export const OpenCodeCliSettings: React.FC = () => {
             <Input
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="/Users/you/.bun/bin/opencode"
+              placeholder={t('settings.openCodeCli.binaryPathPlaceholder')}
               disabled={isLoading || isSaving}
               className="h-7 min-w-0 flex-1 font-mono text-xs"
             />

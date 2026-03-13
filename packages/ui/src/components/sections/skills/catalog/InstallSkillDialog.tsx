@@ -160,15 +160,15 @@ export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, on
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md" keyboardAvoid>
           <DialogHeader>
-            <DialogTitle>Install skill</DialogTitle>
+            <DialogTitle>{t('settings.installSkillDialog.title')}</DialogTitle>
             <DialogDescription>
-              Install <span className="font-semibold text-foreground">{item.skillName}</span> into one of four target locations.
+              {t('settings.installSkillDialog.descriptionPrefix')} <span className="font-semibold text-foreground">{item.skillName}</span> {t('settings.installSkillDialog.descriptionSuffix')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-2 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="typography-ui-label text-foreground">Destination</span>
+              <span className="typography-ui-label text-foreground">{t('settings.installSkillDialog.destination')}</span>
               <Select
                 value={locationValueFrom(scope, targetSource)}
                 onValueChange={(v) => {
@@ -201,9 +201,9 @@ export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, on
 
             {scope === 'project' && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="typography-ui-label text-foreground">Project</span>
+                <span className="typography-ui-label text-foreground">{t('settings.installSkillDialog.projectLabel')}</span>
                 {projects.length === 0 ? (
-                  <span className="typography-meta text-muted-foreground">No projects available</span>
+                  <span className="typography-meta text-muted-foreground">{t('settings.installSkillDialog.noProjectsAvailable')}</span>
                 ) : (
                   <Select
                     value={resolvedTargetProjectId ?? ''}
@@ -237,7 +237,7 @@ export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, on
               variant="ghost"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {t('settings.common.cancel')}
             </ButtonLarge>
             <ButtonLarge
               disabled={isInstalling || !item.installable || (scope === 'project' && !directoryOverride)}
@@ -252,7 +252,7 @@ export const InstallSkillDialog: React.FC<InstallSkillDialogProps> = ({ open, on
                 })
               }
             >
-              {isInstalling ? 'Installing...' : 'Install'}
+              {isInstalling ? t('settings.common.installing') : t('settings.common.install')}
             </ButtonLarge>
           </DialogFooter>
         </DialogContent>

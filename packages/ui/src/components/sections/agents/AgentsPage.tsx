@@ -589,8 +589,8 @@ export const AgentsPage: React.FC = () => {
       <div className="flex h-full items-center justify-center">
         <div className="text-center text-muted-foreground">
           <RiRobot2Line className="mx-auto mb-3 h-12 w-12 opacity-50" />
-          <p className="typography-body">Select an agent from the sidebar</p>
-          <p className="typography-meta mt-1 opacity-75">or create a new one</p>
+          <p className="typography-body">{t('settings.agentsPage.emptyStateTitle')}</p>
+          <p className="typography-meta mt-1 opacity-75">{t('settings.agentsPage.emptyStateDesc')}</p>
         </div>
       </div>
     );
@@ -604,10 +604,10 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-4 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <h2 className="typography-ui-header font-semibold text-foreground truncate">
-              {isNewAgent ? 'New Agent' : selectedAgentName}
+              {isNewAgent ? t('settings.agentsPage.newAgentTitle') : selectedAgentName}
             </h2>
             <p className="typography-meta text-muted-foreground truncate">
-              {isNewAgent ? 'Configure a new assistant persona' : 'Edit agent settings'}
+              {isNewAgent ? t('settings.agentsPage.newAgentDesc') : t('settings.agentsPage.editAgentDesc')}
             </p>
           </div>
         </div>
@@ -616,7 +616,7 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Identity & Role
+              {t('settings.agentsPage.identityRole')}
             </h3>
           </div>
 
@@ -625,7 +625,7 @@ export const AgentsPage: React.FC = () => {
             {isNewAgent && (
               <div className="flex flex-col gap-2 py-1.5 sm:flex-row sm:items-center sm:gap-8">
                 <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
-                  <span className="typography-ui-label text-foreground">Agent Name</span>
+                  <span className="typography-ui-label text-foreground">{t('settings.agentsPage.agentName')}</span>
                 </div>
                 <div className="flex min-w-0 flex-1 items-center gap-2 sm:w-fit sm:flex-initial">
                   <div className="flex items-center">
@@ -645,13 +645,13 @@ export const AgentsPage: React.FC = () => {
                       <SelectItem value="user">
                         <div className="flex items-center gap-2">
                           <RiUser3Line className="h-3.5 w-3.5" />
-                          <span>Global</span>
+                          <span>{t('settings.common.global')}</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="project">
                         <div className="flex items-center gap-2">
                           <RiFolderLine className="h-3.5 w-3.5" />
-                          <span>Project</span>
+                          <span>{t('settings.common.project')}</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -661,7 +661,7 @@ export const AgentsPage: React.FC = () => {
             )}
 
             <div className="py-1.5">
-              <span className="typography-ui-label text-foreground">Description</span>
+              <span className="typography-ui-label text-foreground">{t('settings.common.description')}</span>
               <div className="mt-1.5">
                 <Textarea
                   value={description}
@@ -676,13 +676,13 @@ export const AgentsPage: React.FC = () => {
             <div className="pb-1.5 pt-0.5">
               <div className="flex min-w-0 flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="typography-ui-label text-foreground">Mode</span>
+                  <span className="typography-ui-label text-foreground">{t('settings.agentsPage.mode')}</span>
                   <Tooltip delayDuration={1000}>
                     <TooltipTrigger asChild>
                       <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent sideOffset={8} className="max-w-xs">
-                      Primary vs Subagent visibility
+                      {t('settings.agentsPage.modeTooltip')}
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -698,7 +698,7 @@ export const AgentsPage: React.FC = () => {
                       : 'text-foreground'
                   )}
                 >
-                  Primary
+                  {t('settings.agentsPage.modePrimary')}
                 </ButtonSmall>
                 <ButtonSmall
                   variant="outline"
@@ -711,7 +711,7 @@ export const AgentsPage: React.FC = () => {
                       : 'text-foreground'
                   )}
                 >
-                  Subagent
+                  {t('settings.agentsPage.modeSubagent')}
                 </ButtonSmall>
                 <ButtonSmall
                   variant="outline"
@@ -724,7 +724,7 @@ export const AgentsPage: React.FC = () => {
                       : 'text-foreground'
                   )}
                 >
-                  All
+                  {t('settings.agentsPage.modeAll')}
                 </ButtonSmall>
                 </div>
               </div>
@@ -737,7 +737,7 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Model & Parameters
+              {t('settings.agentsPage.modelAndParameters')}
             </h3>
           </div>
 
@@ -745,7 +745,7 @@ export const AgentsPage: React.FC = () => {
 
             <div className="flex flex-col gap-2 py-1.5 sm:flex-row sm:items-center sm:gap-8">
               <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
-                <span className="typography-ui-label text-foreground">Override Model</span>
+                <span className="typography-ui-label text-foreground">{t('settings.agentsPage.overrideModel')}</span>
               </div>
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:w-fit sm:flex-initial">
                 <ModelSelector
@@ -765,17 +765,17 @@ export const AgentsPage: React.FC = () => {
             <div className={cn("py-1.5", isMobile ? "flex flex-col gap-3" : "flex items-center gap-8")}>
               <div className={cn("flex min-w-0 flex-col", isMobile ? "w-full" : "sm:w-56 shrink-0")}>
                 <div className="flex items-center gap-1.5">
-                  <span className="typography-ui-label text-foreground">Temperature</span>
+                  <span className="typography-ui-label text-foreground">{t('settings.agentsPage.temperature')}</span>
                   <Tooltip delayDuration={1000}>
                     <TooltipTrigger asChild>
                       <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent sideOffset={8} className="max-w-xs">
-                      Controls randomness. Higher = creative, Lower = focused.
+                      {t('settings.agentsPage.temperatureTooltip')}
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <span className="typography-meta text-muted-foreground">0.0 to 2.0</span>
+                <span className="typography-meta text-muted-foreground">{t('settings.agentsPage.temperatureRange')}</span>
               </div>
               <div className={cn("flex items-center gap-2", isMobile ? "w-full" : "w-fit")}>
                 <NumberInput
@@ -797,7 +797,7 @@ export const AgentsPage: React.FC = () => {
                     variant="ghost"
                     onClick={() => setTemperature(undefined)}
                     className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                    aria-label="Clear temperature override"
+                    aria-label={t('settings.agentsPage.clearTemperatureAria')}
                     title={t('settings.agentsPage.clear')}
                   >
                     <RiCloseLine className="h-3.5 w-3.5" />
@@ -809,17 +809,17 @@ export const AgentsPage: React.FC = () => {
             <div className={cn("py-1.5", isMobile ? "flex flex-col gap-3" : "flex items-center gap-8")}>
               <div className={cn("flex min-w-0 flex-col", isMobile ? "w-full" : "sm:w-56 shrink-0")}>
                 <div className="flex items-center gap-1.5">
-                  <span className="typography-ui-label text-foreground">Top P</span>
+                  <span className="typography-ui-label text-foreground">{t('settings.agentsPage.topP')}</span>
                   <Tooltip delayDuration={1000}>
                     <TooltipTrigger asChild>
                       <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent sideOffset={8} className="max-w-xs">
-                      Nucleus sampling diversity. Lower = likely tokens only.
+                      {t('settings.agentsPage.topPTooltip')}
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <span className="typography-meta text-muted-foreground">0.0 to 1.0</span>
+                <span className="typography-meta text-muted-foreground">{t('settings.agentsPage.topPRange')}</span>
               </div>
               <div className={cn("flex items-center gap-2", isMobile ? "w-full" : "w-fit")}>
                 <NumberInput
@@ -841,7 +841,7 @@ export const AgentsPage: React.FC = () => {
                     variant="ghost"
                     onClick={() => setTopP(undefined)}
                     className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                    aria-label="Clear top p override"
+                    aria-label={t('settings.agentsPage.clearTopPAria')}
                     title={t('settings.agentsPage.clear')}
                   >
                     <RiCloseLine className="h-3.5 w-3.5" />
@@ -857,7 +857,7 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              System Prompt
+              {t('settings.agentsPage.systemPrompt')}
             </h3>
           </div>
 
@@ -876,7 +876,7 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-2">
           <div className="mb-1 px-1 flex items-center justify-between gap-4">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Tool Permissions
+              {t('settings.agentsPage.toolPermissions')}
             </h3>
             <ButtonSmall
               variant="outline"
@@ -884,7 +884,7 @@ export const AgentsPage: React.FC = () => {
               className="!font-normal"
               onClick={() => setShowPermissionEditor((prev) => !prev)}
             >
-              {showPermissionEditor ? 'Hide Editor' : 'Advanced Editor'}
+              {showPermissionEditor ? t('settings.common.hide') : t('settings.agentsPage.advancedEditor')}
             </ButtonSmall>
           </div>
 
@@ -902,12 +902,12 @@ export const AgentsPage: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       {patternRulesCount > 0 ? (
-                        <span className="typography-micro text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">Global: {summary}</span>
+                        <span className="typography-micro text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">{t('settings.agentsPage.globalSummary', { summary })}</span>
                       ) : (
                         <span className={cn("typography-micro capitalize px-1.5 py-0.5 rounded", summary === 'allow' ? "text-[var(--status-success)] bg-[var(--status-success)]/10" : summary === 'deny' ? "text-[var(--status-error)] bg-[var(--status-error)]/10" : "text-[var(--status-warning)] bg-[var(--status-warning)]/10")}>{summary}</span>
                       )}
                       {patternRulesCount > 0 && (
-                        <span className="typography-micro text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">Rules: {patternSummary}</span>
+                        <span className="typography-micro text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">{t('settings.agentsPage.rulesSummary', { summary: patternSummary })}</span>
                       )}
                     </div>
                   </div>
@@ -918,7 +918,7 @@ export const AgentsPage: React.FC = () => {
             <div className="space-y-6 px-2">
               <div className="flex items-center justify-between gap-4 py-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="typography-ui-label text-foreground">Global Default</span>
+                  <span className="typography-ui-label text-foreground">{t('settings.agentsPage.globalDefault')}</span>
                   <span className="typography-micro text-muted-foreground/70 font-mono">*</span>
                 </div>
                 <Select
@@ -929,9 +929,9 @@ export const AgentsPage: React.FC = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="allow">Allow</SelectItem>
-                    <SelectItem value="ask">Ask</SelectItem>
-                    <SelectItem value="deny">Deny</SelectItem>
+                    <SelectItem value="allow">{t('settings.agentsPage.permissionAction.allow')}</SelectItem>
+                    <SelectItem value="ask">{t('settings.agentsPage.permissionAction.ask')}</SelectItem>
+                    <SelectItem value="deny">{t('settings.agentsPage.permissionAction.deny')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -960,7 +960,7 @@ export const AgentsPage: React.FC = () => {
                       <div className="space-y-1 pl-2 mt-1">
                         <div className="flex flex-wrap items-center justify-between gap-2 py-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="typography-micro text-muted-foreground">Pattern</span>
+                            <span className="typography-micro text-muted-foreground">{t('settings.agentsPage.pattern')}</span>
                             <span className="typography-micro font-mono text-foreground bg-[var(--surface-muted)] px-1 rounded">*</span>
                             {wildcardOverride && (
                               <ButtonSmall
@@ -986,10 +986,10 @@ export const AgentsPage: React.FC = () => {
                                <SelectValue />
                              </SelectTrigger>
                              <SelectContent>
-                               <SelectItem value="global">Global</SelectItem>
+                              <SelectItem value="global">{t('settings.common.global')}</SelectItem>
                               {wildcardOptions.map((action) => (
                                 <SelectItem key={action} value={action} className="capitalize">
-                                  {action}
+                                  {t(`settings.agentsPage.permissionAction.${action}`)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1005,10 +1005,10 @@ export const AgentsPage: React.FC = () => {
                           return (
                             <div key={ruleKey} className="flex flex-wrap items-center justify-between gap-2 py-0.5 border-t border-[var(--surface-subtle)]">
                               <div className="flex items-center gap-2">
-                                <span className="typography-micro text-muted-foreground">Pattern</span>
+                                <span className="typography-micro text-muted-foreground">{t('settings.agentsPage.pattern')}</span>
                                 <span className="typography-micro font-mono text-foreground bg-[var(--surface-muted)] px-1 rounded">{rule.pattern}</span>
-                                {isAdded && <span className="typography-micro text-[var(--status-success)]">New</span>}
-                                {isModified && <span className="typography-micro text-[var(--status-warning)]">Modified</span>}
+                                {isAdded && <span className="typography-micro text-[var(--status-success)]">{t('settings.common.new')}</span>}
+                                {isModified && <span className="typography-micro text-[var(--status-warning)]">{t('settings.common.modified')}</span>}
                                 {(isAdded || isModified) && (
                                   <ButtonSmall
                                     variant="ghost"
@@ -1027,9 +1027,9 @@ export const AgentsPage: React.FC = () => {
                                    <SelectValue />
                                  </SelectTrigger>
                                  <SelectContent>
-                                   <SelectItem value="allow">Allow</SelectItem>
-                                  <SelectItem value="ask">Ask</SelectItem>
-                                  <SelectItem value="deny">Deny</SelectItem>
+                                  <SelectItem value="allow">{t('settings.agentsPage.permissionAction.allow')}</SelectItem>
+                                  <SelectItem value="ask">{t('settings.agentsPage.permissionAction.ask')}</SelectItem>
+                                  <SelectItem value="deny">{t('settings.agentsPage.permissionAction.deny')}</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1042,14 +1042,14 @@ export const AgentsPage: React.FC = () => {
               </div>
 
               <div className="border-t border-[var(--surface-subtle)] pt-3">
-                <h4 className="typography-ui-label text-foreground mb-2">Add Custom Rule</h4>
+                <h4 className="typography-ui-label text-foreground mb-2">{t('settings.agentsPage.addCustomRule')}</h4>
                 <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
                   <Select value={pendingRuleName} onValueChange={setPendingRuleName}>
                     <SelectTrigger className="w-full sm:w-[160px]">
                       {pendingRuleName ? (
                         <span className="truncate">{formatPermissionLabel(pendingRuleName)}</span>
                       ) : (
-                        <span className="text-muted-foreground">Permission...</span>
+                        <span className="text-muted-foreground">{t('settings.agentsPage.permissionPlaceholder')}</span>
                       )}
                     </SelectTrigger>
                     <SelectContent>
@@ -1071,9 +1071,9 @@ export const AgentsPage: React.FC = () => {
                   />
 
                   <div className="flex gap-1">
-                    <ButtonSmall variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('allow')}>Allow</ButtonSmall>
-                    <ButtonSmall variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('ask')}>Ask</ButtonSmall>
-                    <ButtonSmall variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('deny')}>Deny</ButtonSmall>
+                    <ButtonSmall variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('allow')}>{t('settings.agentsPage.permissionAction.allow')}</ButtonSmall>
+                    <ButtonSmall variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('ask')}>{t('settings.agentsPage.permissionAction.ask')}</ButtonSmall>
+                    <ButtonSmall variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('deny')}>{t('settings.agentsPage.permissionAction.deny')}</ButtonSmall>
                   </div>
                 </div>
               </div>
@@ -1089,7 +1089,7 @@ export const AgentsPage: React.FC = () => {
             size="xs"
             className="!font-normal"
           >
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? t('settings.common.saving') : t('settings.common.saveChanges')}
           </ButtonSmall>
         </div>
 

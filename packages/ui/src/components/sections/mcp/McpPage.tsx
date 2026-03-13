@@ -509,8 +509,8 @@ export const McpPage: React.FC = () => {
       <div className="flex h-full items-center justify-center">
         <div className="text-center text-muted-foreground">
           <RiPlugLine className="mx-auto mb-3 h-12 w-12 opacity-50" />
-          <p className="typography-body">Select an MCP server from the sidebar</p>
-          <p className="typography-meta mt-1 opacity-75">or add a new one</p>
+          <p className="typography-body">{t('settings.mcpPage.emptyStateTitle')}</p>
+          <p className="typography-meta mt-1 opacity-75">{t('settings.mcpPage.emptyStateDesc')}</p>
         </div>
       </div>
     );
@@ -527,7 +527,7 @@ export const McpPage: React.FC = () => {
         <div className="mb-4">
           <div className="min-w-0">
             {isNewServer ? (
-              <h2 className="typography-ui-header font-semibold text-foreground truncate">New MCP Server</h2>
+              <h2 className="typography-ui-header font-semibold text-foreground truncate">{t('settings.mcpPage.newServerTitle')}</h2>
             ) : (
               <div className="flex items-center gap-2 min-w-0">
                 <h2 className="typography-ui-header font-semibold text-foreground truncate">{selectedMcpName}</h2>
@@ -536,7 +536,7 @@ export const McpPage: React.FC = () => {
             )}
             <div className="flex items-center gap-2 mt-0.5">
               <p className="typography-meta text-muted-foreground truncate">
-                {isNewServer ? 'Configure a new MCP server' : `${mcpType === 'local' ? 'Local · stdio' : 'Remote · SSE'} transport`}
+                {isNewServer ? t('settings.mcpPage.newServerDesc') : t(mcpType === 'local' ? 'settings.mcpPage.transport.local' : 'settings.mcpPage.transport.remote')}
               </p>
               {!isNewServer && (
                 <ButtonSmall
@@ -546,7 +546,7 @@ export const McpPage: React.FC = () => {
                   onClick={handleToggleConnect}
                   disabled={isConnecting || !enabled}
                 >
-                  {isConnecting ? 'Working...' : isConnected ? 'Disconnect' : 'Connect'}
+                  {isConnecting ? t('settings.common.working') : isConnected ? t('settings.mcpPage.disconnect') : t('settings.mcpPage.connect')}
                 </ButtonSmall>
               )}
             </div>
@@ -556,7 +556,7 @@ export const McpPage: React.FC = () => {
         {/* Server Identity */}
         <div className="mb-8">
           <div className="mb-1 px-1">
-            <h3 className="typography-ui-header font-medium text-foreground">Server</h3>
+            <h3 className="typography-ui-header font-medium text-foreground">{t('settings.mcpPage.serverSectionTitle')}</h3>
           </div>
 
           <section className="px-2 pb-2 pt-0 space-y-0">
@@ -564,7 +564,7 @@ export const McpPage: React.FC = () => {
             {isNewServer && (
               <div className="flex flex-col gap-2 py-1.5 sm:flex-row sm:items-center sm:gap-8">
                 <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
-                  <span className="typography-ui-label text-foreground">Server Name</span>
+                  <span className="typography-ui-label text-foreground">{t('settings.mcpPage.serverName')}</span>
                 </div>
                 <div className="flex min-w-0 flex-1 items-center gap-2 sm:w-fit sm:flex-initial">
                   <Input
@@ -575,20 +575,20 @@ export const McpPage: React.FC = () => {
                     autoFocus
                   />
                   <Select value={draftScope} onValueChange={(value) => setDraftScope(value as McpScope)}>
-                    <SelectTrigger className="!h-7 !w-7 !min-w-0 !px-0 !py-0 justify-center [&>svg:last-child]:hidden" title={draftScope === 'user' ? 'User scope' : 'Project scope'}>
+                    <SelectTrigger className="!h-7 !w-7 !min-w-0 !px-0 !py-0 justify-center [&>svg:last-child]:hidden" title={draftScope === 'user' ? t('settings.mcpPage.userScope') : t('settings.mcpPage.projectScope')}>
                       {draftScope === 'user' ? <RiUser3Line className="h-3.5 w-3.5" /> : <RiFolderLine className="h-3.5 w-3.5" />}
                     </SelectTrigger>
                     <SelectContent align="end">
                       <SelectItem value="user">
                         <div className="flex items-center gap-2">
                           <RiUser3Line className="h-3.5 w-3.5" />
-                          <span>User</span>
+                          <span>{t('settings.common.user')}</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="project">
                         <div className="flex items-center gap-2">
                           <RiFolderLine className="h-3.5 w-3.5" />
-                          <span>Project</span>
+                          <span>{t('settings.common.project')}</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -613,14 +613,14 @@ export const McpPage: React.FC = () => {
               <Checkbox
                 checked={enabled}
                 onChange={setEnabled}
-                ariaLabel="Enable server"
+                ariaLabel={t('settings.mcpPage.enableServerAria')}
               />
-              <span className="typography-ui-label text-foreground">Enable Server</span>
+              <span className="typography-ui-label text-foreground">{t('settings.mcpPage.enableServer')}</span>
             </div>
 
             <div className="pb-1.5 pt-0.5">
               <div className="flex min-w-0 flex-col gap-1.5">
-                <span className="typography-ui-label text-foreground">Transport Mode</span>
+                <span className="typography-ui-label text-foreground">{t('settings.mcpPage.transportMode')}</span>
                 <div className="flex flex-wrap items-center gap-1">
                   <ButtonSmall
                     variant="outline"
@@ -633,7 +633,7 @@ export const McpPage: React.FC = () => {
                         : 'text-foreground'
                     )}
                   >
-                    Local · stdio
+                    {t('settings.mcpPage.transport.local')}
                   </ButtonSmall>
                   <ButtonSmall
                     variant="outline"
@@ -646,7 +646,7 @@ export const McpPage: React.FC = () => {
                         : 'text-foreground'
                     )}
                   >
-                    Remote · SSE
+                    {t('settings.mcpPage.transport.remote')}
                   </ButtonSmall>
                 </div>
               </div>
@@ -659,7 +659,7 @@ export const McpPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              {mcpType === 'local' ? 'Command' : 'Server URL'}
+              {mcpType === 'local' ? t('settings.mcpPage.commandTitle') : t('settings.mcpPage.serverUrlTitle')}
             </h3>
           </div>
 
@@ -681,7 +681,7 @@ export const McpPage: React.FC = () => {
         <div className="mb-2">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Environment Variables
+              {t('settings.mcpPage.environmentVariables')}
               {envEntries.length > 0 && (
                 <span className="ml-1.5 typography-micro text-muted-foreground font-normal">
                   ({envEntries.length})
@@ -703,7 +703,7 @@ export const McpPage: React.FC = () => {
             size="xs"
             className="!font-normal"
           >
-            {isSaving ? 'Saving...' : isNewServer ? 'Create' : 'Save Changes'}
+            {isSaving ? t('settings.common.saving') : isNewServer ? t('settings.common.create') : t('settings.common.saveChanges')}
           </ButtonSmall>
           {!isNewServer && (
             <ButtonSmall
@@ -712,7 +712,7 @@ export const McpPage: React.FC = () => {
               className="!font-normal text-[var(--status-error)] hover:text-[var(--status-error)]"
               onClick={() => setShowDeleteConfirm(true)}
             >
-              Delete
+              {t('settings.common.delete')}
             </ButtonSmall>
           )}
         </div>
@@ -725,10 +725,9 @@ export const McpPage: React.FC = () => {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete "{selectedMcpName}"?</DialogTitle>
+            <DialogTitle>{t('settings.mcpPage.deleteDialogTitle', { name: selectedMcpName || '' })}</DialogTitle>
             <DialogDescription>
-              This removes the server from <code className="text-foreground">opencode.json</code>.
-              OpenCode will need to reload.
+              {t('settings.mcpPage.deleteDialogDescPrefix')} <code className="text-foreground">opencode.json</code>. {t('settings.mcpPage.deleteDialogDescSuffix')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -738,10 +737,10 @@ export const McpPage: React.FC = () => {
               disabled={isDeleting}
               className="text-foreground hover:bg-interactive-hover hover:text-foreground"
             >
-              Cancel
+              {t('settings.common.cancel')}
             </Button>
             <ButtonLarge onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? 'Deleting…' : 'Delete'}
+              {isDeleting ? t('settings.common.deleting') : t('settings.common.delete')}
             </ButtonLarge>
           </DialogFooter>
         </DialogContent>

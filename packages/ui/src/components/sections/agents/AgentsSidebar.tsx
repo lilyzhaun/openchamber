@@ -325,7 +325,7 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
         <h2 className="text-base font-semibold text-foreground mb-3">{t('settings.agentsSidebar.title')}</h2>
         <SettingsProjectSelector className="mb-3" />
         <div className="flex items-center justify-between gap-2">
-          <span className="typography-meta text-muted-foreground">{t('settings.sidebar.totalCount', { count: visibleAgents.length })}</span>
+        <span className="typography-meta text-muted-foreground">{t('settings.sidebar.totalCount', { count: visibleAgents.length })}</span>
           <ButtonSmall
             variant="ghost"
             className="h-7 w-7 px-0 -my-1 text-muted-foreground"
@@ -552,7 +552,7 @@ const AgentListItem: React.FC<AgentListItemProps> = ({
             {getAgentModeIcon(agent.mode)}
             {(extAgent.scope || isAgentBuiltIn(agent)) && (
               <span className="typography-micro text-muted-foreground bg-muted px-1 rounded flex-shrink-0 leading-none pb-px border border-border/50">
-                {isAgentBuiltIn(agent) ? t('settings.common.scopeSystem') : (extAgent.scope ?? '')}
+                {isAgentBuiltIn(agent) ? t('settings.common.scopeSystem') : t(`settings.common.scope${(extAgent.scope ?? '').charAt(0).toUpperCase()}${(extAgent.scope ?? '').slice(1)}`)}
               </span>
             )}
           </div>

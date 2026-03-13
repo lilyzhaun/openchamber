@@ -108,7 +108,7 @@ export const GitSettings: React.FC = () => {
             onChange={(checked) => {
               void handleGitmojiChange(checked);
             }}
-            ariaLabel="Enable Gitmoji picker"
+            ariaLabel={t('settings.git.enableGitmojiPickerAria')}
           />
           <span className="typography-ui-label text-foreground">{t('settings.git.enableGitmojiPicker')}</span>
         </div>

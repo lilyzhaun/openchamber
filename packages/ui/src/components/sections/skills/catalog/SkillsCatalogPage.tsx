@@ -30,6 +30,7 @@ import type { SkillsCatalogItem } from '@/lib/api/types';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { updateDesktopSettings } from '@/lib/persistence';
 import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop';
+import { useI18n } from '@/contexts/useI18n';
 
 import { AddCatalogDialog } from './AddCatalogDialog';
 import { InstallSkillDialog } from './InstallSkillDialog';
@@ -66,6 +67,7 @@ const loadSettings = async (): Promise<DesktopSettings | null> => {
 };
 
 export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onModeChange, showModeTabs = true }) => {
+  const { t } = useI18n();
   const {
     sources,
     itemsBySource,
@@ -155,8 +157,8 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
               <div className="h-10">
                 <SortableTabsStrip
                   items={[
-                    { id: 'manual', label: 'Manual' },
-                    { id: 'external', label: 'External' },
+                    { id: 'manual', label: t('settings.skillsCatalogPage.mode.manual') },
+                    { id: 'external', label: t('settings.skillsCatalogPage.mode.external') },
                   ]}
                   activeId={mode}
                   onSelect={(next) => onModeChange(next as 'manual' | 'external')}
@@ -168,13 +170,13 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
               </div>
             </div>
           )}
-          <h2 className="typography-ui-header font-semibold text-foreground px-1">Skills Catalog</h2>
+          <h2 className="typography-ui-header font-semibold text-foreground px-1">{t('settings.skillsCatalogPage.title')}</h2>
         </div>
 
         {/* Source & Search */}
         <div className="mb-8">
           <div className="mb-1 px-1">
-            <h3 className="typography-ui-header font-medium text-foreground">Source Repository</h3>
+            <h3 className="typography-ui-header font-medium text-foreground">{t('settings.skillsCatalogPage.sourceRepository')}</h3>
           </div>
 
           <section className="px-2 pb-2 pt-0 space-y-0">
@@ -184,7 +186,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 onValueChange={(v) => setSelectedSource(v)}
               >
                 <SelectTrigger className="w-fit">
-                  <SelectValue placeholder="Select source" />
+                  <SelectValue placeholder={t('settings.skillsCatalogPage.selectSource')} />
                 </SelectTrigger>
                 <SelectContent align="start">
                   {sources.map((src) => (
@@ -207,7 +209,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                   }
                 }}
                 disabled={isLoadingCatalog || isLoadingSource}
-                title="Refresh"
+                title={t('settings.common.refresh')}
               >
                 <RiRefreshLine className={cn("h-3.5 w-3.5", (isLoadingCatalog || isLoadingSource) && "animate-spin")} />
               </ButtonSmall>
@@ -219,7 +221,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                   className="!font-normal h-6 w-6 px-0 text-[var(--status-error)] hover:text-[var(--status-error)]"
                   onClick={() => setIsRemoveCatalogDialogOpen(true)}
                   disabled={isRemovingCatalog}
-                  title="Remove Catalog"
+                  title={t('settings.skillsCatalogPage.removeCatalog')}
                 >
                   <RiDeleteBinLine className="h-3.5 w-3.5" />
                 </ButtonSmall>
@@ -230,7 +232,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 className="!font-normal gap-1"
                 onClick={() => setAddCatalogOpen(true)}
               >
-                <RiAddLine className="h-3.5 w-3.5" /> Add Catalog
+                <RiAddLine className="h-3.5 w-3.5" /> {t('settings.skillsCatalogPage.addCatalog')}
               </ButtonSmall>
             </div>
 
@@ -240,12 +242,12 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search skills..."
+                  placeholder={t('settings.skillsCatalogPage.searchSkills')}
                   className="h-7 pl-8 w-full sm:w-64"
                 />
               </div>
               <span className="typography-meta text-muted-foreground mt-1 block">
-                {isLoadingCatalog ? 'Loading...' : `${filtered.length} skill(s) found`}
+                {isLoadingCatalog ? t('settings.common.loading') : t('settings.skillsCatalogPage.foundSkills', { count: filtered.length })}
               </span>
             </div>
           </section>
@@ -254,7 +256,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
         {/* Error State */}
         {lastCatalogError && (
           <div className="mb-8 rounded-lg border border-[var(--status-error-border)] bg-[var(--status-error-background)] px-4 py-3">
-            <div className="typography-ui-label font-medium text-[var(--status-error)]">Catalog error</div>
+            <div className="typography-ui-label font-medium text-[var(--status-error)]">{t('settings.skillsCatalogPage.catalogError')}</div>
             <div className="typography-meta text-[var(--status-error)]/80 mt-1">{lastCatalogError.message}</div>
           </div>
         )}
@@ -264,13 +266,13 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
           <section className="px-2 pb-2 pt-0">
             {filtered.length === 0 && !isLoadingSource ? (
               <div className="py-8 text-center text-muted-foreground">
-                <p className="typography-body">No skills found</p>
-                <p className="typography-meta mt-1 opacity-75">Try a different search or refresh the catalog</p>
+                <p className="typography-body">{t('settings.skillsCatalogPage.noSkillsFound')}</p>
+                <p className="typography-meta mt-1 opacity-75">{t('settings.skillsCatalogPage.noSkillsFoundDesc')}</p>
               </div>
             ) : isLoadingSource ? (
               <div className="py-8 text-center text-muted-foreground">
                 <RiRefreshLine className="mx-auto mb-3 h-5 w-5 animate-spin opacity-50" />
-                <p className="typography-meta">Loading skills...</p>
+                <p className="typography-meta">{t('settings.skillsCatalogPage.loadingSkills')}</p>
               </div>
             ) : (
               <div className="divide-y divide-[var(--surface-subtle)]">
@@ -286,12 +288,12 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                             <span className="typography-ui-label font-medium text-foreground truncate">{item.skillName}</span>
                             {installed && (
                               <span className="typography-micro text-[var(--status-success)] bg-[var(--status-success)]/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                                installed ({installedScope || 'unknown'})
+                                {t('settings.skillsCatalogPage.installedBadge', { scope: installedScope || 'unknown' })}
                               </span>
                             )}
                             {!item.installable && (
                               <span className="typography-micro text-[var(--status-warning)] bg-[var(--status-warning)]/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                                not installable
+                                {t('settings.skillsCatalogPage.notInstallable')}
                               </span>
                             )}
                           </div>
@@ -299,13 +301,13 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                           {item.description ? (
                             <div className="typography-meta text-muted-foreground mt-0.5 line-clamp-2">{item.description}</div>
                           ) : (
-                            <div className="typography-meta text-muted-foreground/50 mt-0.5 italic">No description provided</div>
+                            <div className="typography-meta text-muted-foreground/50 mt-0.5 italic">{t('settings.common.noDescription')}</div>
                           )}
 
                           {item.clawdhub && (
                             <div className="typography-micro text-muted-foreground mt-1.5 flex items-center gap-3">
                               {item.clawdhub.owner && (
-                                <span>by <span className="font-medium text-foreground/80">{item.clawdhub.owner}</span></span>
+                                <span>{t('settings.skillsCatalogPage.byAuthor', { owner: item.clawdhub.owner })}</span>
                               )}
                               <span className="flex items-center gap-1">
                                 <RiDownloadLine className="h-3 w-3" />
@@ -338,7 +340,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                             setInstallDialogOpen(true);
                           }}
                         >
-                          Install
+                          {t('settings.common.install')}
                         </ButtonSmall>
                       </div>
                     </div>
@@ -357,7 +359,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 onClick={() => void loadMoreClawdHub()}
                 disabled={isLoadingMore}
               >
-                {isLoadingMore ? 'Loading...' : 'Load More Skills'}
+                {isLoadingMore ? t('settings.common.loading') : t('settings.skillsCatalogPage.loadMoreSkills')}
               </ButtonSmall>
             </div>
           )}
@@ -377,8 +379,8 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
         >
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Remove Catalog</DialogTitle>
-              <DialogDescription>Are you sure you want to remove this catalog?</DialogDescription>
+              <DialogTitle>{t('settings.skillsCatalogPage.removeCatalog')}</DialogTitle>
+              <DialogDescription>{t('settings.skillsCatalogPage.removeCatalogDesc')}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <ButtonLarge
@@ -386,10 +388,10 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 onClick={() => setIsRemoveCatalogDialogOpen(false)}
                 disabled={isRemovingCatalog}
               >
-                Cancel
+                {t('settings.common.cancel')}
               </ButtonLarge>
               <ButtonLarge className="bg-[var(--status-error)] hover:bg-[var(--status-error)]/90 text-white" onClick={() => void removeSelectedCatalog()} disabled={isRemovingCatalog}>
-                Remove Catalog
+                {t('settings.skillsCatalogPage.removeCatalog')}
               </ButtonLarge>
             </DialogFooter>
           </DialogContent>
