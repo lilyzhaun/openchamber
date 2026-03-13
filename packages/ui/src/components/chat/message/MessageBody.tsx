@@ -3,12 +3,12 @@ import type { Part } from '@opencode-ai/sdk/v2';
 
 import UserTextPart from './parts/UserTextPart';
 import ToolPart from './parts/ToolPart';
-import ProgressiveGroup from './parts/ProgressiveGroup';
+import AssistantTextPart from './parts/AssistantTextPart';
 import ReasoningPart from './parts/ReasoningPart';
 import { MessageFilesDisplay } from '../FileAttachment';
 import type { ToolPart as ToolPartType } from '@opencode-ai/sdk/v2';
 import type { StreamPhase, ToolPopupContent, AgentMentionInfo } from './types';
-import type { TurnGroupingContext } from '../hooks/useTurnGrouping';
+import type { TurnGroupingContext } from '../lib/turns/types';
 import { cn } from '@/lib/utils';
 import { isEmptyTextPart, extractTextContent } from './partUtils';
 import { FadeInOnReveal } from './FadeInOnReveal';
@@ -19,7 +19,6 @@ import { ArrowsMerge } from '@/components/icons/ArrowsMerge';
 import type { ContentChangeReason } from '@/hooks/useChatScrollManager';
 
 import { SimpleMarkdownRenderer } from '../MarkdownRenderer';
-import { useMessageStore } from '@/stores/messageStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { flattenAssistantTextParts } from '@/lib/messages/messageText';
@@ -32,7 +31,10 @@ import { isVSCodeRuntime } from '@/lib/desktop';
 import { toPng } from 'html-to-image';
 import { toast } from '@/components/ui';
 import { formatTimestampForDisplay } from './timeFormat';
-import { useI18n } from '@/contexts/useI18n';
+import { ToolRevealOnMount } from './parts/ToolRevealOnMount';
+import { StaticToolRow } from './parts/ProgressiveGroup';
+import { getStaticGroupToolName, isExpandableTool, isStandaloneTool } from './parts/toolRenderUtils';
+import TurnActivity from '../components/TurnActivity';
 
 type SubtaskPartLike = Part & {
     type: 'subtask';
@@ -74,7 +76,6 @@ const normalizeSubtaskModel = (model: SubtaskPartLike['model']): string | null =
 };
 
 const UserSubtaskPart: React.FC<{ part: SubtaskPartLike }> = ({ part }) => {
-    const { t } = useI18n();
     const [expanded, setExpanded] = React.useState(false);
     const setCurrentSession = useSessionStore((state) => state.setCurrentSession);
 
@@ -88,7 +89,7 @@ const UserSubtaskPart: React.FC<{ part: SubtaskPartLike }> = ({ part }) => {
     return (
         <div className="mt-2">
             <div className="flex items-center gap-2 flex-wrap">
-                <span className="typography-meta font-semibold text-foreground">{t('chat.message.delegatedTask')}</span>
+                <span className="typography-meta font-semibold text-foreground">Delegated task</span>
                 {command ? (
                     <span className="inline-flex h-5 items-center rounded px-1.5 text-[11px] leading-none bg-foreground/5 text-muted-foreground">
                         /{command}
@@ -119,7 +120,7 @@ const UserSubtaskPart: React.FC<{ part: SubtaskPartLike }> = ({ part }) => {
                         className="typography-meta text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
                         onClick={() => setExpanded((value) => !value)}
                     >
-                        {expanded ? t('chat.message.hidePrompt') : t('chat.message.showPrompt')}
+                        {expanded ? 'Hide prompt' : 'Show prompt'}
                     </button>
                     {expanded ? (
                         <pre className="typography-meta mt-1.5 overflow-x-auto whitespace-pre-wrap break-words text-foreground/85">
@@ -138,7 +139,7 @@ const UserSubtaskPart: React.FC<{ part: SubtaskPartLike }> = ({ part }) => {
                             void setCurrentSession(taskSessionID);
                         }}
                     >
-                        {t('chat.message.openSubtaskSession')}
+                        Open subtask session
                     </button>
                 </div>
             ) : null}
@@ -147,7 +148,6 @@ const UserSubtaskPart: React.FC<{ part: SubtaskPartLike }> = ({ part }) => {
 };
 
 const UserShellActionPart: React.FC<{ part: ShellActionPartLike }> = ({ part }) => {
-    const { t } = useI18n();
     const [expanded, setExpanded] = React.useState(false);
     const [copiedOutput, setCopiedOutput] = React.useState(false);
     const copiedResetTimeoutRef = React.useRef<number | null>(null);
@@ -189,7 +189,7 @@ const UserShellActionPart: React.FC<{ part: ShellActionPartLike }> = ({ part }) 
     return (
         <div className="mt-2">
             <div className="flex items-center gap-2 flex-wrap">
-                <span className="typography-meta font-semibold text-foreground">{t('chat.message.shellCommand')}</span>
+                <span className="typography-meta font-semibold text-foreground">Shell command</span>
                 {status ? (
                     <span className={cn(
                         'inline-flex h-5 items-center rounded px-1.5 text-[11px] leading-none',
@@ -216,7 +216,7 @@ const UserShellActionPart: React.FC<{ part: ShellActionPartLike }> = ({ part }) 
                             className="typography-meta text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
                             onClick={() => setExpanded((value) => !value)}
                         >
-                            {expanded ? t('chat.message.hideOutput') : t('chat.message.showOutput')}
+                            {expanded ? 'Hide output' : 'Show output'}
                         </button>
                         <button
                             type="button"
@@ -224,8 +224,8 @@ const UserShellActionPart: React.FC<{ part: ShellActionPartLike }> = ({ part }) 
                             onClick={() => {
                                 void copyOutputToClipboard();
                             }}
-                            aria-label={copiedOutput ? t('chat.message.copied') : t('chat.message.copyOutput')}
-                            title={copiedOutput ? t('chat.message.copied') : t('chat.message.copyOutput')}
+                            aria-label={copiedOutput ? 'Copied' : 'Copy output'}
+                            title={copiedOutput ? 'Copied' : 'Copy output'}
                         >
                             {copiedOutput ? <RiCheckLine className="h-3.5 w-3.5" /> : <RiFileCopyLine className="h-3.5 w-3.5" />}
                         </button>
@@ -251,11 +251,7 @@ const formatTurnDuration = (durationMs: number): string => {
     return `${minutes}m ${seconds}s`;
 };
 
-const ACTIVITY_STANDALONE_TOOL_NAMES = new Set<string>(['task']);
 
-const isActivityStandaloneTool = (toolName: unknown): boolean => {
-    return typeof toolName === 'string' && ACTIVITY_STANDALONE_TOOL_NAMES.has(toolName.toLowerCase());
-};
 
 interface MessageBodyProps {
     messageId: string;
@@ -294,6 +290,24 @@ interface MessageBodyProps {
     stickyUserHeaderEnabled?: boolean;
 }
 
+const TOOL_REVEAL_CACHE_MAX = 200;
+const revealedToolIdsByMessage = new Map<string, Set<string>>();
+
+const readRevealedToolIds = (messageId: string): Set<string> => {
+    const cached = revealedToolIdsByMessage.get(messageId);
+    return cached ? new Set(cached) : new Set<string>();
+};
+
+const writeRevealedToolIds = (messageId: string, value: Set<string>): void => {
+    if (revealedToolIdsByMessage.size >= TOOL_REVEAL_CACHE_MAX && !revealedToolIdsByMessage.has(messageId)) {
+        const oldest = revealedToolIdsByMessage.keys().next().value;
+        if (oldest) {
+            revealedToolIdsByMessage.delete(oldest);
+        }
+    }
+    revealedToolIdsByMessage.set(messageId, new Set(value));
+};
+
 const UserMessageBody: React.FC<{
     messageId: string;
     parts: Part[];
@@ -309,7 +323,6 @@ const UserMessageBody: React.FC<{
     userActionsMode?: 'inline' | 'external-content' | 'external-actions';
     stickyUserHeaderEnabled?: boolean;
 }> = ({ messageId, parts, isMobile, hasTouchInput, hasTextContent, onCopyMessage, copiedMessage, onShowPopup, agentMention, onRevert, onFork, userActionsMode = 'inline', stickyUserHeaderEnabled = true }) => {
-    const { t } = useI18n();
     const [copyHintVisible, setCopyHintVisible] = React.useState(false);
     const copyHintTimeoutRef = React.useRef<number | null>(null);
 
@@ -419,7 +432,7 @@ const UserMessageBody: React.FC<{
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
-                                aria-label={t('chat.tooltip.revertFromHere')}
+                                aria-label="Revert to this message"
                                 onPointerDown={(event) => event.stopPropagation()}
                                 onClick={(event) => {
                                     event.stopPropagation();
@@ -429,7 +442,7 @@ const UserMessageBody: React.FC<{
                                 <RiArrowGoBackLine className="h-3 w-3" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent sideOffset={6}>{t('chat.tooltip.revertFromHere')}</TooltipContent>
+                        <TooltipContent sideOffset={6}>Revert from here</TooltipContent>
                     </Tooltip>
                 )}
                 {onFork && (
@@ -440,7 +453,7 @@ const UserMessageBody: React.FC<{
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
-                                aria-label={t('chat.tooltip.forkFromHere')}
+                                aria-label="Fork from this message"
                                 onPointerDown={(event) => event.stopPropagation()}
                                 onClick={(event) => {
                                     event.stopPropagation();
@@ -450,7 +463,7 @@ const UserMessageBody: React.FC<{
                                 <RiGitBranchLine className="h-3 w-3" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent sideOffset={6}>{t('chat.tooltip.forkFromHere')}</TooltipContent>
+                        <TooltipContent sideOffset={6}>Fork from here</TooltipContent>
                     </Tooltip>
                 )}
                 {canCopyMessage && hasCopyableText && (
@@ -462,7 +475,7 @@ const UserMessageBody: React.FC<{
                                 size="icon"
                                 data-visible={copyHintVisible || isMessageCopied ? 'true' : undefined}
                                 className="h-6 w-6 text-muted-foreground bg-transparent hover:text-foreground hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50"
-                                aria-label={t('chat.tooltip.copyMessage')}
+                                aria-label="Copy message text"
                                 onPointerDown={(event) => event.stopPropagation()}
                                 onClick={handleCopyButtonClick}
                                 onFocus={() => setCopyHintVisible(true)}
@@ -479,7 +492,7 @@ const UserMessageBody: React.FC<{
                                 )}
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent sideOffset={6}>{t('chat.tooltip.copyMessage')}</TooltipContent>
+                        <TooltipContent sideOffset={6}>Copy message</TooltipContent>
                     </Tooltip>
                 )}
             </div>
@@ -508,17 +521,17 @@ const UserMessageBody: React.FC<{
                 {userContentParts.map((part, index) => {
                     if (isSubtaskPart(part)) {
                         return (
-                            <FadeInOnReveal key={part.id ?? `user-subtask-${index}`}>
+                            <React.Fragment key={part.id ?? `user-subtask-${index}`}>
                                 <UserSubtaskPart part={part} />
-                            </FadeInOnReveal>
+                            </React.Fragment>
                         );
                     }
 
                     if (isShellActionPart(part)) {
                         return (
-                            <FadeInOnReveal key={part.id ?? `user-shell-${index}`}>
+                            <React.Fragment key={part.id ?? `user-shell-${index}`}>
                                 <UserShellActionPart part={part} />
-                            </FadeInOnReveal>
+                            </React.Fragment>
                         );
                     }
 
@@ -531,14 +544,14 @@ const UserMessageBody: React.FC<{
                         }
                     }
                     return (
-                        <FadeInOnReveal key={part.id ?? `user-text-${index}`}>
+                        <React.Fragment key={part.id ?? `user-text-${index}`}>
                             <UserTextPart
                                 part={part}
                                 messageId={messageId}
                                 isMobile={isMobile}
                                 agentMention={mentionForPart}
                             />
-                        </FadeInOnReveal>
+                        </React.Fragment>
                     );
                 })}
             </div>
@@ -573,18 +586,22 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
     turnGroupingContext,
     errorMessage,
 }) => {
-    const { t } = useI18n();
-
-    void _streamPhase;
+    const streamPhase = _streamPhase;
     void _allowAnimation;
     const [copyHintVisible, setCopyHintVisible] = React.useState(false);
     const copyHintTimeoutRef = React.useRef<number | null>(null);
     const messageContentRef = React.useRef<HTMLDivElement>(null);
+    const toolRevealReadyRef = React.useRef(false);
+
+    React.useEffect(() => {
+        toolRevealReadyRef.current = true;
+    }, []);
 
     const canCopyMessage = Boolean(onCopyMessage);
     const isMessageCopied = Boolean(copiedMessage);
     const isTouchContext = Boolean(hasTouchInput ?? isMobile);
     const awaitingMessageCompletion = !isMessageCompleted;
+    const animateActivityRows = awaitingMessageCompletion || Boolean(turnGroupingContext?.isWorking);
 
     const visibleParts = React.useMemo(() => {
         return parts
@@ -599,12 +616,92 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
         return visibleParts.filter((part): part is ToolPartType => part.type === 'tool');
     }, [visibleParts]);
 
+    const toolRevealStateRef = React.useRef<{
+        messageId: string;
+        hasCommitted: boolean;
+        persistedToolIds: Set<string>;
+        animatedToolIds: Set<string>;
+    }>({
+        messageId,
+        hasCommitted: false,
+        persistedToolIds: readRevealedToolIds(messageId),
+        animatedToolIds: new Set<string>(),
+    });
+
+    if (toolRevealStateRef.current.messageId !== messageId) {
+        toolRevealStateRef.current = {
+            messageId,
+            hasCommitted: false,
+            persistedToolIds: readRevealedToolIds(messageId),
+            animatedToolIds: new Set<string>(),
+        };
+    }
+
+    const currentToolIds = React.useMemo(() => {
+        const ids = new Set<string>();
+
+        for (const toolPart of toolParts) {
+            ids.add(toolPart.id);
+        }
+
+        const activitySegments = turnGroupingContext?.activityGroupSegments;
+        if (Array.isArray(activitySegments)) {
+            for (const segment of activitySegments) {
+                if (segment.anchorMessageId !== messageId) {
+                    continue;
+                }
+                for (const activity of segment.parts) {
+                    if (activity.kind !== 'tool') {
+                        continue;
+                    }
+                    const toolId = (activity.part as { id?: unknown }).id;
+                    if (typeof toolId === 'string' && toolId.length > 0) {
+                        ids.add(toolId);
+                    }
+                }
+            }
+        }
+
+        return Array.from(ids);
+    }, [messageId, toolParts, turnGroupingContext?.activityGroupSegments]);
+    const shouldAnimateNewToolMount = Boolean(turnGroupingContext?.isWorking && toolRevealReadyRef.current);
+    const persistedToolIds = toolRevealStateRef.current.persistedToolIds;
+    const animatedToolIds = toolRevealStateRef.current.animatedToolIds;
+
+    if (shouldAnimateNewToolMount && toolRevealStateRef.current.hasCommitted) {
+        for (const toolId of currentToolIds) {
+            if (!persistedToolIds.has(toolId)) {
+                animatedToolIds.add(toolId);
+            }
+        }
+    }
+
+    const animatedToolIdsKey = Array.from(animatedToolIds).join('\u0000');
+    const animatedToolIdsLookup = React.useMemo(
+        () => new Set(animatedToolIdsKey ? animatedToolIdsKey.split('\u0000') : []),
+        [animatedToolIdsKey]
+    );
+
+    React.useEffect(() => {
+        const nextPersistedToolIds = new Set(toolRevealStateRef.current.persistedToolIds);
+        for (const toolId of currentToolIds) {
+            nextPersistedToolIds.add(toolId);
+        }
+        toolRevealStateRef.current.persistedToolIds = nextPersistedToolIds;
+        toolRevealStateRef.current.hasCommitted = true;
+        writeRevealedToolIds(messageId, nextPersistedToolIds);
+    }, [currentToolIds, messageId]);
+
     const assistantTextParts = React.useMemo(() => {
         return visibleParts.filter((part) => part.type === 'text');
     }, [visibleParts]);
 
     const createSessionFromAssistantMessage = useSessionStore((state) => state.createSessionFromAssistantMessage);
     const openMultiRunLauncherWithPrompt = useUIStore((state) => state.openMultiRunLauncherWithPrompt);
+    const chatRenderMode = useUIStore((state) => state.chatRenderMode);
+    const activityRenderMode = useUIStore((state) => state.activityRenderMode);
+    const isSortedRenderMode = chatRenderMode === 'sorted';
+    const collapsedPreviewCount = activityRenderMode === 'collapsed' ? 7 : 0;
     const isLastAssistantInTurn = turnGroupingContext?.isLastAssistantInTurn ?? false;
     const hasStopFinish = messageFinish === 'stop';
 
@@ -615,11 +712,11 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
 
     const readAloudTooltip = React.useMemo(() => {
         if (isTTSPlaying) {
-            return t('chat.tooltip.stopSpeaking');
+            return 'Stop speaking';
         }
-        const providerLabel = voiceProvider === 'browser' ? t('chat.voice.provider.browser') : voiceProvider === 'openai' ? t('chat.voice.provider.openai') : t('chat.voice.provider.say');
-        return t('chat.tooltip.readAloudWithProvider', { provider: providerLabel });
-    }, [isTTSPlaying, t, voiceProvider]);
+        const providerLabel = voiceProvider === 'browser' ? 'Browser' : voiceProvider === 'openai' ? 'OpenAI' : 'Say';
+        return `Read aloud (${providerLabel} voice)`;
+    }, [isTTSPlaying, voiceProvider]);
 
 
     const hasTools = toolParts.length > 0;
@@ -933,10 +1030,10 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                     document.body.removeChild(link);
                 }
 
-                toast.success(t('chat.toast.imageSaved'));
+                toast.success('Image saved');
             } catch (error) {
                 console.error('Failed to generate image:', error);
-                toast.error(t('chat.toast.generateImageFailed'));
+                toast.error('Failed to generate image');
             } finally {
                 if (wrapper && wrapper.parentNode) {
                     wrapper.parentNode.removeChild(wrapper);
@@ -953,330 +1050,263 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
         };
     }, [clearCopyHintTimeout]);
 
-    const toolConnections = React.useMemo(() => {
-        const connections: Record<string, { hasPrev: boolean; hasNext: boolean }> = {};
-        const displayableTools = toolParts.filter((toolPart) => {
-            if (isActivityStandaloneTool(toolPart.tool)) {
-                return false;
-            }
-            return shouldShowTool(toolPart);
-        });
-
-        displayableTools.forEach((toolPart, index) => {
-            connections[toolPart.id] = {
-                hasPrev: index > 0,
-                hasNext: index < displayableTools.length - 1,
-            };
-        });
-
-        return connections;
-    }, [toolParts, shouldShowTool]);
-
     const activityPartsForTurn = React.useMemo(() => {
-        return turnGroupingContext?.activityParts ?? [];
-    }, [turnGroupingContext]);
-
-    const activityPartsForMessage = React.useMemo(() => {
-        if (!turnGroupingContext) return [];
-        return activityPartsForTurn.filter((activity) => activity.messageId === messageId);
-    }, [activityPartsForTurn, messageId, turnGroupingContext]);
+        const all = turnGroupingContext?.activityParts;
+        if (!isSortedRenderMode || !all) {
+            return [];
+        }
+        return all;
+    }, [isSortedRenderMode, turnGroupingContext?.activityParts]);
 
     const activityGroupSegmentsForMessage = React.useMemo(() => {
-        if (!turnGroupingContext) return [];
-        return turnGroupingContext.activityGroupSegments.filter((segment) => segment.anchorMessageId === messageId);
-    }, [messageId, turnGroupingContext]);
+        const all = turnGroupingContext?.activityGroupSegments;
+        if (!isSortedRenderMode || !all) {
+            return [];
+        }
+        return all.filter((segment) => segment.anchorMessageId === messageId);
+    }, [isSortedRenderMode, messageId, turnGroupingContext?.activityGroupSegments]);
 
-    const activityPartsByPart = React.useMemo(() => {
-        const map = new Map<Part, (typeof activityPartsForMessage)[number]>();
-        activityPartsForMessage.forEach((activity) => {
-            map.set(activity.part, activity);
-        });
-        return map;
-    }, [activityPartsForMessage]);
-
-
-    const visibleActivityPartsForTurn = React.useMemo(() => {
-        if (!turnGroupingContext) return [];
-
-        // Filter out reasoning if showReasoningTraces is off.
-        // Justification parts are already filtered at the source (useTurnGrouping)
-        // based on showTextJustificationActivity, so we keep them here.
-        const base = !showReasoningTraces
-            ? activityPartsForTurn.filter((activity) => activity.kind !== 'reasoning')
-            : activityPartsForTurn;
-
-        // Tools rendered standalone are excluded from Activity group.
-        return base.filter((activity) => {
-            if (activity.kind !== 'tool') {
-                return true;
+    const activityByPart = React.useMemo(() => {
+        const byRef = new Map<Part, (typeof activityPartsForTurn)[number]>();
+        const byId = new Map<string, (typeof activityPartsForTurn)[number]>();
+        activityPartsForTurn.forEach((activity) => {
+            byRef.set(activity.part, activity);
+            const partId = (activity.part as { id?: unknown }).id;
+            if (typeof partId === 'string' && partId.length > 0) {
+                byId.set(partId, activity);
             }
-            const toolName = (activity.part as ToolPartType).tool;
-            return !isActivityStandaloneTool(toolName);
         });
-    }, [activityPartsForTurn, showReasoningTraces, turnGroupingContext]);
 
-    const [hasEverHadMultipleVisibleActivities, setHasEverHadMultipleVisibleActivities] = React.useState(false);
+        return {
+            get: (part: Part) => {
+                const direct = byRef.get(part);
+                if (direct) {
+                    return direct;
+                }
+                const partId = (part as { id?: unknown }).id;
+                if (typeof partId === 'string' && partId.length > 0) {
+                    return byId.get(partId);
+                }
+                return undefined;
+            },
+        };
+    }, [activityPartsForTurn]);
 
-    React.useEffect(() => {
-        if (!turnGroupingContext) {
-            return;
-        }
+    const toggleActivityGroup = turnGroupingContext?.toggleGroup;
 
-        const hasTaskSplitSegments = turnGroupingContext.activityGroupSegments.some(
-            (segment) => segment.afterToolPartId !== null
-        );
-
-        const hasReasoningActivity = visibleActivityPartsForTurn.some(
-            (activity) => activity.kind === 'reasoning'
-        );
-
-        if (
-            visibleActivityPartsForTurn.length > 1 ||
-            (hasTaskSplitSegments && visibleActivityPartsForTurn.length > 0) ||
-            hasReasoningActivity
-        ) {
-            setHasEverHadMultipleVisibleActivities(true);
-        }
-    }, [turnGroupingContext, visibleActivityPartsForTurn]);
-
-    const shouldShowActivityGroup = Boolean(turnGroupingContext && hasEverHadMultipleVisibleActivities);
-
-    const shouldRenderActivityGroup = Boolean(
-        turnGroupingContext &&
-            shouldShowActivityGroup &&
-            visibleActivityPartsForTurn.length > 0 &&
-            activityGroupSegmentsForMessage.length > 0
-    );
-
-    const standaloneToolParts = React.useMemo(() => {
-        return toolParts.filter((toolPart) => isActivityStandaloneTool(toolPart.tool));
-    }, [toolParts]);
+    const shouldRenderActivityGroup = isSortedRenderMode
+        && activityGroupSegmentsForMessage.length > 0
+        && Boolean(toggleActivityGroup);
 
 
     const renderedParts = React.useMemo(() => {
         const rendered: React.ReactNode[] = [];
 
-        const renderActivitySegments = (afterToolPartId: string | null) => {
-            if (!turnGroupingContext || !shouldRenderActivityGroup) {
-                return;
-            }
-
-            activityGroupSegmentsForMessage
-                .filter((segment) => (segment.afterToolPartId ?? null) === afterToolPartId)
-                .forEach((segment) => {
-                    // Filter out reasoning if showReasoningTraces is off.
-                    // Justification parts are already filtered at the source (useTurnGrouping)
-                    // based on showTextJustificationActivity, so we keep them here.
-                    const visibleSegmentParts = !showReasoningTraces
-                        ? segment.parts.filter((activity) => activity.kind !== 'reasoning')
-                        : segment.parts;
-
-                    if (visibleSegmentParts.length === 0) {
-                        return;
-                    }
-
-                    rendered.push(
-                        <ProgressiveGroup
-                            key={`progressive-group-${segment.id}`}
-                            parts={visibleSegmentParts}
-                            isExpanded={turnGroupingContext.isGroupExpanded}
-                            onToggle={turnGroupingContext.toggleGroup}
-                            syntaxTheme={syntaxTheme}
-                            isMobile={isMobile}
-                            expandedTools={expandedTools}
-                            onToggleTool={onToggleTool}
-                            onShowPopup={onShowPopup}
-                            onContentChange={onContentChange}
-                            diffStats={turnGroupingContext.diffStats}
-                        />
-                    );
-                });
-        };
-
-        // Activity groups and standalone tasks are interleaved in message order.
-        // Note: Reasoning parts are rendered in the visibleParts.forEach loop below
-        // when Activity group isn't showing, to maintain proper ordering with tools.
-        renderActivitySegments(null);
-
-        standaloneToolParts.forEach((standaloneToolPart) => {
-            rendered.push(
-                <FadeInOnReveal key={`standalone-tool-${standaloneToolPart.id}`}>
-                    <ToolPart
-                        part={standaloneToolPart}
-                        isExpanded={expandedTools.has(standaloneToolPart.id)}
-                        onToggle={onToggleTool}
+        if (shouldRenderActivityGroup && toggleActivityGroup) {
+            activityGroupSegmentsForMessage.forEach((segment) => {
+                const visibleSegmentParts = showReasoningTraces
+                    ? segment.parts
+                    : segment.parts.filter((activity) => activity.kind !== 'reasoning');
+                if (visibleSegmentParts.length === 0) {
+                    return;
+                }
+                rendered.push(
+                    <TurnActivity
+                        key={`progressive-group-${segment.id}`}
+                        parts={visibleSegmentParts}
+                        isExpanded={turnGroupingContext.isGroupExpanded === true}
+                        collapsedPreviewCount={collapsedPreviewCount}
+                        onToggle={toggleActivityGroup}
                         syntaxTheme={syntaxTheme}
                         isMobile={isMobile}
-                        onContentChange={onContentChange}
+                        expandedTools={expandedTools}
+                        onToggleTool={onToggleTool}
                         onShowPopup={onShowPopup}
-                        hasPrevTool={false}
-                        hasNextTool={false}
+                        onContentChange={onContentChange}
+                        streamPhase={streamPhase}
+                        showHeader={true}
+                        animateRows={animateActivityRows}
+                        animatedToolIds={animatedToolIdsLookup}
+                        diffStats={turnGroupingContext.diffStats}
                     />
-                </FadeInOnReveal>
-            );
+                );
+            });
+        }
 
-            renderActivitySegments(standaloneToolPart.id);
-        });
+        // Flat rendering: iterate parts in natural order.
+        // Group consecutive static tools (read, grep, glob, etc.) into compact rows.
+        // Expandable tools (bash, edit, task) get individual rows.
+        // Text and reasoning render inline at their natural position.
+        let i = 0;
+        while (i < visibleParts.length) {
+            const part = visibleParts[i];
 
-        const partsWithTime: Array<{
-            part: Part;
-            index: number;
-            endTime: number | null;
-            element: React.ReactNode;
-        }> = [];
-
-        visibleParts.forEach((part, index) => {
-            const activity = activityPartsByPart.get(part);
-            if (!activity) {
-                return;
+            if (part.type === 'text') {
+                const activity = activityByPart.get(part);
+                if (isSortedRenderMode && !hasStopFinish) {
+                    i += 1;
+                    continue;
+                }
+                if (activity?.kind === 'justification') {
+                    i += 1;
+                    continue;
+                }
+                rendered.push(
+                    <AssistantTextPart
+                        key={`assistant-text-${messageId}-${i}`}
+                        part={part}
+                        messageId={messageId}
+                        streamPhase={streamPhase}
+                        chatRenderMode={chatRenderMode}
+                        onContentChange={onContentChange}
+                    />
+                );
+                i++;
+                continue;
             }
 
-            if (!turnGroupingContext) {
-                return;
-            }
-
-            let endTime: number | null = null;
-            let element: React.ReactNode | null = null;
-
-                if (!shouldShowActivityGroup) {
-                    if (activity.kind === 'tool') {
-                        const toolPart = part as ToolPartType;
-
-                        if (isActivityStandaloneTool(toolPart.tool)) {
-                            return;
-                        }
-
-                        const toolState = (toolPart as { state?: { time?: { end?: number | null | undefined } | null | undefined } | null | undefined }).state;
-                        const time = toolState?.time;
-                        const isFinalized = isToolFinalized(toolPart);
-
-                        if (!shouldShowTool(toolPart)) {
-                            return;
-                        }
-
-                    const connection = toolConnections[toolPart.id];
-
-                    const toolElement = (
-                        <FadeInOnReveal key={`tool-${toolPart.id}`}>
-                            <ToolPart
-                                part={toolPart}
-                                isExpanded={expandedTools.has(toolPart.id)}
-                                onToggle={onToggleTool}
-                                syntaxTheme={syntaxTheme}
-                                isMobile={isMobile}
-                                onContentChange={onContentChange}
-                                onShowPopup={onShowPopup}
-                                hasPrevTool={connection?.hasPrev ?? false}
-                                hasNextTool={connection?.hasNext ?? false}
-                            />
-                        </FadeInOnReveal>
-                    );
-
-                    element = toolElement;
-                    endTime = isFinalized && typeof time?.end === 'number' ? time.end : null;
-                } else if (activity.kind === 'reasoning' && showReasoningTraces) {
-                    // Fallback rendering for reasoning when Activity group isn't shown
-                    const time = (part as { time?: { end?: number | null | undefined } | null | undefined }).time;
-                    const partEndTime = typeof time?.end === 'number' ? time.end : null;
-
-                    const reasoningElement = (
-                        <FadeInOnReveal key={`reasoning-${activity.id}`}>
+            if (part.type === 'reasoning') {
+                const activity = activityByPart.get(part);
+                if (isSortedRenderMode && !hasStopFinish) {
+                    i += 1;
+                    continue;
+                }
+                if (activity?.kind === 'reasoning') {
+                    i += 1;
+                    continue;
+                }
+                if (showReasoningTraces) {
+                    if (isSortedRenderMode) {
+                        rendered.push(
                             <ReasoningPart
+                                key={`reasoning-${messageId}-${i}`}
                                 part={part}
                                 messageId={messageId}
                                 onContentChange={onContentChange}
                             />
+                        );
+                    } else {
+                        const partText = (part as { text?: string }).text;
+                        if (partText && partText.trim().length > 0) {
+                            rendered.push(
+                                <FadeInOnReveal key={`reasoning-${messageId}-${i}`}>
+                                    <div className="text-sm text-muted-foreground/60 italic leading-relaxed whitespace-pre-wrap">
+                                        {partText}
+                                    </div>
+                                </FadeInOnReveal>
+                            );
+                        }
+                    }
+                }
+                i++;
+                continue;
+            }
+
+            if (part.type === 'tool') {
+                const toolPart = part as ToolPartType;
+                const toolName = toolPart.tool?.toLowerCase() ?? '';
+
+                const activity = activityByPart.get(part);
+                if (activity?.kind === 'tool' && !isStandaloneTool(toolName)) {
+                    i += 1;
+                    continue;
+                }
+
+                if (!shouldShowTool(toolPart)) {
+                    i++;
+                    continue;
+                }
+
+                // Expandable tools: bash, edit, write, task, question — individual rows
+                if (isExpandableTool(toolName)) {
+                    rendered.push(
+                        <FadeInOnReveal key={`tool-${toolPart.id}`}>
+                            <ToolRevealOnMount animate={animatedToolIdsLookup.has(toolPart.id)} wipe>
+                                <ToolPart
+                                    part={toolPart}
+                                    isExpanded={expandedTools.has(toolPart.id)}
+                                    onToggle={onToggleTool}
+                                    syntaxTheme={syntaxTheme}
+                                    isMobile={isMobile}
+                                    onContentChange={onContentChange}
+                                    onShowPopup={onShowPopup}
+                                    animateTailText={animatedToolIdsLookup.has(toolPart.id)}
+                                />
+                            </ToolRevealOnMount>
                         </FadeInOnReveal>
                     );
-
-                    element = reasoningElement;
-                    endTime = partEndTime;
+                    i++;
+                    continue;
                 }
 
-                if (element) {
-                    partsWithTime.push({
-                        part,
-                        index,
-                        endTime,
-                        element,
-                    });
+                // Static tools: group consecutive tools of the same kind into compact rows
+                const groupToolName = getStaticGroupToolName(toolName);
+                const group: ToolPartType[] = [toolPart];
+                let j = i + 1;
+                while (j < visibleParts.length) {
+                    const next = visibleParts[j];
+                    if (next.type !== 'tool') break;
+                    const nextTool = next as ToolPartType;
+                    if (!shouldShowTool(nextTool)) { j++; continue; }
+                    const nextName = nextTool.tool?.toLowerCase() ?? '';
+                    if (getStaticGroupToolName(nextName) !== groupToolName) break;
+                    group.push(nextTool);
+                    j++;
                 }
-            }
-        });
 
-        partsWithTime.sort((a, b) => {
-            if (a.endTime === null && b.endTime === null) {
-                return a.index - b.index;
+                rendered.push(
+                    <FadeInOnReveal key={`static-tools-${toolPart.id}`}>
+                        <ToolRevealOnMount animate={group.some((candidate) => animatedToolIdsLookup.has(candidate.id))} wipe>
+                            <StaticToolRow
+                                toolName={groupToolName}
+                                activities={group.map(tp => ({
+                                    id: tp.id,
+                                    turnId: '',
+                                    messageId: messageId,
+                                    partIndex: 0,
+                                    part: tp,
+                                    kind: 'tool' as const,
+                                }))}
+                                animateTailText={group.some((candidate) => animatedToolIdsLookup.has(candidate.id))}
+                            />
+                        </ToolRevealOnMount>
+                    </FadeInOnReveal>
+                );
+                i = j;
+                continue;
             }
-            if (a.endTime === null) {
-                return 1;
-            }
-            if (b.endTime === null) {
-                return -1;
-            }
-            return a.endTime - b.endTime;
-        });
 
-        partsWithTime.forEach(({ element }) => {
-            rendered.push(element);
-        });
+            // Unknown part type — skip
+            i++;
+        }
 
         return rendered;
     }, [
-        activityPartsByPart,
+        activityByPart,
         activityGroupSegmentsForMessage,
+        animatedToolIdsLookup,
+        animateActivityRows,
+        chatRenderMode,
+        collapsedPreviewCount,
         expandedTools,
+        hasStopFinish,
         isMobile,
-        isToolFinalized,
+        isSortedRenderMode,
         messageId,
         onContentChange,
         onShowPopup,
         onToggleTool,
+        shouldRenderActivityGroup,
         shouldShowTool,
-        shouldShowActivityGroup,
+        streamPhase,
         showReasoningTraces,
         syntaxTheme,
-        toolConnections,
+        toggleActivityGroup,
         turnGroupingContext,
         visibleParts,
-        standaloneToolParts,
-        shouldRenderActivityGroup,
     ]);
 
-    const userMessageId = turnGroupingContext?.turnId;
-    const currentSessionId = useSessionStore((state) => state.currentSessionId);
-
-    const rawSummaryBodyFromStore = useMessageStore((state) => {
-        if (!userMessageId || !currentSessionId) return undefined;
-        const sessionMessages = state.messages.get(currentSessionId);
-        if (!sessionMessages) return undefined;
-        const userMsg = sessionMessages.find((m) => m.info?.id === userMessageId);
-        if (!userMsg) return undefined;
-        const summary = (userMsg.info as { summary?: { body?: string | null | undefined } | null | undefined }).summary;
-        const body = summary?.body;
-        return typeof body === 'string' && body.trim().length > 0 ? body : undefined;
-    });
-
-    const summaryCandidate =
-        typeof turnGroupingContext?.summaryBody === 'string' && turnGroupingContext.summaryBody.trim().length > 0
-            ? turnGroupingContext.summaryBody
-            : rawSummaryBodyFromStore;
-
-    const summaryBodyRef = React.useRef<string | undefined>(undefined);
-    if (summaryCandidate && summaryCandidate.trim().length > 0) {
-        summaryBodyRef.current = summaryCandidate;
-    }
-    const prevUserMessageId = React.useRef(userMessageId);
-    if (prevUserMessageId.current !== userMessageId) {
-        prevUserMessageId.current = userMessageId;
-        summaryBodyRef.current = undefined;
-    }
-    const summaryBody = summaryBodyRef.current;
-
-    const showSummaryBody =
-        turnGroupingContext?.isLastAssistantInTurn &&
-        summaryBody &&
-        summaryBody.trim().length > 0;
+    // With flat rendering, no collapsed summary is needed — text renders inline.
 
     const showErrorMessage = Boolean(errorMessage);
 
@@ -1317,7 +1347,7 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                                   !hasCopyableText && 'opacity-50'
                               )}
                               disabled={!hasCopyableText}
-                              aria-label={t('chat.tooltip.copyAnswer')}
+                              aria-label="Copy message text"
                               aria-hidden={!hasCopyableText}
                               onPointerDown={(event) => event.stopPropagation()}
                               onClick={handleCopyButtonClick}
@@ -1339,7 +1369,7 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                               )}
                           </Button>
                        </TooltipTrigger>
-                       <TooltipContent sideOffset={6}>{t('chat.tooltip.copyAnswer')}</TooltipContent>
+                       <TooltipContent sideOffset={6}>Copy answer</TooltipContent>
                    </Tooltip>
                )}
                <Tooltip delayDuration={1000}>
@@ -1363,7 +1393,7 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                             )}
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent sideOffset={6}>{isSharing ? t('chat.tooltip.savingImage') : t('chat.tooltip.saveAsImage')}</TooltipContent>
+                    <TooltipContent sideOffset={6}>{isSharing ? 'Saving image...' : 'Save as image'}</TooltipContent>
                 </Tooltip>
                <Tooltip delayDuration={1000}>
                    <TooltipTrigger asChild>
@@ -1378,7 +1408,7 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                            <RiChatNewLine className="h-4 w-4" />
                        </Button>
                    </TooltipTrigger>
-                   <TooltipContent sideOffset={6}>{t('chat.tooltip.startSessionFromAnswer')}</TooltipContent>
+                   <TooltipContent sideOffset={6}>Start new session from this answer</TooltipContent>
                </Tooltip>
               <Tooltip delayDuration={1000}>
                   <TooltipTrigger asChild>
@@ -1393,7 +1423,7 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                           <ArrowsMerge className="h-4 w-4" />
                       </Button>
                   </TooltipTrigger>
-                  <TooltipContent sideOffset={6}>{t('chat.tooltip.startMultiRunFromAnswer')}</TooltipContent>
+                  <TooltipContent sideOffset={6}>Start new multi-run from this answer</TooltipContent>
               </Tooltip>
 
               {showMessageTTSButtons && hasCopyableText && (
@@ -1407,7 +1437,7 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                                  'h-8 w-8 bg-transparent hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent focus-visible:ring-2 focus-visible:ring-primary/50',
                                  isTTSPlaying ? 'text-green-500' : 'text-muted-foreground hover:text-foreground'
                              )}
-                             aria-label={isTTSPlaying ? t('chat.tooltip.stopSpeaking') : readAloudTooltip}
+                             aria-label={isTTSPlaying ? 'Stop speaking' : 'Read aloud'}
                              onPointerDown={(event) => event.stopPropagation()}
                              onClick={handleTTSClick}
                          >
@@ -1450,42 +1480,9 @@ const AssistantMessageBody: React.FC<Omit<MessageBodyProps, 'isUser'>> = ({
                             </div>
                         </FadeInOnReveal>
                     )}
-                    {showSummaryBody && (
-                        <FadeInOnReveal key="summary-body">
-                            <div
-                                className="group/assistant-text relative break-words"
-                            >
-                                <SimpleMarkdownRenderer content={summaryBody} onShowPopup={onShowPopup} />
-                                {shouldShowFooter && (
-                                    <div className="mt-2 mb-1 flex items-center justify-start gap-1.5">
-                                        <div className="flex items-center gap-1.5">
-                                            {footerButtons}
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            {turnDurationText ? (
-                                                <span className="text-sm text-muted-foreground/60 tabular-nums flex items-center gap-1">
-                                                    <RiHourglassLine className="h-3.5 w-3.5" />
-                                                    {turnDurationText}
-                                                </span>
-                                            ) : null}
-                                            {footerTimestamp ? (
-                                                <span
-                                                    className={footerTimestampClassName}
-                                                    aria-label={`Message time: ${footerTimestamp}`}
-                                                >
-                                                    <RiTimeLine className="h-3.5 w-3.5" />
-                                                    {footerTimestamp}
-                                                </span>
-                                            ) : null}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </FadeInOnReveal>
-                    )}
                 </div>
                 <MessageFilesDisplay files={parts} onShowPopup={onShowPopup} />
-                {!showSummaryBody && shouldShowFooter && (
+                {shouldShowFooter && (
                     <div className="mt-2 mb-1 flex items-center justify-start gap-1.5">
                         <div className="flex items-center gap-1.5">
                             {footerButtons}
