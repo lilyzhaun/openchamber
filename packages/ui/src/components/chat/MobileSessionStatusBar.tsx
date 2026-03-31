@@ -1,5 +1,7 @@
 import React from 'react';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionUIStore } from '@/sync/session-ui-store';
+import { useSelectionStore } from '@/sync/selection-store';
+import { useSessions, useAllSessionStatuses } from '@/sync/sync-context';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
@@ -52,7 +54,7 @@ import { ProjectEditDialog } from '@/components/layout/ProjectEditDialog';
 import { useDrawerSwipe } from '@/hooks/useDrawerSwipe';
 import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
-import { useI18n } from '@/contexts/useI18n';
+import { useNotificationStore } from '@/sync/notification-store';
 
 interface MobileSessionStatusBarProps {
   onSessionSwitch?: (sessionId: string) => void;
@@ -75,9 +77,10 @@ const normalize = (value: string): string => {
 
 function useSessionGrouping(
   sessions: Session[],
-  sessionStatus: Map<string, { type: string }> | undefined,
-  sessionAttentionStates: Map<string, { needsAttention: boolean }> | undefined
+  sessionStatus: Record<string, { type: string }> | undefined
 ) {
+  const unseenCounts = useNotificationStore((s) => s.index.session.unseenCount);
+
   const parentChildMap = React.useMemo(() => {
     const map = new Map<string, Session[]>();
     const allIds = new Set(sessions.map((s) => s.id));
@@ -92,7 +95,7 @@ function useSessionGrouping(
   }, [sessions]);
 
   const getStatusType = React.useCallback((sessionId: string): 'busy' | 'retry' | 'idle' => {
-    const status = sessionStatus?.get(sessionId);
+    const status = sessionStatus?.[sessionId];
     if (status?.type === 'busy' || status?.type === 'retry') return status.type;
     return 'idle';
   }, [sessionStatus]);
@@ -127,7 +130,7 @@ function useSessionGrouping(
     topLevel.forEach((session) => {
       const statusType = getStatusType(session.id);
       const hasRunning = hasRunningChildren(session.id);
-      const attention = sessionAttentionStates?.get(session.id)?.needsAttention ?? false;
+      const attention = (unseenCounts[session.id] ?? 0) > 0;
 
       const enriched: SessionWithStatus = {
         ...session,
@@ -156,29 +159,27 @@ function useSessionGrouping(
     viewed.sort(sortByUpdated);
 
     return [...running, ...viewed];
-  }, [sessions, getStatusType, hasRunningChildren, getRunningChildrenCount, getChildIndicators, sessionAttentionStates]);
+  }, [sessions, getStatusType, hasRunningChildren, getRunningChildrenCount, getChildIndicators, unseenCounts]);
 
   const totalRunning = processedSessions.reduce((sum, s) => {
     const selfRunning = s._statusType !== 'idle' ? 1 : 0;
     return sum + selfRunning + (s._runningChildrenCount ?? 0);
   }, 0);
 
-  const totalUnread = processedSessions.filter((s) => sessionAttentionStates?.get(s.id)?.needsAttention ?? false).length;
+  const totalUnread = processedSessions.filter((s) => (unseenCounts[s.id] ?? 0) > 0).length;
 
   return { sessions: processedSessions, totalRunning, totalUnread, totalCount: processedSessions.length };
 }
 
 function useSessionHelpers(
   agents: Array<{ name: string }>,
-  sessionStatus: Map<string, { type: string }> | undefined,
-  sessionAttentionStates: Map<string, { needsAttention: boolean }> | undefined,
-  t: (key: string) => string,
+  sessionStatus: Record<string, { type: string }> | undefined
 ) {
   const getSessionAgentName = React.useCallback((session: Session): string => {
     const agent = (session as { agent?: string }).agent;
     if (agent) return agent;
 
-    const sessionAgentSelection = useSessionStore.getState().getSessionAgentSelection(session.id);
+    const sessionAgentSelection = useSelectionStore.getState().getSessionAgentSelection(session.id);
     if (sessionAgentSelection) return sessionAgentSelection;
 
     return agents[0]?.name ?? 'agent';
@@ -187,18 +188,18 @@ function useSessionHelpers(
   const getSessionTitle = React.useCallback((session: Session): string => {
     const title = session.title;
     if (title && title.trim()) return title;
-    return t('session.untitled');
-  }, [t]);
+    return 'New session';
+  }, []);
 
   const isRunning = React.useCallback((sessionId: string): boolean => {
-    const status = sessionStatus?.get(sessionId);
+    const status = sessionStatus?.[sessionId];
     return status?.type === 'busy' || status?.type === 'retry';
   }, [sessionStatus]);
 
-  // Use server-authoritative attention state instead of local activity state
+  const unseenCounts = useNotificationStore((s) => s.index.session.unseenCount);
   const needsAttention = React.useCallback((sessionId: string): boolean => {
-    return sessionAttentionStates?.get(sessionId)?.needsAttention ?? false;
-  }, [sessionAttentionStates]);
+    return (unseenCounts[sessionId] ?? 0) > 0;
+  }, [unseenCounts]);
 
   return { getSessionAgentName, getSessionTitle, isRunning, needsAttention };
 }
@@ -206,17 +207,16 @@ function useSessionHelpers(
 // Hook to calculate project status indicators
 function useProjectStatus(
   sessions: Session[],
-  sessionStatus: Map<string, { type: string }> | undefined,
-  sessionAttentionStates: Map<string, { needsAttention: boolean }> | undefined,
+  sessionStatus: Record<string, { type: string }> | undefined,
   currentSessionId: string | null
 ) {
-  const availableWorktreesByProject = useSessionStore((state) => state.availableWorktreesByProject);
-  const sessionsByDirectory = useSessionStore((state) => state.sessionsByDirectory);
-  const getSessionsByDirectory = useSessionStore((state) => state.getSessionsByDirectory);
+  const availableWorktreesByProject = useSessionUIStore((state) => state.availableWorktreesByProject);
+  const getSessionsByDirectory = useSessionUIStore((state) => state.getSessionsByDirectory);
+  const notifUnseenCounts = useNotificationStore((s) => s.index.session.unseenCount);
 
   const projectStatusMap = React.useCallback((projectPath: string): { hasRunning: boolean; hasUnread: boolean } => {
     const getStatusType = (sessionId: string): 'busy' | 'retry' | 'idle' => {
-      const status = sessionStatus?.get(sessionId);
+      const status = sessionStatus?.[sessionId];
       if (status?.type === 'busy' || status?.type === 'retry') return status.type;
       return 'idle';
     };
@@ -243,7 +243,7 @@ function useProjectStatus(
     let hasUnread = false;
 
     for (const dir of dirs) {
-      const list = sessionsByDirectory.get(dir) ?? getSessionsByDirectory(dir);
+      const list = getSessionsByDirectory(dir);
       for (const session of list) {
         if (!session?.id || seen.has(session.id)) {
           continue;
@@ -255,7 +255,7 @@ function useProjectStatus(
           hasRunning = true;
         }
 
-        if (session.id !== currentSessionId && sessionAttentionStates?.get(session.id)?.needsAttention === true) {
+        if (session.id !== currentSessionId && (notifUnseenCounts[session.id] ?? 0) > 0) {
           hasUnread = true;
         }
 
@@ -269,7 +269,7 @@ function useProjectStatus(
     }
 
     return { hasRunning, hasUnread };
-  }, [sessionsByDirectory, getSessionsByDirectory, availableWorktreesByProject, sessionStatus, sessionAttentionStates, currentSessionId]);
+  }, [getSessionsByDirectory, availableWorktreesByProject, sessionStatus, notifUnseenCounts, currentSessionId]);
 
   return projectStatusMap;
 }
@@ -746,7 +746,6 @@ function ProjectEditPanel({
   onDelete,
   homeDirectory,
 }: ProjectEditPanelProps) {
-  const { t } = useI18n();
   const [localProjects, setLocalProjects] = React.useState(projects);
 
   React.useEffect(() => {
@@ -799,10 +798,10 @@ function ProjectEditPanel({
     <MobileOverlayPanel
       open={isOpen}
       onClose={onClose}
-      title={t('mobileSessionStatus.editProjects')}
+      title="Edit Projects"
       footer={
         <p className="text-xs text-[var(--surface-mutedForeground)] text-center">
-          {t('mobileSessionStatus.editProjectsHint')}
+          Drag items to reorder, or use arrows to move. Tap edit to change details.
         </p>
       }
     >
@@ -834,7 +833,7 @@ function ProjectEditPanel({
 
         {localProjects.length === 0 && (
           <div className="text-center py-8 text-[var(--surface-mutedForeground)]">
-            {t('mobileSessionStatus.noProjectsToEdit')}
+            No projects to edit
           </div>
         )}
       </div>
@@ -960,7 +959,6 @@ function ProjectBar({
   onRemoveProject,
   homeDirectory
 }: ProjectBarProps) {
-  const { t } = useI18n();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [editPanelOpen, setEditPanelOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -1015,12 +1013,12 @@ function ProjectBar({
   if (projects.length === 0) {
     return (
       <div className="flex items-center gap-2 px-2 py-1 border-b border-[var(--interactive-border)] bg-transparent">
-        <span className="text-[11px] text-[var(--surface-mutedForeground)]">{t('mobileSessionStatus.noProjects')}</span>
+        <span className="text-[11px] text-[var(--surface-mutedForeground)]">No projects</span>
         <button
           type="button"
           onClick={onAddProject}
           className="flex items-center justify-center !py-1.5 px-2 rounded-md border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 !min-h-0"
-          aria-label={t('nav.addProject')}
+          aria-label="Add project"
         >
           <RiAddLine className="h-3 w-3" />
         </button>
@@ -1096,7 +1094,7 @@ function ProjectBar({
         type="button"
         onClick={onAddProject}
         className="flex items-center justify-center !py-1.5 px-2 rounded-md border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 shrink-0 !min-h-0"
-        aria-label={t('nav.addProject')}
+        aria-label="Add project"
       >
         <RiAddLine className="h-3.5 w-3.5" />
       </button>
@@ -1105,17 +1103,17 @@ function ProjectBar({
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{t('session.common.removeProject')}</DialogTitle>
+            <DialogTitle>Remove Project</DialogTitle>
             <DialogDescription>
-              {t('session.common.removeProjectConfirmPrefix')} <span className="font-medium text-foreground">{projectToDelete?.label || formatDirectoryName(projectToDelete?.path || '', homeDirectory)}</span>?
+              Are you sure you want to remove <span className="font-medium text-foreground">{projectToDelete?.label || formatDirectoryName(projectToDelete?.path || '', homeDirectory)}</span>?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              {t('settings.common.cancel')}
+              Cancel
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
-              {t('session.common.remove')}
+              Remove
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1181,7 +1179,6 @@ function CollapsedView({
   contextUsage: SessionContextUsage | null;
   childIndicators?: Array<{ session: Session; isRunning: boolean }>;
 }) {
-  const { t } = useI18n();
   const { handleTouchStart, handleTouchMove, handleTouchEnd } = useDrawerSwipe();
 
   return (
@@ -1225,7 +1222,7 @@ function CollapsedView({
           }}
           className="flex items-center gap-0.5 px-2 py-1 text-[12px] leading-tight !min-h-0 rounded border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 self-center"
         >
-          {t('session.common.new')}
+          New
         </button>
       </div>
     </div>
@@ -1291,12 +1288,11 @@ function ExpandedView({
   homeDirectory: string | null;
   childIndicators?: Array<{ session: Session; isRunning: boolean }>;
 }) {
-  const { t } = useI18n();
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [collapsedHeight, setCollapsedHeight] = React.useState<number | null>(null);
   const [hasMeasured, setHasMeasured] = React.useState(false);
   const { handleTouchStart, handleTouchMove, handleTouchEnd } = useDrawerSwipe();
-  const availableWorktreesByProject = useSessionStore((state) => state.availableWorktreesByProject);
+  const availableWorktreesByProject = useSessionUIStore((state) => state.availableWorktreesByProject);
 
   React.useEffect(() => {
     if (containerRef.current && !hasMeasured && !isExpanded) {
@@ -1385,7 +1381,7 @@ function ExpandedView({
             }}
             className="flex items-center gap-0.5 px-2 py-1 text-[12px] leading-tight !min-h-0 rounded border border-[var(--primary-base)]/60 bg-[var(--primary-base)]/5 text-[var(--primary-base)]/80 hover:text-[var(--primary-base)] hover:bg-[var(--primary-base)]/10 self-start"
           >
-            {t('session.common.new')}
+            New
           </button>
         </div>
       </div>
@@ -1409,7 +1405,7 @@ function ExpandedView({
       >
         {displaySessions.length === 0 ? (
           <div className="flex items-center justify-center py-3 text-[11px] text-[var(--surface-mutedForeground)]">
-            <span>{t('mobileSessionStatus.noSessionsInProject')}</span>
+            <span>No sessions in this project</span>
           </div>
         ) : (
           displaySessions.map((session) => (
@@ -1434,15 +1430,13 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   onSessionSwitch,
   cornerRadius,
 }) => {
-  const { t } = useI18n();
   const { currentTheme } = useThemeSystem();
-  const sessions = useSessionStore((state) => state.sessions);
-  const currentSessionId = useSessionStore((state) => state.currentSessionId);
-  const sessionStatus = useSessionStore((state) => state.sessionStatus);
-  const sessionAttentionStates = useSessionStore((state) => state.sessionAttentionStates);
-  const setCurrentSession = useSessionStore((state) => state.setCurrentSession);
-  const openNewSessionDraft = useSessionStore((state) => state.openNewSessionDraft);
-  const getContextUsage = useSessionStore((state) => state.getContextUsage);
+  const sessions = useSessions();
+  const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
+  const sessionStatus = useAllSessionStatuses();
+  const setCurrentSession = useSessionUIStore((state) => state.setCurrentSession);
+  const openNewSessionDraft = useSessionUIStore((state) => state.openNewSessionDraft);
+  const getContextUsage = useSessionUIStore((state) => state.getContextUsage);
   const agents = useConfigStore((state) => state.agents);
   const { getCurrentModel } = useConfigStore();
   const { isMobile, showMobileSessionStatusBar, isMobileSessionStatusBarCollapsed, setIsMobileSessionStatusBarCollapsed } = useUIStore();
@@ -1459,14 +1453,14 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
   // Directory store
   const homeDirectory = useDirectoryStore((state) => state.homeDirectory);
 
-  const { sessions: sortedSessions, totalRunning, totalUnread, totalCount } = useSessionGrouping(sessions, sessionStatus, sessionAttentionStates);
-  const { getSessionAgentName, getSessionTitle, needsAttention } = useSessionHelpers(agents, sessionStatus, sessionAttentionStates, t);
-  const getProjectStatus = useProjectStatus(sessions, sessionStatus, sessionAttentionStates, currentSessionId);
+  const { sessions: sortedSessions, totalRunning, totalUnread, totalCount } = useSessionGrouping(sessions, sessionStatus);
+  const { getSessionAgentName, getSessionTitle, needsAttention } = useSessionHelpers(agents, sessionStatus);
+  const getProjectStatus = useProjectStatus(sessions, sessionStatus, currentSessionId);
 
   const currentSession = sessions.find((s) => s.id === currentSessionId);
   const currentSessionTitle = currentSession
     ? getSessionTitle(currentSession)
-    : t('mobileSessionStatus.swipeHint');
+    : '← Swipe here to open sidebars →';
 
   // Calculate current session's child indicators
   const currentSessionWithStatus = sortedSessions.find((s) => s.id === currentSessionId);
@@ -1531,19 +1525,19 @@ export const MobileSessionStatusBar: React.FC<MobileSessionStatusBarProps> = ({
         if (result.success && result.path) {
           const added = addProject(result.path, { id: result.projectId });
           if (!added) {
-            toast.error(t('session.toast.addProjectFailed'), {
-              description: t('session.toast.selectValidDirectory'),
+            toast.error('Failed to add project', {
+              description: 'Please select a valid directory.',
             });
           }
         } else if (result.error && result.error !== 'Directory selection cancelled') {
-          toast.error(t('session.toast.selectDirectoryFailed'), {
+          toast.error('Failed to select directory', {
             description: result.error,
           });
         }
       })
       .catch((error) => {
         console.error('Failed to select directory:', error);
-        toast.error(t('session.toast.selectDirectoryFailed'));
+        toast.error('Failed to select directory');
       });
   };
 

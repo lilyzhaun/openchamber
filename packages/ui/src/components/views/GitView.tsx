@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useFireworksCelebration } from '@/contexts/FireworksContext';
 import type { GitIdentityProfile, CommitFileEntry } from '@/lib/api/types';
@@ -61,12 +61,17 @@ import { BranchIntegrationSection, type OperationLogEntry } from './git/BranchIn
 import type { GitRemote } from '@/lib/gitApi';
 import { getRootBranch } from '@/lib/worktrees/worktreeStatus';
 import { cn } from '@/lib/utils';
-import { generateCommitMessage as generateSessionCommitMessage } from '@/lib/gitApi';
+import { generateCommitMessage as generateSessionCommitMessage, getGitWorktreeBootstrapStatus } from '@/lib/gitApi';
 
 type SyncAction = 'fetch' | 'pull' | 'push' | null;
 type CommitAction = 'commit' | 'commitAndPush' | null;
 type BranchOperation = 'merge' | 'rebase' | null;
 type ActionTab = 'commit' | 'branch' | 'pr' | 'worktree';
+type HistoryBranchDivider = {
+  insertBeforeIndex: number;
+  branchName: string;
+  direction: 'up' | 'down';
+} | null;
 
 const GIT_ACTION_TAB_STORAGE_KEY = 'oc.git.actionTab';
 
@@ -224,12 +229,13 @@ export const GitView: React.FC<GitViewProps> = () => {
   const { t } = useI18n();
   const { git } = useRuntimeAPIs();
   const currentDirectory = useEffectiveDirectory();
-  const {
-    currentSessionId,
-    worktreeMetadata: worktreeMap,
-    availableWorktrees,
-    newSessionDraft,
-  } = useSessionStore();
+  const [worktreeBootstrapStatus, setWorktreeBootstrapStatus] = React.useState<'pending' | 'ready' | 'failed' | null>(null);
+  const [isWaitingForGitRefreshAfterBootstrap, setIsWaitingForGitRefreshAfterBootstrap] = React.useState(false);
+  const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
+  const newSessionDraft = useSessionUIStore((s) => s.newSessionDraft);
+  const setDraftBootstrapPendingDirectory = useSessionUIStore((s) => s.setDraftBootstrapPendingDirectory);
+  const worktreeMap = useSessionUIStore((s) => s.worktreeMetadata);
+  const availableWorktrees = useSessionUIStore((s) => s.availableWorktrees);
   const normalizedCurrentDirectory = normalizePath(currentDirectory);
   const inferredWorktreeMetadata = React.useMemo(() => {
     if (!normalizedCurrentDirectory) {
@@ -274,20 +280,90 @@ export const GitView: React.FC<GitViewProps> = () => {
   const currentIdentity = useGitIdentity(currentDirectory ?? null);
   const isLoading = useGitStore((state) => state.isLoadingStatus);
   const isLogLoading = useGitStore((state) => state.isLoadingLog);
-  const {
-    setActiveDirectory,
-    fetchAll,
-    fetchStatus,
-    fetchBranches,
-    fetchLog,
-    fetchIdentity,
-    prefetchDiffs,
-    setLogMaxCount,
-  } = useGitStore();
+  const setActiveDirectory = useGitStore((state) => state.setActiveDirectory);
+  const fetchAll = useGitStore((state) => state.fetchAll);
+  const fetchStatus = useGitStore((state) => state.fetchStatus);
+  const fetchBranches = useGitStore((state) => state.fetchBranches);
+  const fetchLog = useGitStore((state) => state.fetchLog);
+  const fetchIdentity = useGitStore((state) => state.fetchIdentity);
+  const prefetchDiffs = useGitStore((state) => state.prefetchDiffs);
+  const setLogMaxCount = useGitStore((state) => state.setLogMaxCount);
   const isMobile = useUIStore((state) => state.isMobile);
   const openContextDiff = useUIStore((state) => state.openContextDiff);
   const navigateToDiff = useUIStore((state) => state.navigateToDiff);
   const setRightSidebarOpen = useUIStore((state) => state.setRightSidebarOpen);
+  const previousBootstrapStatusRef = React.useRef<'pending' | 'ready' | 'failed' | null>(null);
+
+  React.useEffect(() => {
+    if (!currentDirectory) {
+      setWorktreeBootstrapStatus(null);
+      setIsWaitingForGitRefreshAfterBootstrap(false);
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: number | null = null;
+
+    const poll = async () => {
+      try {
+        const next = await getGitWorktreeBootstrapStatus(currentDirectory);
+        if (cancelled) {
+          return;
+        }
+        setWorktreeBootstrapStatus(next.status);
+        if (next.status === 'pending') {
+          timeoutId = window.setTimeout(() => {
+            void poll();
+          }, 500);
+        }
+      } catch {
+        if (!cancelled) {
+          setWorktreeBootstrapStatus(null);
+        }
+      }
+    };
+
+    void poll();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [currentDirectory]);
+
+  React.useEffect(() => {
+    const previous = previousBootstrapStatusRef.current;
+    previousBootstrapStatusRef.current = worktreeBootstrapStatus;
+
+    if (!currentDirectory || !git) {
+      return;
+    }
+
+    if (previous === 'pending' && worktreeBootstrapStatus === 'ready') {
+      setIsWaitingForGitRefreshAfterBootstrap(true);
+      void fetchAll(currentDirectory, git).finally(() => {
+        window.setTimeout(() => {
+          setIsWaitingForGitRefreshAfterBootstrap(false);
+        }, 1200);
+      });
+    }
+
+    if (worktreeBootstrapStatus === 'failed') {
+      setDraftBootstrapPendingDirectory(null);
+      setIsWaitingForGitRefreshAfterBootstrap(false);
+    }
+  }, [currentDirectory, fetchAll, git, setDraftBootstrapPendingDirectory, worktreeBootstrapStatus]);
+
+  const normalizedDraftBootstrapPendingDirectory = normalizePath(newSessionDraft?.bootstrapPendingDirectory ?? null);
+  const isDraftBootstrapPendingForCurrentDirectory = Boolean(
+    currentDirectory && normalizedDraftBootstrapPendingDirectory && normalizedDraftBootstrapPendingDirectory === normalizePath(currentDirectory)
+  );
+  const isPendingWorktreeSetup = Boolean(
+    currentDirectory && (worktreeBootstrapStatus === 'pending' || isDraftBootstrapPendingForCurrentDirectory)
+  );
+  const shouldHideNotGitState = isPendingWorktreeSetup || isWaitingForGitRefreshAfterBootstrap;
 
   const initialSnapshot = React.useMemo(() => {
     if (!currentDirectory) return null;
@@ -414,6 +490,7 @@ export const GitView: React.FC<GitViewProps> = () => {
   const [expandedCommitHashes, setExpandedCommitHashes] = React.useState<Set<string>>(new Set());
   const [commitFilesMap, setCommitFilesMap] = React.useState<Map<string, CommitFileEntry[]>>(new Map());
   const [loadingCommitHashes, setLoadingCommitHashes] = React.useState<Set<string>>(new Set());
+  const [historyBranchDivider, setHistoryBranchDivider] = React.useState<HistoryBranchDivider>(null);
   const [remoteUrl, setRemoteUrl] = React.useState<string | null>(null);
   const [gitmojiEmojis, setGitmojiEmojis] = React.useState<GitmojiEntry[]>([]);
   const [gitmojiSearch, setGitmojiSearch] = React.useState('');
@@ -433,6 +510,7 @@ export const GitView: React.FC<GitViewProps> = () => {
     return isActionTab(stored) ? stored : 'commit';
   });
   const [remotes, setRemotes] = React.useState<GitRemote[]>([]);
+  const [removingRemoteName, setRemovingRemoteName] = React.useState<string | null>(null);
   const [branchOperation, setBranchOperation] = React.useState<BranchOperation>(null);
   const [operationLogs, setOperationLogs] = React.useState<OperationLogEntry[]>([]);
   const [conflictDialogOpen, setConflictDialogOpen] = React.useState(false);
@@ -585,13 +663,22 @@ export const GitView: React.FC<GitViewProps> = () => {
     git.getRemoteUrl(currentDirectory).then(setRemoteUrl).catch(() => setRemoteUrl(null));
   }, [currentDirectory, git]);
 
-  React.useEffect(() => {
+  const refreshRemotes = React.useCallback(async () => {
     if (!currentDirectory || !git?.getRemotes) {
       setRemotes([]);
       return;
     }
-    git.getRemotes(currentDirectory).then(setRemotes).catch(() => setRemotes([]));
+    try {
+      const remoteList = await git.getRemotes(currentDirectory);
+      setRemotes(remoteList);
+    } catch {
+      setRemotes([]);
+    }
   }, [currentDirectory, git]);
+
+  React.useEffect(() => {
+    void refreshRemotes();
+  }, [refreshRemotes]);
 
   React.useEffect(() => {
     if (!settingsGitmojiEnabled) {
@@ -828,6 +915,35 @@ export const GitView: React.FC<GitViewProps> = () => {
       setSyncAction(null);
     }
   };
+
+  const handleRemoveRemote = React.useCallback(async (remote: GitRemote) => {
+    if (!currentDirectory) return;
+
+    const remoteName = remote.name.trim();
+    if (!remoteName) {
+      toast.error('Remote name is required');
+      return;
+    }
+    if (remoteName === 'origin') {
+      toast.error('Cannot remove origin remote');
+      return;
+    }
+
+    setRemovingRemoteName(remoteName);
+    try {
+      await git.removeRemote(currentDirectory, { remote: remoteName });
+      toast.success(`Removed ${remoteName} remote`);
+      await Promise.all([
+        refreshStatusAndBranches(false),
+        refreshRemotes(),
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `Failed to remove ${remoteName}`;
+      toast.error(message);
+    } finally {
+      setRemovingRemoteName(null);
+    }
+  }, [currentDirectory, git, refreshRemotes, refreshStatusAndBranches]);
 
   const handleCommit = async (options: { pushAfter?: boolean } = {}) => {
     if (!currentDirectory) return;
@@ -1225,6 +1341,71 @@ export const GitView: React.FC<GitViewProps> = () => {
       branch: currentBranch,
     };
   }, [canShowPullRequestSection, currentBranch, currentDirectory]);
+
+  React.useEffect(() => {
+    if (!currentDirectory || !git || !log?.all?.length || !currentBranch || !baseBranch || currentBranch === baseBranch) {
+      setHistoryBranchDivider(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const resolveBranchDivider = async () => {
+      try {
+        const branchOnlyLog = await git.getGitLog(currentDirectory, {
+          from: baseBranch,
+          to: 'HEAD',
+          maxCount: logMaxCountLocal,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        const branchHashes = new Set(
+          (branchOnlyLog?.all ?? [])
+            .map((entry) => entry.hash)
+            .filter((hash) => typeof hash === 'string' && hash.length > 0)
+        );
+
+        if (branchHashes.size === 0) {
+          setHistoryBranchDivider(null);
+          return;
+        }
+
+        const insertBeforeIndex = log.all.findIndex((entry) => !branchHashes.has(entry.hash));
+        if (insertBeforeIndex === 0) {
+          setHistoryBranchDivider(null);
+          return;
+        }
+
+        if (insertBeforeIndex === -1) {
+          setHistoryBranchDivider({
+            insertBeforeIndex: log.all.length,
+            branchName: currentBranch,
+            direction: 'up',
+          });
+          return;
+        }
+
+        setHistoryBranchDivider({
+          insertBeforeIndex,
+          branchName: currentBranch,
+          direction: 'up',
+        });
+      } catch {
+        if (!cancelled) {
+          setHistoryBranchDivider(null);
+        }
+      }
+    };
+
+    void resolveBranchDivider();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [baseBranch, currentBranch, currentDirectory, git, log, logMaxCountLocal]);
   // Keep these sections stable in layout; individual cards render placeholders when unavailable.
 
   const toggleFileSelection = (path: string) => {
@@ -1729,6 +1910,20 @@ export const GitView: React.FC<GitViewProps> = () => {
   }
 
   if (isGitRepo === false) {
+    if (shouldHideNotGitState) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+          <RiLoader4Line className="mb-3 size-6 animate-spin text-muted-foreground" />
+          <p className="typography-ui-label font-semibold text-foreground">
+            Worktree setup is in progress
+          </p>
+          <p className="typography-meta mt-1 text-muted-foreground">
+            Git tools will appear as soon as the new worktree is ready.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="flex h-full flex-col items-center justify-center px-4 text-center">
         <RiGitBranchLine className="mb-3 size-6 text-muted-foreground" />
@@ -1754,6 +1949,8 @@ export const GitView: React.FC<GitViewProps> = () => {
         onFetch={(remote) => handleSyncAction('fetch', remote)}
         onPull={(remote) => handleSyncAction('pull', remote)}
         onPush={() => handleSyncAction('push')}
+        onRemoveRemote={handleRemoveRemote}
+        removingRemoteName={removingRemoteName}
         onCheckoutBranch={handleCheckoutBranch}
         onCreateBranch={handleCreateBranch}
         onRenameBranch={handleRenameBranch}
@@ -1809,7 +2006,6 @@ export const GitView: React.FC<GitViewProps> = () => {
                   {(changeEntries?.length ?? 0) > 0 ? (
                     <>
                       <ChangesSection
-                        variant="plain"
                         maxListHeightClassName="max-h-[40vh]"
                         changeEntries={changeEntries}
                         onVisiblePathsChange={setVisibleChangePaths}
@@ -1835,7 +2031,6 @@ export const GitView: React.FC<GitViewProps> = () => {
                       />
 
                       <CommitSection
-                        variant="plain"
                         selectedCount={selectedCount}
                         commitMessage={commitMessage}
                         onCommitMessageChange={setCommitMessage}
@@ -1893,7 +2088,6 @@ export const GitView: React.FC<GitViewProps> = () => {
                 <div className="space-y-4">
                   {integrateCommitsProps ? (
                     <IntegrateCommitsSection
-                      variant="plain"
                       repoRoot={integrateCommitsProps.repoRoot}
                       sourceBranch={integrateCommitsProps.sourceBranch}
                       worktreeMetadata={integrateCommitsProps.worktreeMetadata}
@@ -1922,7 +2116,6 @@ export const GitView: React.FC<GitViewProps> = () => {
                 <div className="space-y-4">
                   {pullRequestProps ? (
                     <PullRequestSection
-                      variant="plain"
                       directory={pullRequestProps.directory}
                       branch={pullRequestProps.branch}
                       baseBranch={baseBranch}
@@ -1966,6 +2159,7 @@ export const GitView: React.FC<GitViewProps> = () => {
               loadingCommitHashes={loadingCommitHashes}
               onCopyHash={handleCopyCommitHash}
               showHeader={false}
+              branchDivider={historyBranchDivider}
             />
           </div>
         </DialogContent>

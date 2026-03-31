@@ -3,7 +3,7 @@
 import type { RuntimeAPIs } from './api/types';
 import * as gitHttp from './gitApiHttp';
 import { opencodeClient } from './opencode/client';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useContextStore } from '@/stores/contextStore';
 import { useConfigStore } from '@/stores/useConfigStore';
 
@@ -29,6 +29,7 @@ export type {
   GitWorktreeValidationResult,
   GitDeleteBranchPayload,
   GitDeleteRemoteBranchPayload,
+  GitRemoveRemotePayload,
   DiscoveredGitCredential,
   GitRemote,
   GitMergeResult,
@@ -55,10 +56,10 @@ export async function checkIsGitRepository(directory: string): Promise<boolean> 
   return gitHttp.checkIsGitRepository(directory);
 }
 
-export async function getGitStatus(directory: string): Promise<import('./api/types').GitStatus> {
+export async function getGitStatus(directory: string, options?: { mode?: 'light' }): Promise<import('./api/types').GitStatus> {
   const runtime = getRuntimeGit();
   if (runtime) return runtime.getGitStatus(directory);
-  return gitHttp.getGitStatus(directory);
+  return gitHttp.getGitStatus(directory, options);
 }
 
 export async function getGitDiff(directory: string, options: import('./api/types').GetGitDiffOptions): Promise<import('./api/types').GitDiffResponse> {
@@ -325,7 +326,7 @@ type SessionGenerationContext = {
 };
 
 const resolveSessionGenerationContext = (): SessionGenerationContext | null => {
-  const sessionId = useSessionStore.getState().currentSessionId;
+  const sessionId = useSessionUIStore.getState().currentSessionId;
   if (!sessionId) {
     return null;
   }
@@ -450,6 +451,33 @@ export async function validateGitWorktree(
     return runtime.validateGitWorktree(directory, payload);
   }
   return gitHttp.validateGitWorktree(directory, payload);
+}
+
+export async function getGitWorktreeBootstrapStatus(
+  directory: string,
+): Promise<import('./api/types').GitWorktreeBootstrapStatus> {
+  const runtime = getRuntimeGit();
+  if (runtime?.worktree?.bootstrapStatus) {
+    return runtime.worktree.bootstrapStatus(directory);
+  }
+  if (runtime?.getGitWorktreeBootstrapStatus) {
+    return runtime.getGitWorktreeBootstrapStatus(directory);
+  }
+  return gitHttp.getGitWorktreeBootstrapStatus(directory);
+}
+
+export async function previewGitWorktree(
+  directory: string,
+  payload: import('./api/types').CreateGitWorktreePayload
+): Promise<import('./api/types').GitWorktreeCreateResult> {
+  const runtime = getRuntimeGit();
+  if (runtime?.worktree?.preview) {
+    return runtime.worktree.preview(directory, payload);
+  }
+  if (runtime?.previewGitWorktree) {
+    return runtime.previewGitWorktree(directory, payload);
+  }
+  return gitHttp.previewGitWorktree(directory, payload);
 }
 
 export async function createGitWorktree(
@@ -637,6 +665,15 @@ export async function getRemotes(directory: string): Promise<import('./api/types
   const runtime = getRuntimeGit();
   if (runtime) return runtime.getRemotes(directory);
   return gitHttp.getRemotes(directory);
+}
+
+export async function removeRemote(
+  directory: string,
+  payload: import('./api/types').GitRemoveRemotePayload
+): Promise<{ success: boolean }> {
+  const runtime = getRuntimeGit();
+  if (runtime) return runtime.removeRemote(directory, payload);
+  return gitHttp.removeRemote(directory, payload);
 }
 
 export async function rebase(

@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ButtonLarge } from '@/components/ui/button-large';
 import { Input } from '@/components/ui/input';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,7 +28,6 @@ import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
 import { useSkillsStore } from '@/stores/useSkillsStore';
 import { useGitIdentitiesStore } from '@/stores/useGitIdentitiesStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useI18n } from '@/contexts/useI18n';
 import { InstallConflictsDialog, type ConflictDecision, type SkillConflict } from './InstallConflictsDialog';
 import {
   SKILL_LOCATION_OPTIONS,
@@ -47,7 +45,6 @@ interface InstallFromRepoDialogProps {
 type IdentityOption = { id: string; name: string };
 
 export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ open, onOpenChange }) => {
-  const { t } = useI18n();
   const { scanRepo, installSkills, isScanning, isInstalling } = useSkillsCatalogStore();
   const installedSkills = useSkillsStore((s) => s.skills);
   const defaultGitIdentityId = useGitIdentitiesStore((s) => s.defaultGitIdentityId);
@@ -159,7 +156,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
   const handleScan = async () => {
     const trimmed = source.trim();
     if (!trimmed) {
-      toast.error(t('settings.installFromRepoDialog.repositorySourceRequired'));
+      toast.error('Repository source is required');
       return;
     }
 
@@ -172,7 +169,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
     if (!result.ok) {
       if (result.error?.kind === 'authRequired') {
         if (isVSCodeRuntime()) {
-          toast.error(t('settings.installFromRepoDialog.privateReposNotSupportedInVSCode'));
+          toast.error('Private repositories are not supported in VS Code yet');
           return;
         }
 
@@ -187,11 +184,11 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
               : ids[0].id;
           setGitIdentityId(preferred);
         }
-        toast.error(t('settings.installFromRepoDialog.authRequiredTryScanningAgain'));
+        toast.error('Authentication required. Select a Git identity and try scanning again.');
         return;
       }
 
-      toast.error(result.error?.message || t('settings.installFromRepoDialog.failedScanRepository'));
+      toast.error(result.error?.message || 'Failed to scan repository');
       return;
     }
 
@@ -208,12 +205,12 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
     setSelected(nextSelected);
 
     setIdentities([]);
-    toast.success(t('settings.installFromRepoDialog.foundSkills', { count: nextItems.length }));
+    toast.success(`Found ${nextItems.length} skill(s)`);
   };
 
   const doInstall = async (opts: { conflictDecisions?: Record<string, ConflictDecision> }) => {
     if (selectedDirs.length === 0) {
-      toast.error(t('settings.installFromRepoDialog.selectAtLeastOneSkill'));
+      toast.error('Select at least one skill to install');
       return;
     }
 
@@ -243,7 +240,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
     if (result.ok) {
       const installedCount = result.installed?.length || 0;
-      toast.success(installedCount > 0 ? t('settings.installFromRepoDialog.installedSkills', { count: installedCount }) : t('settings.installFromRepoDialog.installationCompleted'));
+      toast.success(installedCount > 0 ? `Installed ${installedCount} skill(s)` : 'Installation completed');
       onOpenChange(false);
       return;
     }
@@ -257,7 +254,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
     if (result.error?.kind === 'authRequired') {
       if (isVSCodeRuntime()) {
-          toast.error(t('settings.installFromRepoDialog.privateReposNotSupportedInVSCode'));
+        toast.error('Private repositories are not supported in VS Code yet');
         return;
       }
       const ids = (result.error.identities || []) as IdentityOption[];
@@ -271,11 +268,11 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
             : ids[0].id;
         setGitIdentityId(preferred);
       }
-      toast.error(t('settings.installFromRepoDialog.authRequiredTryInstallingAgain'));
+      toast.error('Authentication required. Select a Git identity and try installing again.');
       return;
     }
 
-    toast.error(result.error?.message || t('settings.installFromRepoDialog.failedInstallSkills'));
+    toast.error(result.error?.message || 'Failed to install skills');
   };
 
   return (
@@ -283,20 +280,20 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>{t('settings.installFromRepoDialog.title')}</DialogTitle>
+            <DialogTitle>Install from Git repository</DialogTitle>
             <DialogDescription>
-              {t('settings.installFromRepoDialog.descriptionPrefix')} <code className="font-mono">SKILL.md</code>{t('settings.installFromRepoDialog.descriptionSuffix')}
+              Scan a repository for folders containing <code className="font-mono">SKILL.md</code>, then install selected skills.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 flex-shrink-0">
             <div className="space-y-2">
-              <label className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.repositoryLabel')}</label>
+              <label className="typography-ui-label font-medium text-foreground">Repository</label>
               <div className="flex items-center gap-2">
                 <Input
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  placeholder={t('settings.installFromRepoDialog.repositoryPlaceholder')}
+                  placeholder="owner/repo or git@github.com:owner/repo.git"
                   className="text-foreground placeholder:text-muted-foreground"
                 />
                 <Button
@@ -307,27 +304,27 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                   className="gap-2"
                 >
                   <RiGitRepositoryLine className="h-4 w-4" />
-                  {isScanning ? t('settings.common.scanning') : t('settings.installFromRepoDialog.scan')}
+                  {isScanning ? 'Scanning…' : 'Scan'}
                 </Button>
               </div>
               <p className="typography-meta text-muted-foreground">
-                {t('settings.installFromRepoDialog.repositoryHintPrefix')} <code className="font-mono">owner/repo/skills</code>{t('settings.installFromRepoDialog.repositoryHintSuffix')}
+                For GitHub shorthand, you can add a subpath like <code className="font-mono">owner/repo/skills</code>.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <label className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.subpathLabel')}</label>
+                <label className="typography-ui-label font-medium text-foreground">Optional subpath</label>
                 <Input
                   value={subpath}
                   onChange={(e) => setSubpath(e.target.value)}
-                  placeholder={t('settings.installFromRepoDialog.subpathPlaceholder')}
+                  placeholder="e.g. skills"
                   className="text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.targetLocation')}</label>
+                <label className="typography-ui-label font-medium text-foreground">Target location</label>
                 <Select
                   value={locationValueFrom(scope, targetSource)}
                   onValueChange={(v) => {
@@ -361,9 +358,9 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
             {scope === 'project' && (
               <div className="space-y-2">
-                <label className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.projectLabel')}</label>
+                <label className="typography-ui-label font-medium text-foreground">Project</label>
                 {projects.length === 0 ? (
-                  <p className="typography-meta text-muted-foreground">{t('settings.installFromRepoDialog.noProjectsAvailable')}</p>
+                  <p className="typography-meta text-muted-foreground">No projects available</p>
                 ) : (
                   <Select
                     value={resolvedTargetProjectId ?? ''}
@@ -371,7 +368,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                     disabled={projects.length === 1}
                   >
                     <SelectTrigger size="lg" className="w-full justify-between">
-                      <SelectValue placeholder={t('settings.installFromRepoDialog.chooseProject')} />
+                      <SelectValue placeholder="Choose project" />
                     </SelectTrigger>
                     <SelectContent align="start">
                       {projects.map((p) => (
@@ -387,14 +384,14 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
             {identities.length > 0 && !isVSCodeRuntime() ? (
               <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                <div className="typography-ui-label font-medium text-foreground">{t('settings.installFromRepoDialog.authenticationRequired')}</div>
+                <div className="typography-ui-label font-medium text-foreground">Authentication required</div>
                 <div className="typography-meta text-muted-foreground mt-1">
-                  {t('settings.installFromRepoDialog.authenticationRequiredDesc')}
+                  Select a Git identity (SSH key) that can access this repository.
                 </div>
                 <div className="mt-2">
                   <Select value={gitIdentityId || ''} onValueChange={(v) => setGitIdentityId(v)}>
                     <SelectTrigger size="lg" className="w-full justify-between">
-                      <span>{identities.find((i) => i.id === gitIdentityId)?.name || t('settings.installFromRepoDialog.chooseIdentity')}</span>
+                      <span>{identities.find((i) => i.id === gitIdentityId)?.name || 'Choose identity'}</span>
                     </SelectTrigger>
                     <SelectContent align="start">
                       {identities.map((id) => (
@@ -406,7 +403,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                   </Select>
                 </div>
                 <div className="typography-micro text-muted-foreground mt-2">
-                  {t('settings.installFromRepoDialog.configureIdentitiesHint')}
+                  Configure identities in Settings → Git Identities.
                 </div>
               </div>
             ) : null}
@@ -416,8 +413,8 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
             {items.length === 0 ? (
               <div className="flex h-full items-center justify-center text-center text-muted-foreground">
                 <div>
-                  <p className="typography-body">{t('settings.installFromRepoDialog.noScanResultsTitle')}</p>
-                  <p className="typography-meta mt-1 opacity-75">{t('settings.installFromRepoDialog.noScanResultsDesc')}</p>
+                  <p className="typography-body">No scan results yet</p>
+                  <p className="typography-meta mt-1 opacity-75">Scan a repository to discover skills</p>
                 </div>
               </div>
             ) : (
@@ -426,12 +423,12 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder={t('settings.installFromRepoDialog.searchSkillsPlaceholder')}
+                    placeholder="Search skills…"
                     className="max-w-sm"
                   />
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => toggleAll(true)}>{t('settings.common.selectAll')}</Button>
-                    <Button variant="outline" size="sm" onClick={() => toggleAll(false)}>{t('settings.common.selectNone')}</Button>
+                    <Button variant="outline" size="sm" onClick={() => toggleAll(true)}>Select all</Button>
+                    <Button variant="outline" size="sm" onClick={() => toggleAll(false)}>Select none</Button>
                   </div>
                 </div>
 
@@ -461,14 +458,14 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                             <div className="typography-ui-label truncate">{item.skillName}</div>
                             {installed ? (
                               <span className="typography-micro text-muted-foreground bg-muted px-1 rounded flex-shrink-0 leading-none pb-px border border-border/50">
-                                {t('settings.installFromRepoDialog.installedBadge', { scope: installed.scope, source: installed.source })}
+                                installed ({installed.scope}/{installed.source})
                               </span>
                             ) : null}
                           </div>
                           {item.description ? (
                             <div className="typography-meta text-muted-foreground mt-0.5 line-clamp-2">{item.description}</div>
                           ) : (
-                            <div className="typography-micro text-muted-foreground mt-0.5">{t('settings.common.noDescription')}</div>
+                            <div className="typography-micro text-muted-foreground mt-0.5">No description provided</div>
                           )}
                           {item.warnings?.length ? (
                             <div className="typography-micro text-muted-foreground mt-1">
@@ -482,22 +479,23 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                 </ScrollableOverlay>
 
                 <div className="typography-meta text-muted-foreground">
-                  {t('settings.installFromRepoDialog.selectedCount', { selected: selectedDirs.length, total: items.filter((i) => i.installable).length })}
+                  Selected: {selectedDirs.length} / {items.filter((i) => i.installable).length}
                 </div>
               </div>
             )}
           </div>
 
           <DialogFooter className="flex-shrink-0">
-            <ButtonLarge variant="ghost" onClick={() => onOpenChange(false)}>
-              {t('settings.common.cancel')}
-            </ButtonLarge>
-            <ButtonLarge
+            <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
               disabled={isInstalling || selectedDirs.length === 0 || !source.trim() || (scope === 'project' && !directoryOverride)}
               onClick={() => void doInstall({})}
             >
-              {isInstalling ? t('settings.common.installing') : t('settings.installFromRepoDialog.installSelected')}
-            </ButtonLarge>
+              {isInstalling ? 'Installing…' : 'Install selected'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

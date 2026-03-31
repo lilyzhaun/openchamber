@@ -4,7 +4,6 @@ import type { SidebarSection } from '@/constants/sidebar';
 import { getSafeStorage } from './utils/safeStorage';
 import { SEMANTIC_TYPOGRAPHY, getTypographyVariable, type SemanticTypographyKey } from '@/lib/typography';
 import type { ShortcutCombo } from '@/lib/shortcuts';
-import type { AppLanguage } from '@/lib/i18n/locales';
 
 export type MainTab = 'chat' | 'plan' | 'git' | 'diff' | 'terminal' | 'files';
 export type RightSidebarTab = 'git' | 'files';
@@ -13,6 +12,7 @@ export type MermaidRenderingMode = 'svg' | 'ascii';
 export type UserMessageRenderingMode = 'markdown' | 'plain';
 export type ChatRenderMode = 'sorted' | 'live';
 export type ActivityRenderMode = 'collapsed' | 'summary';
+export type SessionRetentionAction = 'archive' | 'delete';
 
 type ContextPanelTab = {
   id: string;
@@ -472,7 +472,6 @@ interface UIStore {
   isBottomTerminalExpanded: boolean;
   bottomTerminalHeight: number;
   hasManuallyResizedBottomTerminal: boolean;
-  isNavRailExpanded: boolean;
   isSessionSwitcherOpen: boolean;
   activeMainTab: MainTab;
   mainTabGuard: MainTabGuard | null;
@@ -505,6 +504,7 @@ interface UIStore {
   showDeletionDialog: boolean;
   autoDeleteEnabled: boolean;
   autoDeleteAfterDays: number;
+  sessionRetentionAction: SessionRetentionAction;
   autoDeleteLastRunAt: number | null;
   messageLimit: number;
   fontSize: number;
@@ -512,7 +512,6 @@ interface UIStore {
   padding: number;
   cornerRadius: number;
   inputBarOffset: number;
-  appLanguage: AppLanguage;
 
   favoriteModels: Array<{ providerID: string; modelID: string }>;
   hiddenModels: Array<{ providerID: string; modelID: string }>;
@@ -561,11 +560,8 @@ interface UIStore {
   stickyUserHeader: boolean;
   showMobileSessionStatusBar: boolean;
   isMobileSessionStatusBarCollapsed: boolean;
-  viewPagerPage: 'left' | 'center' | 'right';
-  isPixelOfficeOpen: boolean;
-
   isExpandedInput: boolean;
-
+  reportUsage: boolean;
   shortcutOverrides: Record<string, ShortcutCombo>;
 
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -592,8 +588,6 @@ interface UIStore {
   setBottomTerminalOpen: (open: boolean) => void;
   setBottomTerminalExpanded: (expanded: boolean) => void;
   setBottomTerminalHeight: (height: number) => void;
-  setNavRailExpanded: (expanded: boolean) => void;
-  toggleNavRail: () => void;
   setSessionSwitcherOpen: (open: boolean) => void;
   setActiveMainTab: (tab: MainTab) => void;
   setMainTabGuard: (guard: MainTabGuard | null) => void;
@@ -625,6 +619,7 @@ interface UIStore {
   setShowDeletionDialog: (value: boolean) => void;
   setAutoDeleteEnabled: (value: boolean) => void;
   setAutoDeleteAfterDays: (days: number) => void;
+  setSessionRetentionAction: (value: SessionRetentionAction) => void;
   setAutoDeleteLastRunAt: (timestamp: number | null) => void;
   setMessageLimit: (value: number) => void;
   setFontSize: (size: number) => void;
@@ -632,7 +627,6 @@ interface UIStore {
   setPadding: (size: number) => void;
   setCornerRadius: (radius: number) => void;
   setInputBarOffset: (offset: number) => void;
-  setAppLanguage: (language: AppLanguage) => void;
   setKeyboardOpen: (open: boolean) => void;
   applyTypography: () => void;
   applyPadding: () => void;
@@ -676,16 +670,16 @@ interface UIStore {
   setStickyUserHeader: (value: boolean) => void;
   setShowMobileSessionStatusBar: (value: boolean) => void;
   setIsMobileSessionStatusBarCollapsed: (value: boolean) => void;
+  viewPagerPage: 'left' | 'center' | 'right';
   setViewPagerPage: (page: 'left' | 'center' | 'right') => void;
   toggleExpandedInput: () => void;
   setExpandedInput: (value: boolean) => void;
   openMultiRunLauncher: () => void;
   openMultiRunLauncherWithPrompt: (prompt: string) => void;
+  setReportUsage: (value: boolean) => void;
   setShortcutOverride: (actionId: string, combo: ShortcutCombo) => void;
   clearShortcutOverride: (actionId: string) => void;
   resetAllShortcutOverrides: () => void;
-  setPixelOfficeOpen: (open: boolean) => void;
-  togglePixelOffice: () => void;
 }
 
 
@@ -709,7 +703,6 @@ export const useUIStore = create<UIStore>()(
         isBottomTerminalExpanded: false,
         bottomTerminalHeight: 300,
         hasManuallyResizedBottomTerminal: false,
-        isNavRailExpanded: false,
         isSessionSwitcherOpen: false,
         activeMainTab: 'chat',
         mainTabGuard: null,
@@ -740,14 +733,14 @@ export const useUIStore = create<UIStore>()(
         showDeletionDialog: true,
         autoDeleteEnabled: false,
         autoDeleteAfterDays: 30,
+        sessionRetentionAction: 'archive',
         autoDeleteLastRunAt: null,
         messageLimit: 200,
         fontSize: 100,
         terminalFontSize: 13,
         padding: 100,
-        cornerRadius: 12,
+        cornerRadius: 18,
         inputBarOffset: 0,
-        appLanguage: 'zh-CN',
         favoriteModels: [],
         hiddenModels: [],
         collapsedModelProviders: [],
@@ -793,8 +786,8 @@ export const useUIStore = create<UIStore>()(
         showMobileSessionStatusBar: true,
         isMobileSessionStatusBarCollapsed: false,
         isExpandedInput: false,
+        reportUsage: true,
         shortcutOverrides: {},
-        isPixelOfficeOpen: false,
 
         setTheme: (theme) => {
           set({ theme });
@@ -1177,13 +1170,6 @@ export const useUIStore = create<UIStore>()(
           set({ bottomTerminalHeight: height, hasManuallyResizedBottomTerminal: true });
         },
 
-        setNavRailExpanded: (expanded) => {
-          set({ isNavRailExpanded: expanded });
-        },
-        toggleNavRail: () => {
-          set({ isNavRailExpanded: !get().isNavRailExpanded });
-        },
-
         setSessionSwitcherOpen: (open) => {
           set({ isSessionSwitcherOpen: open });
         },
@@ -1331,6 +1317,10 @@ export const useUIStore = create<UIStore>()(
           set({ autoDeleteAfterDays: clampedDays });
         },
 
+        setSessionRetentionAction: (value) => {
+          set({ sessionRetentionAction: value });
+        },
+
         setAutoDeleteLastRunAt: (timestamp) => {
           set({ autoDeleteLastRunAt: timestamp });
         },
@@ -1444,10 +1434,6 @@ export const useUIStore = create<UIStore>()(
  
         setInputBarOffset: (offset) => {
           set({ inputBarOffset: offset });
-        },
-
-        setAppLanguage: (language) => {
-          set({ appLanguage: language });
         },
 
         setKeyboardOpen: (open) => {
@@ -1713,6 +1699,9 @@ export const useUIStore = create<UIStore>()(
         setIsMobileSessionStatusBarCollapsed: (value) => {
           set({ isMobileSessionStatusBarCollapsed: value });
         },
+        setReportUsage: (value) => {
+          set({ reportUsage: value });
+        },
         viewPagerPage: 'center',
         setViewPagerPage: (page: 'left' | 'center' | 'right') => {
           set({ viewPagerPage: page });
@@ -1752,14 +1741,6 @@ export const useUIStore = create<UIStore>()(
 
         setExpandedInput: (value) => {
           set({ isExpandedInput: value });
-        },
-
-        setPixelOfficeOpen: (open) => {
-          set({ isPixelOfficeOpen: open });
-        },
-
-        togglePixelOffice: () => {
-          set((state) => ({ isPixelOfficeOpen: !state.isPixelOfficeOpen }));
         },
       }),
       {
@@ -1827,9 +1808,6 @@ export const useUIStore = create<UIStore>()(
           }
 
           if (version < 6) {
-            if (state.appLanguage === 'en' || typeof state.appLanguage !== 'string') {
-              state.appLanguage = 'zh-CN';
-            }
             state.contextPanelByDirectory = sanitizeContextPanelByDirectory(state.contextPanelByDirectory);
           }
 
@@ -1850,7 +1828,6 @@ export const useUIStore = create<UIStore>()(
           isBottomTerminalOpen: state.isBottomTerminalOpen,
           isBottomTerminalExpanded: state.isBottomTerminalExpanded,
           bottomTerminalHeight: state.bottomTerminalHeight,
-          isNavRailExpanded: state.isNavRailExpanded,
           isSessionSwitcherOpen: state.isSessionSwitcherOpen,
           activeMainTab: state.activeMainTab,
           sidebarSection: state.sidebarSection,
@@ -1866,13 +1843,13 @@ export const useUIStore = create<UIStore>()(
           showDeletionDialog: state.showDeletionDialog,
           autoDeleteEnabled: state.autoDeleteEnabled,
           autoDeleteAfterDays: state.autoDeleteAfterDays,
+          sessionRetentionAction: state.sessionRetentionAction,
           autoDeleteLastRunAt: state.autoDeleteLastRunAt,
           messageLimit: state.messageLimit,
           fontSize: state.fontSize,
           terminalFontSize: state.terminalFontSize,
           padding: state.padding,
           cornerRadius: state.cornerRadius,
-          appLanguage: state.appLanguage,
           favoriteModels: state.favoriteModels,
           hiddenModels: state.hiddenModels,
           collapsedModelProviders: state.collapsedModelProviders,
@@ -1905,7 +1882,6 @@ export const useUIStore = create<UIStore>()(
           showMobileSessionStatusBar: state.showMobileSessionStatusBar,
           isMobileSessionStatusBarCollapsed: state.isMobileSessionStatusBarCollapsed,
           shortcutOverrides: state.shortcutOverrides,
-          isPixelOfficeOpen: state.isPixelOfficeOpen,
         })
       }
     ),

@@ -15,8 +15,8 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { toast } from '@/components/ui';
-import { useI18n } from '@/contexts/useI18n';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionUIStore } from '@/sync/session-ui-store';
+import { useInputStore } from '@/sync/input-store';
 import { useUIStore } from '@/stores/useUIStore';
 import { execCommand } from '@/lib/execCommands';
 import {
@@ -47,7 +47,6 @@ export const IntegrateCommitsSection: React.FC<{
   defaultTargetBranch: string;
   refreshKey?: number;
   onRefresh?: () => void;
-  variant?: 'framed' | 'plain';
 }> = ({
   repoRoot,
   sourceBranch,
@@ -56,10 +55,8 @@ export const IntegrateCommitsSection: React.FC<{
   defaultTargetBranch,
   refreshKey,
   onRefresh,
-  variant = 'framed',
 }) => {
-  const { t } = useI18n();
-  const currentSessionId = useSessionStore((s) => s.currentSessionId);
+  const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
   const setActiveMainTab = useUIStore((s) => s.setActiveMainTab);
   const [branchDropdownOpen, setBranchDropdownOpen] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -171,7 +168,7 @@ export const IntegrateCommitsSection: React.FC<{
   const persistTarget = React.useCallback(
     (branch: string) => {
       if (!currentSessionId) return;
-      useSessionStore.getState().setWorktreeMetadata(currentSessionId, {
+      useSessionUIStore.getState().setWorktreeMetadata(currentSessionId, {
         ...worktreeMetadata,
         createdFromBranch: branch,
       });
@@ -179,7 +176,7 @@ export const IntegrateCommitsSection: React.FC<{
     [currentSessionId, worktreeMetadata]
   );
 
-  const openNewSessionDraft = useSessionStore((s) => s.openNewSessionDraft);
+  const openNewSessionDraft = useSessionUIStore((s) => s.openNewSessionDraft);
 
   const buildConflictContext = React.useCallback((payload: { state: IntegrateInProgress; details: IntegrateConflictDetails }) => {
     const visibleText = `Resolve cherry-pick conflicts, stage the resolved files, and continue the cherry-pick. Keep intent of commit ${payload.state.currentCommit} onto branch ${payload.state.targetBranch}.`;
@@ -221,8 +218,8 @@ Important:
     return { visibleText, instructionsText, payloadText };
   }, []);
 
-  const setPendingInputText = useSessionStore((s) => s.setPendingInputText);
-  const setPendingSyntheticParts = useSessionStore((s) => s.setPendingSyntheticParts);
+  const setPendingInputText = useInputStore((s) => s.setPendingInputText);
+  const setPendingSyntheticParts = useInputStore((s) => s.setPendingSyntheticParts);
 
   const handleResolveWithAi = React.useCallback((
     payload: { state: IntegrateInProgress; details: IntegrateConflictDetails },
@@ -247,7 +244,7 @@ Important:
 
     // Use current session - set pending input text and synthetic parts
     if (!currentSessionId) {
-      toast.error(t('views.git.integrate.noActiveSession'), { description: t('views.git.integrate.openChatFirst') });
+      toast.error('No active session', { description: 'Open a chat session first or start a new session.' });
       return;
     }
 
@@ -262,19 +259,15 @@ Important:
   const handleMove = React.useCallback(async () => {
     if (ui.kind !== 'ready') return;
     if (ui.plan.commits.length === 0) {
-      toast.message(t('views.git.integrate.noCommitsToMove'));
+      toast.message('No commits to move');
       return;
     }
     setUi({ kind: 'running', plan: ui.plan });
     try {
       const result = await integrateWorktreeCommits(ui.plan);
       if (result.kind === 'success') {
-        toast.success(t('views.git.integrate.commitsMoved'), {
-          description: t('views.git.integrate.commitsMovedDesc', {
-            count: result.moved,
-            suffix: result.moved === 1 ? '' : 's',
-            branch: ui.plan.targetBranch,
-          }),
+        toast.success('Commits moved', {
+          description: `${result.moved} commit${result.moved === 1 ? '' : 's'} into ${ui.plan.targetBranch}`,
         });
         const next = await computeIntegratePlan(ui.plan);
         setUi({ kind: 'ready', plan: next });
@@ -282,7 +275,7 @@ Important:
         return;
       }
       if (result.kind === 'conflict') {
-        toast.error(t('views.git.integrate.cherryPickConflict'), { description: t('views.git.integrate.resolveThenContinue') });
+        toast.error('Cherry-pick conflict', { description: 'Resolve conflicts, then continue.' });
         setUi({ kind: 'conflict', state: result.state, details: result.details });
         if (conflictStorageKey && typeof window !== 'undefined') {
           window.localStorage.setItem(conflictStorageKey, JSON.stringify(result.state));
@@ -290,7 +283,7 @@ Important:
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error(t('views.git.integrate.failedMoveCommits'), { description: message });
+      toast.error('Failed to move commits', { description: message });
       const next = await computeIntegratePlan({ repoRoot, sourceBranch, targetBranch }).catch(() => null);
       if (next) setUi({ kind: 'ready', plan: next });
       else setUi({ kind: 'idle' });
@@ -301,7 +294,7 @@ Important:
     if (ui.kind !== 'conflict') return;
     try {
       await abortIntegrate(ui.state);
-      toast.message(t('views.git.integrate.cherryPickAborted'));
+      toast.message('Cherry-pick aborted');
       if (conflictStorageKey && typeof window !== 'undefined') {
         window.localStorage.removeItem(conflictStorageKey);
       }
@@ -317,7 +310,7 @@ Important:
     try {
       const result = await continueIntegrate(ui.state);
       if (result.kind === 'success') {
-        toast.success(t('views.git.integrate.cherryPickFinished'));
+        toast.success('Cherry-pick finished');
         const next = await computeIntegratePlan({ repoRoot, sourceBranch, targetBranch }).catch(() => null);
         if (next) setUi({ kind: 'ready', plan: next });
         else setUi({ kind: 'idle' });
@@ -335,7 +328,7 @@ Important:
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      toast.error(t('views.git.integrate.cherryPickContinueFailed'), { description: message });
+      toast.error('Cherry-pick continue failed', { description: message });
     }
   }, [ui, repoRoot, sourceBranch, targetBranch, onRefresh, conflictStorageKey]);
 
@@ -343,24 +336,18 @@ Important:
     return null;
   }
 
-  const containerClassName =
-    variant === 'framed'
-      ? 'rounded-xl border border-border/60 bg-background/70 overflow-hidden'
-      : 'border-0 bg-transparent rounded-none';
-  const headerClassName =
-    variant === 'framed'
-      ? 'px-3 py-2 border-b border-border/40 flex items-center justify-between gap-2'
-      : 'px-0 py-3 border-b border-border/40 flex items-center justify-between gap-2';
-  const bodyClassName = variant === 'framed' ? 'flex flex-col gap-3 p-3' : 'flex flex-col gap-3 py-3';
+  const containerClassName = 'border-0 bg-transparent rounded-none';
+  const headerClassName = 'px-0 py-3 border-b border-border/40 flex items-center justify-between gap-2';
+  const bodyClassName = 'flex flex-col gap-3 py-3';
 
   return (
     <section className={containerClassName}>
       <div className={headerClassName}>
         <div className="flex items-center gap-2 min-w-0">
           <RiSplitCellsHorizontal className="size-4 text-muted-foreground" />
-          <h3 className="typography-ui-header font-semibold text-foreground truncate">{t('views.git.integrate.title')}</h3>
+          <h3 className="typography-ui-header font-semibold text-foreground truncate">Re-integrate commits</h3>
           {ui.kind === 'ready' && ui.plan.commits.length > 0 ? (
-            <span className="typography-meta text-muted-foreground truncate">{t('views.git.integrate.toMove', { count: ui.plan.commits.length })}</span>
+            <span className="typography-meta text-muted-foreground truncate">{ui.plan.commits.length} to move</span>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
@@ -373,7 +360,7 @@ Important:
       <div className={bodyClassName}>
         <div className="flex flex-wrap items-center gap-2">
           <div className="min-w-0">
-            <div className="typography-ui-label text-foreground">{t('views.git.integrate.moveCommits')}</div>
+            <div className="typography-ui-label text-foreground">Move commits</div>
               <div className="typography-micro text-muted-foreground truncate">
                 {sourceBranch} → {targetBranch}
               </div>
@@ -383,8 +370,8 @@ Important:
 
             <DropdownMenu open={branchDropdownOpen} onOpenChange={setBranchDropdownOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 px-2 py-0 gap-1.5">
-                  {t('views.git.integrate.target')}
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  Target
                   <span className="max-w-[160px] truncate font-mono text-xs text-muted-foreground">{targetBranch}</span>
                   <RiArrowDownSLine className="size-4 opacity-60" />
                 </Button>
@@ -394,14 +381,14 @@ Important:
                 className="w-72 p-0 max-h-(--radix-dropdown-menu-content-available-height) flex flex-col overflow-hidden"
               >
                 <Command className="h-full min-h-0">
-                  <CommandInput ref={searchInputRef} placeholder={t('views.git.integrate.searchBranches')} />
+                  <CommandInput ref={searchInputRef} placeholder="Search branches..." />
                   <CommandList
                     className="h-full min-h-0"
                     scrollbarClassName="overlay-scrollbar--flush overlay-scrollbar--dense overlay-scrollbar--zero"
                     disableHorizontal
                   >
-                    <CommandEmpty>{t('views.git.integrate.noBranchesFound')}</CommandEmpty>
-                    <CommandGroup heading={t('views.git.integrate.localBranches')}>
+                    <CommandEmpty>No branches found.</CommandEmpty>
+                    <CommandGroup heading="Local branches">
                       {localBranches.map((branch) => (
                         <CommandItem
                           key={branch}
@@ -422,29 +409,29 @@ Important:
             </DropdownMenu>
 
             {ui.kind === 'ready' ? (
-              <Button size="sm" className="h-7 px-2 py-0" onClick={() => void handleMove()} disabled={!isEligible || ui.plan.commits.length === 0}>
-                {t('views.git.integrate.moveCommits')}
+              <Button size="sm" onClick={() => void handleMove()} disabled={!isEligible || ui.plan.commits.length === 0}>
+                Move
               </Button>
             ) : ui.kind === 'loading' ? (
-              <Button size="sm" variant="outline" className="h-7 px-2 py-0" disabled>
-                {t('views.git.integrate.checking')}
+              <Button size="sm" variant="outline" disabled>
+                Checking…
               </Button>
             ) : ui.kind === 'running' ? (
-              <Button size="sm" variant="outline" className="h-7 px-2 py-0" disabled>
-                {t('views.git.integrate.moving')}
+              <Button size="sm" variant="outline" disabled>
+                Moving…
               </Button>
             ) : null}
           </div>
 
           {ui.kind === 'ready' && ui.plan.commits.length === 0 && (
-            <div className="typography-meta text-muted-foreground">{t('views.git.integrate.noCommitsToMoveDot')}</div>
+            <div className="typography-meta text-muted-foreground">No commits to move.</div>
           )}
 
           {ui.kind === 'ready' && ui.plan.commits.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="typography-meta text-foreground">
-                  {t('views.git.integrate.commitsToMove')}
+                  Commits to move
                   <span className="text-muted-foreground"> ({ui.plan.commits.length})</span>
                 </div>
                 {commitSummaries.length > 0 && ui.plan.commits.length > 5 && (
@@ -453,7 +440,7 @@ Important:
                     onClick={() => setShowAllCommits((v) => !v)}
                     className="typography-micro text-muted-foreground hover:text-foreground"
                   >
-                    {showAllCommits ? t('views.git.integrate.showLess') : t('views.git.integrate.showAll')}
+                    {showAllCommits ? 'Show less' : 'Show all'}
                   </button>
                 )}
               </div>
@@ -466,11 +453,11 @@ Important:
                   </div>
                 ))}
                 {commitSummaries.length === 0 && (
-                  <div className="typography-meta text-muted-foreground">{t('views.git.integrate.previewUnavailable')}</div>
+                  <div className="typography-meta text-muted-foreground">Preview unavailable.</div>
                 )}
                 {ui.plan.commits.length > commitSummaries.length && (
                   <div className="typography-micro text-muted-foreground/70">
-                    {t('views.git.integrate.showingFirstCommits', { count: commitSummaries.length })}
+                    Showing first {commitSummaries.length} commits.
                   </div>
                 )}
               </div>
@@ -480,10 +467,10 @@ Important:
           {ui.kind === 'conflict' && (
             <div className="rounded-md border border-border/60 bg-background/60 p-3 space-y-2">
               <div className="typography-meta text-foreground">
-                {t('views.git.integrate.conflictsInFiles', { count: ui.details.unmergedFiles.length })}
+                Conflicts in {ui.details.unmergedFiles.length} files
               </div>
               <div className="typography-micro text-muted-foreground/80">
-                {t('views.git.integrate.currentCommit')}: <span className="font-mono">{ui.state.currentCommit.slice(0, 7)}</span>
+                Current commit: <span className="font-mono">{ui.state.currentCommit.slice(0, 7)}</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {ui.details.unmergedFiles.slice(0, 6).map((file) => (
@@ -492,34 +479,34 @@ Important:
                   </span>
                 ))}
                 {ui.details.unmergedFiles.length > 6 && (
-                  <span className="text-xs text-muted-foreground">{t('views.git.integrate.moreCount', { count: ui.details.unmergedFiles.length - 6 })}</span>
+                  <span className="text-xs text-muted-foreground">+{ui.details.unmergedFiles.length - 6} more</span>
                 )}
               </div>
               <div className="flex items-center gap-2 pt-1">
-                <Button size="sm" variant="ghost" className="h-7 px-2 py-0 typography-meta" onClick={() => void handleAbort()}>
-                  {t('views.git.integrate.abort')}
+                <Button size="sm" variant="ghost" className="typography-meta" onClick={() => void handleAbort()}>
+                  Abort
                 </Button>
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="h-7 px-2 py-0 typography-meta gap-1"
+                  className="typography-meta gap-1"
                   disabled={!currentSessionId}
                   onClick={() => void handleResolveWithAi({ state: ui.state, details: ui.details }, false)}
                 >
                   <RiSparklingLine className="size-3.5" />
-                  {t('views.git.integrate.currentSession')}
+                  Current Session
                 </Button>
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="h-7 px-2 py-0 typography-meta gap-1"
+                  className="typography-meta gap-1"
                   onClick={() => void handleResolveWithAi({ state: ui.state, details: ui.details }, true)}
                 >
                   <RiSparklingLine className="size-3.5" />
-                  {t('views.git.integrate.newSession')}
+                  New Session
                 </Button>
-                <Button size="sm" className="h-7 px-2 py-0 typography-meta" onClick={() => void handleContinue()}>
-                  {t('views.git.integrate.continue')}
+                <Button size="sm" className="typography-meta" onClick={() => void handleContinue()}>
+                  Continue
                 </Button>
               </div>
             </div>

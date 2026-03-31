@@ -9,11 +9,11 @@ import {
 import { Button } from '@/components/ui/button';
 
 import { RiAlertLine, RiLoader4Line, RiChat1Line, RiAddLine } from '@remixicon/react';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionUIStore } from '@/sync/session-ui-store';
+import { useInputStore } from '@/sync/input-store';
 import { useUIStore } from '@/stores/useUIStore';
 import { toast } from '@/components/ui';
 import { getConflictDetails, type MergeConflictDetails } from '@/lib/gitApi';
-import { useI18n } from '@/contexts/useI18n';
 
 interface ConflictDialogProps {
   open: boolean;
@@ -34,11 +34,10 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
   onAbort,
   onClearState,
 }) => {
-  const { t } = useI18n();
-  const openNewSessionDraft = useSessionStore((state) => state.openNewSessionDraft);
-  const currentSessionId = useSessionStore((state) => state.currentSessionId);
-  const setPendingInputText = useSessionStore((state) => state.setPendingInputText);
-  const setPendingSyntheticParts = useSessionStore((state) => state.setPendingSyntheticParts);
+  const openNewSessionDraft = useSessionUIStore((state) => state.openNewSessionDraft);
+  const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
+  const setPendingInputText = useInputStore((state) => state.setPendingInputText);
+  const setPendingSyntheticParts = useInputStore((state) => state.setPendingSyntheticParts);
   const setActiveMainTab = useUIStore((state) => state.setActiveMainTab);
 
   const [isLoading, setIsLoading] = React.useState(false);
@@ -58,7 +57,7 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
         setConflictDetails(details);
       })
       .catch((err) => {
-        const message = err instanceof Error ? err.message : t('views.git.conflictDialog.failedLoadConflictDetails');
+        const message = err instanceof Error ? err.message : 'Failed to load conflict details';
         setLoadError(message);
       })
       .finally(() => {
@@ -126,12 +125,12 @@ Important:
   const handleResolveInCurrentSession = () => {
     const context = buildConflictContext();
     if (!context) {
-      toast.error(t('views.git.conflictDialog.noConflictDetails'));
+      toast.error('No conflict details available');
       return;
     }
 
     if (!currentSessionId) {
-      toast.error(t('views.git.conflictDialog.noActiveSession'), { description: t('views.git.conflictDialog.openChatOrNewSession') });
+      toast.error('No active session', { description: 'Open a chat session first or use "New Session".' });
       return;
     }
 
@@ -150,7 +149,7 @@ Important:
   const handleResolveInNewSession = () => {
     const context = buildConflictContext();
     if (!context) {
-      toast.error(t('views.git.conflictDialog.noConflictDetails'));
+      toast.error('No conflict details available');
       return;
     }
 
@@ -169,7 +168,7 @@ Important:
     onOpenChange(false);
   };
 
-  const operationLabel = operation === 'merge' ? t('views.git.operationMerge') : t('views.git.operationRebase');
+  const operationLabel = operation === 'merge' ? 'Merge' : 'Rebase';
   const displayFiles = conflictDetails?.unmergedFiles || conflictFiles;
 
   return (
@@ -179,30 +178,30 @@ Important:
           <DialogHeader>
             <div className="flex items-center gap-2">
               <RiAlertLine className="size-5 shrink-0 text-[var(--status-warning)]" />
-              <DialogTitle>{t('views.git.conflictDialog.conflictsDetected', { operation: operationLabel })}</DialogTitle>
+              <DialogTitle>{operationLabel} Conflicts Detected</DialogTitle>
             </div>
             <DialogDescription>
-              {t('views.git.conflictDialog.operationResultedInConflicts', { operation })}
+              The {operation} operation resulted in conflicts that need to be resolved.
             </DialogDescription>
           </DialogHeader>
 
           {isLoading && (
             <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
               <RiLoader4Line className="size-4 animate-spin" />
-              <span className="typography-meta">{t('views.git.conflictDialog.loadingConflictDetails')}</span>
+              <span className="typography-meta">Loading conflict details...</span>
             </div>
           )}
 
           {loadError && (
             <div className="rounded-lg bg-[var(--status-error-bg)] p-3 text-[var(--status-error)] typography-meta break-words">
-              {t('views.git.conflictDialog.errorLoadingDetails')}: {loadError}
+              Error loading details: {loadError}
             </div>
           )}
 
           {displayFiles.length > 0 && (
             <div className="space-y-2 overflow-hidden">
               <div className="flex items-center justify-between">
-                <p className="typography-meta text-muted-foreground">{t('views.git.conflictDialog.conflictedFiles')}</p>
+                <p className="typography-meta text-muted-foreground">Conflicted files:</p>
                 <span className="typography-micro px-1.5 py-0.5 rounded bg-[var(--surface-elevated)] text-muted-foreground">
                   {displayFiles.length}
                 </span>
@@ -225,7 +224,7 @@ Important:
 
           {conflictDetails?.headInfo && (
             <div className="space-y-1 overflow-hidden">
-              <p className="typography-meta text-muted-foreground">{t('views.git.conflictDialog.headInformation')}</p>
+              <p className="typography-meta text-muted-foreground">HEAD information:</p>
               <div className="typography-micro text-foreground font-mono bg-[var(--surface-elevated)] rounded-lg p-3 max-h-24 overflow-y-auto break-words whitespace-pre-wrap">
                 {conflictDetails.headInfo}
               </div>
@@ -244,7 +243,7 @@ Important:
               ) : (
                 <RiAddLine className="size-4" />
               )}
-              {t('views.git.conflictDialog.resolveInNewSession')}
+              Resolve in New Session
             </Button>
             <Button
               variant="outline"
@@ -257,14 +256,14 @@ Important:
               ) : (
                 <RiChat1Line className="size-4" />
               )}
-              {t('views.git.conflictDialog.resolveInCurrentSession')}
+              Resolve in Current Session
             </Button>
             <div className="flex gap-2 pt-1">
               <Button variant="ghost" size="sm" onClick={handleContinueLater} className="flex-1">
-                {t('views.git.conflictDialog.continueLater')}
+                Continue Later
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleAbort} className="flex-1 text-[var(--status-error)]">
-                {t('views.git.conflictDialog.abortOperation', { operation: operationLabel })}
+              <Button variant="destructive" size="sm" onClick={handleAbort} className="flex-1">
+                Abort {operationLabel}
               </Button>
             </div>
           </div>

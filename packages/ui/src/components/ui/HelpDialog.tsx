@@ -112,7 +112,7 @@ export const HelpDialog: React.FC = () => {
         },
         {
           id: 'new_chat_worktree',
-          description: "Create New Session in Worktree",
+          description: "Create New Worktree Draft",
           icon: RiGitBranchLine,
           keys: '',
         },
@@ -185,12 +185,6 @@ export const HelpDialog: React.FC = () => {
           keys: [`${mod} + 1...9`],
           description: "Switch Project",
           icon: RiLayoutLeftLine,
-        },
-        {
-          id: 'open_timeline',
-          description: "Open Timeline",
-          icon: RiTimeLine,
-          keys: '',
         },
         {
           id: 'toggle_services_menu',

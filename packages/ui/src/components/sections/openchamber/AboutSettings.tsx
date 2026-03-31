@@ -5,15 +5,13 @@ import { UpdateDialog } from '@/components/ui/UpdateDialog';
 import { useDeviceInfo } from '@/lib/device';
 import { toast } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { ButtonSmall } from '@/components/ui/button-small';
-import { useI18n } from '@/contexts/useI18n';
+import { Button } from '@/components/ui/button';
 
 const GITHUB_URL = 'https://github.com/btriapitsyn/openchamber';
 
 const MIN_CHECKING_DURATION = 800; // ms
 
 export const AboutSettings: React.FC = () => {
-  const { t } = useI18n();
   const [updateDialogOpen, setUpdateDialogOpen] = React.useState(false);
   const [showChecking, setShowChecking] = React.useState(false);
   const updateStore = useUpdateStore();
@@ -34,7 +32,7 @@ export const AboutSettings: React.FC = () => {
         setShowChecking(false);
         // Show toast if check completed with no update available
         if (didInitiateCheck.current && !updateStore.available && !updateStore.error) {
-          toast.success(t('settings.aboutSettings.latestVersion'));
+          toast.success('You are on the latest version');
           didInitiateCheck.current = false;
         }
       }, MIN_CHECKING_DURATION);
@@ -157,26 +155,26 @@ export const AboutSettings: React.FC = () => {
             )}
 
             {!updateStore.checking && updateStore.available && (
-              <ButtonSmall
+              <Button size="sm"
                 variant="default"
                 onClick={() => setUpdateDialogOpen(true)}
               >
                 <RiDownloadLine className="h-4 w-4 mr-1" />
                 Update to {updateStore.info?.version}
-              </ButtonSmall>
+              </Button>
             )}
 
             {!updateStore.checking && !updateStore.available && !updateStore.error && (
               <span className="typography-meta text-muted-foreground">Up to date</span>
             )}
 
-            <ButtonSmall
+            <Button size="sm"
               variant="outline"
               onClick={() => updateStore.checkForUpdates()}
               disabled={updateStore.checking}
             >
               Check for updates
-            </ButtonSmall>
+            </Button>
           </div>
         </div>
         

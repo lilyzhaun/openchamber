@@ -1,14 +1,13 @@
 import React from 'react';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
-import { ButtonSmall } from '@/components/ui/button-small';
+import { Button } from '@/components/ui/button';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
 import { RiAddLine, RiStackLine } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { SettingsProjectSelector } from '@/components/sections/shared/SettingsProjectSelector';
 import { opencodeClient } from '@/lib/opencode/client';
-import { useI18n } from '@/contexts/useI18n';
 
 const ADD_PROVIDER_ID = '__add_provider__';
 
@@ -37,7 +36,6 @@ interface ProvidersSidebarProps {
 }
 
 export const ProvidersSidebar: React.FC<ProvidersSidebarProps> = ({ onItemSelect }) => {
-  const { t } = useI18n();
   const providers = useConfigStore((state) => state.providers);
   const selectedProviderId = useConfigStore((state) => state.selectedProviderId);
   const setSelectedProvider = useConfigStore((state) => state.setSelectedProvider);
@@ -108,22 +106,22 @@ export const ProvidersSidebar: React.FC<ProvidersSidebarProps> = ({ onItemSelect
   return (
     <div className={cn('flex h-full flex-col', bgClass)}>
       <div className="border-b px-3 pt-4 pb-3">
-        <h2 className="text-base font-semibold text-foreground mb-3">{t('settings.providersSidebar.title')}</h2>
+        <h2 className="text-base font-semibold text-foreground mb-3">Providers</h2>
         <SettingsProjectSelector className="mb-3" />
         <div className="flex items-center justify-between gap-2">
-          <span className="typography-meta text-muted-foreground">{t('settings.sidebar.totalCount', { count: providers.length })}</span>
-          <ButtonSmall
+          <span className="typography-meta text-muted-foreground">Total {providers.length}</span>
+          <Button size="sm"
             variant="ghost"
             className="h-7 w-7 px-0 -my-1 text-muted-foreground"
             onClick={() => {
               setSelectedProvider(ADD_PROVIDER_ID);
               onItemSelect?.();
             }}
-            aria-label={t('settings.providersSidebar.connectProvider')}
-            title={t('settings.providersSidebar.connectProvider')}
+            aria-label="Connect provider"
+            title="Connect provider"
           >
             <RiAddLine className="h-3.5 w-3.5" />
-          </ButtonSmall>
+          </Button>
         </div>
       </div>
 
@@ -131,15 +129,15 @@ export const ProvidersSidebar: React.FC<ProvidersSidebarProps> = ({ onItemSelect
         {providers.length === 0 ? (
           <div className="py-12 px-4 text-center text-muted-foreground">
             <RiStackLine className="mx-auto mb-3 h-10 w-10 opacity-50" />
-            <p className="typography-ui-label font-medium">{t('settings.providersSidebar.noProvidersFound')}</p>
-            <p className="typography-meta mt-1 opacity-75">{t('settings.providersSidebar.checkOpenCodeConfig')}</p>
+            <p className="typography-ui-label font-medium">No providers found</p>
+            <p className="typography-meta mt-1 opacity-75">Check your OpenCode configuration</p>
           </div>
         ) : (
           <>
             {userProviders.length > 0 && (
               <>
                 <div className="px-2 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t('settings.providersSidebar.userProviders')}
+                  User Providers
                 </div>
                 {userProviders.map((provider) => (
                   <ProviderListItem
@@ -158,7 +156,7 @@ export const ProvidersSidebar: React.FC<ProvidersSidebarProps> = ({ onItemSelect
             {projectProviders.length > 0 && (
               <>
                 <div className={cn('px-2 pb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground', userProviders.length > 0 ? 'pt-3' : 'pt-2')}>
-                  {t('settings.providersSidebar.projectProviders')}
+                  Project Providers
                 </div>
                 {projectProviders.map((provider) => (
                   <ProviderListItem

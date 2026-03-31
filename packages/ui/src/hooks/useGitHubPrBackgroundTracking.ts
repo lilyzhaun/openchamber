@@ -1,17 +1,24 @@
 import React from 'react';
 import type { Session } from '@opencode-ai/sdk/v2';
 import type { RuntimeAPIs } from '@/lib/api/types';
+import { mapWithConcurrency } from '@/lib/concurrency';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useGitHubAuthStore } from '@/stores/useGitHubAuthStore';
 import { useGitHubPrStatusStore } from '@/stores/useGitHubPrStatusStore';
 import { useProjectsStore } from '@/stores/useProjectsStore';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionUIStore } from '@/sync/session-ui-store';
+import { useSessions } from '@/sync/sync-context';
 
-const MAX_BACKGROUND_PR_DIRECTORIES = 50;
+const MAX_BACKGROUND_PR_DIRECTORIES = 20;
 const ACTIVE_DIRECTORY_REFRESH_TTL_MS = 15_000;
 const BACKGROUND_DIRECTORY_REFRESH_TTL_MS = 2 * 60_000;
 const BRANCH_REFRESH_INTERVAL_MS = 15_000;
+const MAX_STATUS_FETCH_PER_TICK = 3;
+const MAX_STATUS_FETCH_ON_RESUME = 5;
+const STATUS_FETCH_CONCURRENCY = 2;
 const PR_EVENTUAL_CONSISTENCY_REFRESH_DELAY_MS = 5_000;
+const RESUME_REFRESH_DEBOUNCE_MS = 700;
+const RESUME_FORCE_COOLDOWN_MS = 8_000;
 
 const normalizePath = (value?: string | null): string | null => {
   if (typeof value !== 'string') {
@@ -47,6 +54,11 @@ type PrTarget = {
   remoteName?: string | null;
 };
 
+type BranchRefreshOptions = {
+  forceCurrent?: boolean;
+  maxFetchCount?: number;
+};
+
 const getBranchRefreshTtl = (directory: string, currentDirectory: string | null): number => {
   return directory === currentDirectory ? ACTIVE_DIRECTORY_REFRESH_TTL_MS : BACKGROUND_DIRECTORY_REFRESH_TTL_MS;
 };
@@ -60,6 +72,28 @@ const hasRepoSignalChanged = (previous: BranchCacheEntry | undefined, next: Bran
     || previous.tracking !== next.tracking
     || previous.ahead !== next.ahead
     || previous.behind !== next.behind;
+};
+
+const prioritizeDirectoriesForFetch = (
+  directories: string[],
+  cache: Map<string, BranchCacheEntry>,
+  currentDirectory: string | null,
+): string[] => {
+  return [...directories].sort((left, right) => {
+    const leftPriority = left === currentDirectory ? 0 : 1;
+    const rightPriority = right === currentDirectory ? 0 : 1;
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+
+    const leftFetchedAt = cache.get(left)?.fetchedAt ?? 0;
+    const rightFetchedAt = cache.get(right)?.fetchedAt ?? 0;
+    if (leftFetchedAt !== rightFetchedAt) {
+      return leftFetchedAt - rightFetchedAt;
+    }
+
+    return left.localeCompare(right);
+  });
 };
 
 const toPrTargets = (cache: Map<string, BranchCacheEntry>, directories: string[]): PrTarget[] => {
@@ -84,10 +118,9 @@ export const useGitHubPrBackgroundTracking = (
 ): void => {
   const currentDirectory = useDirectoryStore((state) => state.currentDirectory);
   const projects = useProjectsStore((state) => state.projects);
-  const sessions = useSessionStore((state) => state.sessions);
-  const archivedSessions = useSessionStore((state) => state.archivedSessions);
-  const availableWorktreesByProject = useSessionStore((state) => state.availableWorktreesByProject);
-  const worktreeMetadata = useSessionStore((state) => state.worktreeMetadata);
+  const sessions = useSessions();
+  const availableWorktreesByProject = useSessionUIStore((state) => state.availableWorktreesByProject);
+  const worktreeMetadata = useSessionUIStore((state) => state.worktreeMetadata);
 
   const githubAuthStatus = useGitHubAuthStore((state) => state.status);
   const githubAuthChecked = useGitHubAuthStore((state) => state.hasChecked);
@@ -100,6 +133,10 @@ export const useGitHubPrBackgroundTracking = (
   const branchCacheRef = React.useRef<Map<string, BranchCacheEntry>>(new Map());
   const targetsRef = React.useRef<PrTarget[]>([]);
   const burstTimeoutsRef = React.useRef<Map<string, number>>(new Map());
+  const refreshInFlightRef = React.useRef(false);
+  const pendingRefreshRef = React.useRef<BranchRefreshOptions | null>(null);
+  const resumeRefreshTimeoutRef = React.useRef<number | null>(null);
+  const lastResumeRefreshAtRef = React.useRef(0);
 
   React.useEffect(() => {
     branchCacheRef.current = branchCache;
@@ -165,7 +202,7 @@ export const useGitHubPrBackgroundTracking = (
       add(metadata.path);
     });
 
-    [...sessions, ...archivedSessions]
+    [...sessions]
       .sort((a, b) => (b.time?.updated ?? 0) - (a.time?.updated ?? 0))
       .forEach((rawSession) => {
         const session = rawSession as SessionLike;
@@ -174,32 +211,44 @@ export const useGitHubPrBackgroundTracking = (
       });
 
     return Array.from(ordered.values()).slice(0, MAX_BACKGROUND_PR_DIRECTORIES);
-  }, [archivedSessions, availableWorktreesByProject, currentDirectory, projects, sessions, worktreeMetadata]);
+  }, [availableWorktreesByProject, currentDirectory, projects, sessions, worktreeMetadata]);
 
   React.useEffect(() => {
     let cancelled = false;
 
-    const refreshBranches = async (force = false): Promise<PrTarget[]> => {
+    const refreshBranches = async (options?: BranchRefreshOptions): Promise<PrTarget[]> => {
+      const forceCurrent = options?.forceCurrent === true;
+      const maxFetchCount = Math.max(1, options?.maxFetchCount ?? MAX_STATUS_FETCH_PER_TICK);
       const now = Date.now();
-      const directoriesToFetch = candidateDirectories.filter((directory) => {
+      const dueDirectories = candidateDirectories.filter((directory) => {
         const cached = branchCacheRef.current.get(directory);
         if (!cached) {
           return true;
         }
-        if (force) {
+
+        if (forceCurrent && currentDirectory && directory === currentDirectory) {
           return true;
         }
+
         return now - cached.fetchedAt > getBranchRefreshTtl(directory, currentDirectory);
       });
+
+      const directoriesToFetch = prioritizeDirectoriesForFetch(
+        dueDirectories,
+        branchCacheRef.current,
+        currentDirectory,
+      ).slice(0, maxFetchCount);
 
       if (directoriesToFetch.length === 0) {
         return toPrTargets(branchCacheRef.current, candidateDirectories);
       }
 
-      const results = await Promise.all(
-        directoriesToFetch.map(async (directory) => {
+      const results = await mapWithConcurrency(
+        directoriesToFetch,
+        STATUS_FETCH_CONCURRENCY,
+        async (directory) => {
           try {
-            const status = await git.getGitStatus(directory);
+            const status = await git.getGitStatus(directory, { mode: 'light' });
             const branch = typeof status.current === 'string' ? status.current.trim() : '';
             return {
               directory,
@@ -211,7 +260,7 @@ export const useGitHubPrBackgroundTracking = (
           } catch {
             return { directory, branch: null, tracking: null, ahead: 0, behind: 0 };
           }
-        }),
+        },
       );
 
       if (cancelled) {
@@ -281,13 +330,43 @@ export const useGitHubPrBackgroundTracking = (
       return toPrTargets(nextCache, candidateDirectories);
     };
 
-    void refreshBranches();
+    const runRefresh = async (options?: BranchRefreshOptions): Promise<PrTarget[]> => {
+      if (refreshInFlightRef.current) {
+        const previousPending = pendingRefreshRef.current;
+        pendingRefreshRef.current = {
+          forceCurrent: Boolean(previousPending?.forceCurrent || options?.forceCurrent),
+          maxFetchCount: Math.max(
+            previousPending?.maxFetchCount ?? 1,
+            options?.maxFetchCount ?? 1,
+          ),
+        };
+        return [];
+      }
+
+      refreshInFlightRef.current = true;
+      try {
+        return await refreshBranches(options);
+      } finally {
+        refreshInFlightRef.current = false;
+        const pending = pendingRefreshRef.current;
+        pendingRefreshRef.current = null;
+        if (pending) {
+          void runRefresh(pending);
+        }
+      }
+    };
+
+    // Delay initial PR tracking to avoid startup CPU burst
+    const startupDelayId = window.setTimeout(() => {
+      if (cancelled) return;
+      void runRefresh({ forceCurrent: true, maxFetchCount: MAX_STATUS_FETCH_ON_RESUME });
+    }, 5_000);
 
     const intervalId = window.setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
         return;
       }
-      void refreshBranches();
+      void runRefresh({ maxFetchCount: MAX_STATUS_FETCH_PER_TICK });
     }, BRANCH_REFRESH_INTERVAL_MS);
 
     const refreshOnResume = () => {
@@ -295,31 +374,44 @@ export const useGitHubPrBackgroundTracking = (
         return;
       }
 
-      void refreshBranches(true).then((nextTargets) => {
-        const currentTargets = nextTargets.length > 0 ? nextTargets : targetsRef.current;
-        if (currentTargets.length === 0) {
-          return;
-        }
+      const now = Date.now();
+      if (now - lastResumeRefreshAtRef.current < RESUME_FORCE_COOLDOWN_MS) {
+        return;
+      }
 
-        const activeTargets = currentDirectory
-          ? currentTargets.filter((target) => target.directory === currentDirectory)
-          : [];
+      if (resumeRefreshTimeoutRef.current !== null) {
+        window.clearTimeout(resumeRefreshTimeoutRef.current);
+      }
 
-        if (activeTargets.length > 0) {
-          void refreshPrTargets(activeTargets, {
+      resumeRefreshTimeoutRef.current = window.setTimeout(() => {
+        resumeRefreshTimeoutRef.current = null;
+        lastResumeRefreshAtRef.current = Date.now();
+        void runRefresh({ forceCurrent: true, maxFetchCount: MAX_STATUS_FETCH_ON_RESUME }).then((nextTargets) => {
+          const currentTargets = nextTargets.length > 0 ? nextTargets : targetsRef.current;
+          if (currentTargets.length === 0) {
+            return;
+          }
+
+          const activeTargets = currentDirectory
+            ? currentTargets.filter((target) => target.directory === currentDirectory)
+            : [];
+
+          if (activeTargets.length > 0) {
+            void refreshPrTargets(activeTargets, {
+              force: true,
+              silent: true,
+              markInitialResolved: true,
+            });
+          }
+
+          void refreshPrTargets(currentTargets, {
             force: true,
+            onlyExistingPr: true,
             silent: true,
             markInitialResolved: true,
           });
-        }
-
-        void refreshPrTargets(currentTargets, {
-          force: true,
-          onlyExistingPr: true,
-          silent: true,
-          markInitialResolved: true,
         });
-      });
+      }, RESUME_REFRESH_DEBOUNCE_MS);
     };
 
     window.addEventListener('focus', refreshOnResume);
@@ -327,9 +419,16 @@ export const useGitHubPrBackgroundTracking = (
 
     return () => {
       cancelled = true;
+      window.clearTimeout(startupDelayId);
       window.clearInterval(intervalId);
       window.removeEventListener('focus', refreshOnResume);
       document.removeEventListener('visibilitychange', refreshOnResume);
+      if (resumeRefreshTimeoutRef.current !== null) {
+        window.clearTimeout(resumeRefreshTimeoutRef.current);
+        resumeRefreshTimeoutRef.current = null;
+      }
+      pendingRefreshRef.current = null;
+      refreshInFlightRef.current = false;
     };
   }, [candidateDirectories, currentDirectory, git, refreshPrTargets, scheduleBurstRefresh]);
 

@@ -1,7 +1,5 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ButtonLarge } from '@/components/ui/button-large';
-import { ButtonSmall } from '@/components/ui/button-small';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,7 +24,6 @@ import {
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
-import { useI18n } from '@/contexts/useI18n';
 import {
   Dialog,
   DialogContent,
@@ -75,7 +72,6 @@ function parseShellCommand(raw: string): string[] {
 }
 
 const CommandTextarea: React.FC<CommandTextareaProps> = ({ value, onChange }) => {
-  const { t } = useI18n();
   // Internal: one arg per line
   const [text, setText] = React.useState(() => value.join('\n'));
 
@@ -103,26 +99,26 @@ const CommandTextarea: React.FC<CommandTextareaProps> = ({ value, onChange }) =>
         : parseShellCommand(trimmed);
       setText(lines.join('\n'));
       onChange(lines);
-      toast.success(t('settings.mcpPage.pastedArguments', { count: lines.length, suffix: lines.length !== 1 ? 's' : '' }));
+      toast.success(`Pasted ${lines.length} argument${lines.length !== 1 ? 's' : ''}`);
     } catch {
-      toast.error(t('settings.mcpPage.cannotReadClipboard'));
+      toast.error('Cannot read clipboard');
     }
   };
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-end gap-2">
-        <ButtonSmall
+        <Button
           variant="ghost"
           size="xs"
           className="!font-normal gap-1 text-muted-foreground"
           onClick={handlePasteFromClipboard}
           type="button"
-          title={t('settings.mcpPage.pasteFullCommandTitle')}
+          title="Paste full command from clipboard and auto-split"
         >
           <RiClipboardLine className="h-3 w-3" />
           Paste command
-        </ButtonSmall>
+        </Button>
       </div>
 
       <Textarea
@@ -181,7 +177,6 @@ interface EnvEditorProps {
 }
 
 const EnvEditor: React.FC<EnvEditorProps> = ({ value, onChange }) => {
-  const { t } = useI18n();
   const [revealedKeys, setRevealedKeys] = React.useState<Set<number>>(new Set());
 
   const addRow = () => onChange([...value, { key: '', value: '' }]);
@@ -228,7 +223,7 @@ const EnvEditor: React.FC<EnvEditorProps> = ({ value, onChange }) => {
         if (key) parsed.push({ key, value: val });
       }
       if (parsed.length === 0) {
-        toast.error(t('settings.mcpPage.noKeyValuePairsFound'));
+        toast.error('No KEY=VALUE pairs found in clipboard');
         return;
       }
       // Merge: update existing keys, append new ones
@@ -239,9 +234,9 @@ const EnvEditor: React.FC<EnvEditorProps> = ({ value, onChange }) => {
         else merged.push(p);
       }
       onChange(merged);
-      toast.success(t('settings.mcpPage.importedVariables', { count: parsed.length, suffix: parsed.length !== 1 ? 's' : '' }));
+      toast.success(`Imported ${parsed.length} variable${parsed.length !== 1 ? 's' : ''}`);
     } catch {
-      toast.error(t('settings.mcpPage.cannotReadClipboard'));
+      toast.error('Cannot read clipboard');
     }
   };
 
@@ -255,17 +250,17 @@ const EnvEditor: React.FC<EnvEditorProps> = ({ value, onChange }) => {
           <span className="typography-micro text-muted-foreground w-32 shrink-0">Key</span>
           <span className="typography-micro text-muted-foreground">Value</span>
         </div>
-        <ButtonSmall
+        <Button
           variant="ghost"
           size="xs"
           className="!font-normal gap-1 text-muted-foreground"
           onClick={handlePasteDotEnv}
           type="button"
-          title={t('settings.mcpPage.pasteKeyValueTitle')}
+          title="Paste KEY=VALUE lines from clipboard"
         >
           <RiClipboardLine className="h-3 w-3" />
           Paste .env
-        </ButtonSmall>
+        </Button>
       </div>
 
       {/* Rows */}
@@ -276,7 +271,7 @@ const EnvEditor: React.FC<EnvEditorProps> = ({ value, onChange }) => {
             <Input
               value={entry.key}
               onChange={(e) => updateRow(idx, 'key', e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_'))}
-              placeholder={t('settings.mcpPage.envKeyPlaceholder')}
+              placeholder="API_KEY"
               className="w-36 shrink-0 font-mono typography-meta uppercase"
               spellCheck={false}
             />
@@ -286,7 +281,7 @@ const EnvEditor: React.FC<EnvEditorProps> = ({ value, onChange }) => {
                 type={revealedKeys.has(idx) ? 'text' : 'password'}
                 value={entry.value}
                 onChange={(e) => updateRow(idx, 'value', e.target.value)}
-                placeholder={t('settings.mcpPage.envValuePlaceholder')}
+                placeholder="value"
                 className="font-mono typography-meta pr-8 w-full"
                 spellCheck={false}
               />
@@ -302,18 +297,18 @@ const EnvEditor: React.FC<EnvEditorProps> = ({ value, onChange }) => {
               </button>
             </div>
             {/* Remove */}
-            <ButtonSmall
+            <Button size="sm"
               variant="ghost"
               className="h-7 w-7 px-0 shrink-0 text-muted-foreground hover:text-[var(--status-error)]"
               onClick={() => removeRow(idx)}
             >
               <RiDeleteBinLine className="h-3.5 w-3.5" />
-            </ButtonSmall>
+            </Button>
           </div>
         ))}
       </div>
 
-      <ButtonSmall
+      <Button
         variant="outline"
         size="xs"
         className="!font-normal gap-1.5"
@@ -322,7 +317,7 @@ const EnvEditor: React.FC<EnvEditorProps> = ({ value, onChange }) => {
       >
         <RiAddLine className="h-3.5 w-3.5" />
         Add variable
-      </ButtonSmall>
+      </Button>
 
       {hasSensitiveValues && (
         <p className="typography-micro text-muted-foreground/60">
@@ -365,7 +360,6 @@ const StatusBadge: React.FC<{ status: string | undefined; enabled: boolean }> = 
 // McpPage
 // ─────────────────────────────────────────────────────────────
 export const McpPage: React.FC = () => {
-  const { t } = useI18n();
   const {
     selectedMcpName,
     mcpServers,
@@ -446,15 +440,15 @@ export const McpPage: React.FC = () => {
 
   const handleSave = async () => {
     const name = isNewServer ? draftName.trim() : selectedMcpName ?? '';
-    if (!name) { toast.error(t('settings.mcpPage.nameRequired')); return; }
+    if (!name) { toast.error('Name is required'); return; }
     if (isNewServer && mcpServers.some((s) => s.name === name)) {
-      toast.error(t('settings.mcpPage.serverNameExists')); return;
+      toast.error('A server with this name already exists'); return;
     }
     if (mcpType === 'local' && command.filter(Boolean).length === 0) {
-      toast.error(t('settings.mcpPage.commandRequiredForLocal')); return;
+      toast.error('Command cannot be empty for a local server'); return;
     }
     if (mcpType === 'remote' && !url.trim()) {
-      toast.error(t('settings.mcpPage.urlRequiredForRemote')); return;
+      toast.error('URL cannot be empty for a remote server'); return;
     }
 
     const draft: McpDraft = { name, scope: draftScope, type: mcpType, command, url, environment: envEntries, enabled };
@@ -463,9 +457,9 @@ export const McpPage: React.FC = () => {
       const success = isNewServer ? await createMcp(draft) : await updateMcp(name, draft);
       if (success) {
         if (isNewServer) { setMcpDraft(null); setSelectedMcp(name); }
-        toast.success(isNewServer ? t('settings.mcpPage.mcpServerCreatedReloading') : t('settings.mcpPage.savedReloading'));
+        toast.success(isNewServer ? 'MCP server created. OpenCode reloading…' : 'Saved. OpenCode reloading…');
       } else {
-        toast.error(t('settings.mcpPage.failedSave'));
+        toast.error('Failed to save');
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'An error occurred');
@@ -478,8 +472,8 @@ export const McpPage: React.FC = () => {
     if (!selectedMcpName) return;
     setIsDeleting(true);
     const ok = await deleteMcp(selectedMcpName);
-    if (ok) { toast.success(t('settings.mcpPage.serverDeleted', { name: selectedMcpName })); setShowDeleteConfirm(false); }
-    else toast.error(t('settings.mcpPage.failedDelete'));
+    if (ok) { toast.success(`"${selectedMcpName}" deleted`); setShowDeleteConfirm(false); }
+    else toast.error('Failed to delete');
     setIsDeleting(false);
   };
 
@@ -490,10 +484,10 @@ export const McpPage: React.FC = () => {
       const isConnected = mcpStatus[selectedMcpName]?.status === 'connected';
       if (isConnected) {
         await disconnectMcp(selectedMcpName, currentDirectory);
-        toast.success(t('settings.mcpPage.disconnected'));
+        toast.success('Disconnected');
       } else {
         await connectMcp(selectedMcpName, currentDirectory);
-        toast.success(t('settings.mcpPage.connected'));
+        toast.success('Connected');
       }
       await refreshStatus({ directory: currentDirectory, silent: true });
     } catch (err) {
@@ -509,8 +503,8 @@ export const McpPage: React.FC = () => {
       <div className="flex h-full items-center justify-center">
         <div className="text-center text-muted-foreground">
           <RiPlugLine className="mx-auto mb-3 h-12 w-12 opacity-50" />
-          <p className="typography-body">{t('settings.mcpPage.emptyStateTitle')}</p>
-          <p className="typography-meta mt-1 opacity-75">{t('settings.mcpPage.emptyStateDesc')}</p>
+          <p className="typography-body">Select an MCP server from the sidebar</p>
+          <p className="typography-meta mt-1 opacity-75">or add a new one</p>
         </div>
       </div>
     );
@@ -527,7 +521,7 @@ export const McpPage: React.FC = () => {
         <div className="mb-4">
           <div className="min-w-0">
             {isNewServer ? (
-              <h2 className="typography-ui-header font-semibold text-foreground truncate">{t('settings.mcpPage.newServerTitle')}</h2>
+              <h2 className="typography-ui-header font-semibold text-foreground truncate">New MCP Server</h2>
             ) : (
               <div className="flex items-center gap-2 min-w-0">
                 <h2 className="typography-ui-header font-semibold text-foreground truncate">{selectedMcpName}</h2>
@@ -536,18 +530,18 @@ export const McpPage: React.FC = () => {
             )}
             <div className="flex items-center gap-2 mt-0.5">
               <p className="typography-meta text-muted-foreground truncate">
-                {isNewServer ? t('settings.mcpPage.newServerDesc') : t(mcpType === 'local' ? 'settings.mcpPage.transport.local' : 'settings.mcpPage.transport.remote')}
+                {isNewServer ? 'Configure a new MCP server' : `${mcpType === 'local' ? 'Local · stdio' : 'Remote · SSE'} transport`}
               </p>
               {!isNewServer && (
-                <ButtonSmall
+                <Button
                   variant={isConnected ? 'outline' : 'default'}
                   size="xs"
                   className="!font-normal"
                   onClick={handleToggleConnect}
                   disabled={isConnecting || !enabled}
                 >
-                  {isConnecting ? t('settings.common.working') : isConnected ? t('settings.mcpPage.disconnect') : t('settings.mcpPage.connect')}
-                </ButtonSmall>
+                  {isConnecting ? 'Working...' : isConnected ? 'Disconnect' : 'Connect'}
+                </Button>
               )}
             </div>
           </div>
@@ -556,7 +550,7 @@ export const McpPage: React.FC = () => {
         {/* Server Identity */}
         <div className="mb-8">
           <div className="mb-1 px-1">
-            <h3 className="typography-ui-header font-medium text-foreground">{t('settings.mcpPage.serverSectionTitle')}</h3>
+            <h3 className="typography-ui-header font-medium text-foreground">Server</h3>
           </div>
 
           <section className="px-2 pb-2 pt-0 space-y-0">
@@ -564,31 +558,31 @@ export const McpPage: React.FC = () => {
             {isNewServer && (
               <div className="flex flex-col gap-2 py-1.5 sm:flex-row sm:items-center sm:gap-8">
                 <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
-                  <span className="typography-ui-label text-foreground">{t('settings.mcpPage.serverName')}</span>
+                  <span className="typography-ui-label text-foreground">Server Name</span>
                 </div>
                 <div className="flex min-w-0 flex-1 items-center gap-2 sm:w-fit sm:flex-initial">
                   <Input
                     value={draftName}
                     onChange={(e) => setDraftName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '-'))}
-                    placeholder={t('settings.mcpPage.serverNamePlaceholder')}
+                    placeholder="my-mcp-server"
                     className="h-7 w-48 font-mono px-2"
                     autoFocus
                   />
                   <Select value={draftScope} onValueChange={(value) => setDraftScope(value as McpScope)}>
-                    <SelectTrigger className="!h-7 !w-7 !min-w-0 !px-0 !py-0 justify-center [&>svg:last-child]:hidden" title={draftScope === 'user' ? t('settings.mcpPage.userScope') : t('settings.mcpPage.projectScope')}>
+                    <SelectTrigger className="!h-7 !w-7 !min-w-0 !px-0 !py-0 justify-center [&>svg:last-child]:hidden" title={draftScope === 'user' ? 'User scope' : 'Project scope'}>
                       {draftScope === 'user' ? <RiUser3Line className="h-3.5 w-3.5" /> : <RiFolderLine className="h-3.5 w-3.5" />}
                     </SelectTrigger>
                     <SelectContent align="end">
                       <SelectItem value="user">
                         <div className="flex items-center gap-2">
                           <RiUser3Line className="h-3.5 w-3.5" />
-                          <span>{t('settings.common.user')}</span>
+                          <span>User</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="project">
                         <div className="flex items-center gap-2">
                           <RiFolderLine className="h-3.5 w-3.5" />
-                          <span>{t('settings.common.project')}</span>
+                          <span>Project</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -613,16 +607,16 @@ export const McpPage: React.FC = () => {
               <Checkbox
                 checked={enabled}
                 onChange={setEnabled}
-                ariaLabel={t('settings.mcpPage.enableServerAria')}
+                ariaLabel="Enable server"
               />
-              <span className="typography-ui-label text-foreground">{t('settings.mcpPage.enableServer')}</span>
+              <span className="typography-ui-label text-foreground">Enable Server</span>
             </div>
 
             <div className="pb-1.5 pt-0.5">
               <div className="flex min-w-0 flex-col gap-1.5">
-                <span className="typography-ui-label text-foreground">{t('settings.mcpPage.transportMode')}</span>
+                <span className="typography-ui-label text-foreground">Transport Mode</span>
                 <div className="flex flex-wrap items-center gap-1">
-                  <ButtonSmall
+                  <Button
                     variant="outline"
                     size="xs"
                     onClick={() => setMcpType('local')}
@@ -633,9 +627,9 @@ export const McpPage: React.FC = () => {
                         : 'text-foreground'
                     )}
                   >
-                    {t('settings.mcpPage.transport.local')}
-                  </ButtonSmall>
-                  <ButtonSmall
+                    Local · stdio
+                  </Button>
+                  <Button
                     variant="outline"
                     size="xs"
                     onClick={() => setMcpType('remote')}
@@ -646,8 +640,8 @@ export const McpPage: React.FC = () => {
                         : 'text-foreground'
                     )}
                   >
-                    {t('settings.mcpPage.transport.remote')}
-                  </ButtonSmall>
+                    Remote · SSE
+                  </Button>
                 </div>
               </div>
             </div>
@@ -659,7 +653,7 @@ export const McpPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              {mcpType === 'local' ? t('settings.mcpPage.commandTitle') : t('settings.mcpPage.serverUrlTitle')}
+              {mcpType === 'local' ? 'Command' : 'Server URL'}
             </h3>
           </div>
 
@@ -670,7 +664,7 @@ export const McpPage: React.FC = () => {
               <Input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder={t('settings.mcpPage.serverUrlPlaceholder')}
+                placeholder="https://mcp.example.com/mcp"
                 className="font-mono typography-meta"
               />
             )}
@@ -681,7 +675,7 @@ export const McpPage: React.FC = () => {
         <div className="mb-2">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              {t('settings.mcpPage.environmentVariables')}
+              Environment Variables
               {envEntries.length > 0 && (
                 <span className="ml-1.5 typography-micro text-muted-foreground font-normal">
                   ({envEntries.length})
@@ -697,23 +691,23 @@ export const McpPage: React.FC = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-2 px-2 py-1">
-          <ButtonSmall
+          <Button
             onClick={handleSave}
             disabled={isSaving || (!isDirty && !isNewServer)}
             size="xs"
             className="!font-normal"
           >
-            {isSaving ? t('settings.common.saving') : isNewServer ? t('settings.common.create') : t('settings.common.saveChanges')}
-          </ButtonSmall>
+            {isSaving ? 'Saving...' : isNewServer ? 'Create' : 'Save Changes'}
+          </Button>
           {!isNewServer && (
-            <ButtonSmall
+            <Button
               variant="ghost"
               size="xs"
               className="!font-normal text-[var(--status-error)] hover:text-[var(--status-error)]"
               onClick={() => setShowDeleteConfirm(true)}
             >
-              {t('settings.common.delete')}
-            </ButtonSmall>
+              Delete
+            </Button>
           )}
         </div>
       </div>
@@ -725,9 +719,10 @@ export const McpPage: React.FC = () => {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('settings.mcpPage.deleteDialogTitle', { name: selectedMcpName || '' })}</DialogTitle>
+            <DialogTitle>Delete "{selectedMcpName}"?</DialogTitle>
             <DialogDescription>
-              {t('settings.mcpPage.deleteDialogDescPrefix')} <code className="text-foreground">opencode.json</code>. {t('settings.mcpPage.deleteDialogDescSuffix')}
+              This removes the server from <code className="text-foreground">opencode.json</code>.
+              OpenCode will need to reload.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -737,11 +732,11 @@ export const McpPage: React.FC = () => {
               disabled={isDeleting}
               className="text-foreground hover:bg-interactive-hover hover:text-foreground"
             >
-              {t('settings.common.cancel')}
+              Cancel
             </Button>
-            <ButtonLarge onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? t('settings.common.deleting') : t('settings.common.delete')}
-            </ButtonLarge>
+            <Button size="sm" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? 'Deleting…' : 'Delete'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

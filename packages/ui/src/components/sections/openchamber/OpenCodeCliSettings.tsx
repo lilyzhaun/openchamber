@@ -1,15 +1,13 @@
 import * as React from 'react';
-import { ButtonSmall } from '@/components/ui/button-small';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { RiFolderLine, RiInformationLine } from '@remixicon/react';
 import { isDesktopShell, isTauriShell } from '@/lib/desktop';
 import { updateDesktopSettings } from '@/lib/persistence';
 import { reloadOpenCodeConfiguration } from '@/stores/useAgentsStore';
-import { useI18n } from '@/contexts/useI18n';
 
 export const OpenCodeCliSettings: React.FC = () => {
-  const { t } = useI18n();
   const [value, setValue] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -60,7 +58,7 @@ export const OpenCodeCliSettings: React.FC = () => {
 
     try {
       const selected = await tauri.dialog.open({
-        title: t('settings.openCodeCli.selectBinaryTitle'),
+        title: 'Select opencode binary',
         multiple: false,
         directory: false,
       });
@@ -76,25 +74,25 @@ export const OpenCodeCliSettings: React.FC = () => {
     setIsSaving(true);
     try {
       await updateDesktopSettings({ opencodeBinary: value.trim() });
-      await reloadOpenCodeConfiguration({ message: t('settings.actions.restartingOpenCode'), mode: 'projects', scopes: ['all'] });
+      await reloadOpenCodeConfiguration({ message: 'Restarting OpenCode…', mode: 'projects', scopes: ['all'] });
     } finally {
       setIsSaving(false);
     }
-  }, [t, value]);
+  }, [value]);
 
   return (
     <div className="mb-8">
       <div className="mb-1 px-1">
         <div className="flex items-center gap-2">
           <h3 className="typography-ui-header font-medium text-foreground">
-            {t('settings.openCodeCli.title')}
+            OpenCode CLI
           </h3>
           <Tooltip delayDuration={1000}>
             <TooltipTrigger asChild>
               <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
             </TooltipTrigger>
             <TooltipContent sideOffset={8} className="max-w-xs">
-              {t('settings.openCodeCli.binaryPathTooltipPrefix')} <code className="font-mono text-xs">opencode</code> {t('settings.openCodeCli.binaryPathTooltipSuffix')}
+              Optional absolute path to the <code className="font-mono text-xs">opencode</code> binary.
             </TooltipContent>
           </Tooltip>
         </div>
@@ -103,47 +101,47 @@ export const OpenCodeCliSettings: React.FC = () => {
       <section className="px-2 pb-2 pt-0 space-y-0.5">
         <div className="flex flex-col gap-2 py-1.5 sm:flex-row sm:items-center sm:gap-3">
           <div className="flex min-w-0 flex-col shrink-0">
-            <span className="typography-ui-label text-foreground">{t('settings.openCodeCli.binaryPath')}</span>
+            <span className="typography-ui-label text-foreground">OpenCode Binary Path</span>
           </div>
           <div className="flex min-w-0 items-center gap-2 sm:w-[20rem]">
             <Input
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={t('settings.openCodeCli.binaryPathPlaceholder')}
+              placeholder="/Users/you/.bun/bin/opencode"
               disabled={isLoading || isSaving}
               className="h-7 min-w-0 flex-1 font-mono text-xs"
             />
-            <ButtonSmall
+            <Button
               type="button"
               variant="outline"
               size="xs"
               onClick={handleBrowse}
               disabled={isLoading || isSaving || !isDesktopShell() || !isTauriShell()}
               className="h-7 w-7 p-0"
-              aria-label={t('settings.openCodeCli.browseBinaryPathAria')}
-              title={t('settings.openCodeCli.browse')}
+              aria-label="Browse for OpenCode binary path"
+              title="Browse"
             >
               <RiFolderLine className="h-4 w-4" />
-            </ButtonSmall>
+            </Button>
           </div>
         </div>
 
         <div className="py-1.5">
           <div className="typography-micro text-muted-foreground/70">
-            {t('settings.openCodeCli.tipPrefix')} <span className="font-mono">OPENCODE_BINARY</span> {t('settings.openCodeCli.tipSuffix')} <span className="font-mono">~/.config/openchamber/settings.json</span>.
+            Tip: you can also use <span className="font-mono">OPENCODE_BINARY</span> env var, but this setting persists in <span className="font-mono">~/.config/openchamber/settings.json</span>.
           </div>
         </div>
 
         <div className="flex justify-start py-1.5">
-          <ButtonSmall
+          <Button
             type="button"
             size="xs"
             onClick={handleSaveAndReload}
             disabled={isLoading || isSaving}
             className="shrink-0 !font-normal"
           >
-            {isSaving ? t('settings.openCodeCli.saving') : t('settings.openCodeCli.saveReload')}
-          </ButtonSmall>
+            {isSaving ? 'Saving…' : 'Save + Reload'}
+          </Button>
         </div>
       </section>
     </div>

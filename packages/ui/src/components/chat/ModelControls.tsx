@@ -37,7 +37,6 @@ import { Input } from '@/components/ui/input';
 import { MobileOverlayPanel } from '@/components/ui/MobileOverlayPanel';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
-import { Switch } from '@/components/ui/switch';
 import { TextLoop } from '@/components/ui/TextLoop';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsVSCodeRuntime } from '@/hooks/useRuntimeAPIs';
@@ -48,7 +47,10 @@ import { getEditModeColors } from '@/lib/permissions/editModeColors';
 import { cn, fuzzyMatch } from '@/lib/utils';
 import { useContextStore } from '@/stores/contextStore';
 import { useConfigStore } from '@/stores/useConfigStore';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionUIStore } from '@/sync/session-ui-store';
+import { useSelectionStore } from '@/sync/selection-store';
+import { useDirectorySync, useSessionMessages } from '@/sync/sync-context';
+import { useSync } from '@/sync/use-sync';
 import { useUIStore } from '@/stores/useUIStore';
 import { useModelLists } from '@/hooks/useModelLists';
 import { useIsTextTruncated } from '@/hooks/useIsTextTruncated';
@@ -315,20 +317,23 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
     const agents = getVisibleAgents();
     const primaryAgents = React.useMemo(() => agents.filter((agent) => agent.mode === 'primary'), [agents]);
 
+    const currentSessionId = useSessionUIStore((s) => s.currentSessionId);
+    const getDirectoryForSession = useSessionUIStore((s) => s.getDirectoryForSession);
+    const sync = useSync();
+
     const {
-        currentSessionId,
-        messages,
+        getSessionModelSelection,
+        saveSessionModelSelection,
         saveSessionAgentSelection,
         saveAgentModelForSession,
         getAgentModelForSession,
         saveAgentModelVariantForSession,
         getAgentModelVariantForSession,
-        analyzeAndSaveExternalSessionChoices,
-    } = useSessionStore();
+    } = useSelectionStore();
 
     const contextHydrated = useContextStore((state) => state.hasHydrated);
 
-    const sessionSavedAgentName = useContextStore((state) =>
+    const sessionSavedAgentName = useSelectionStore((state) =>
         currentSessionId ? state.sessionAgentSelections.get(currentSessionId) ?? null : null
     );
 
@@ -350,14 +355,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
         ? (sessionSavedAgentName || stickySessionAgentName || currentAgentName)
         : currentAgentName;
 
-    const sessionIdForEditMode = currentSessionId ?? '__global__';
-    const sessionEditMode = useContextStore((state) => {
-        if (!uiAgentName) {
-            return undefined;
-        }
-        return state.getSessionAgentEditMode(sessionIdForEditMode, uiAgentName, 'ask');
-    });
-    const setSessionAgentEditMode = useContextStore((state) => state.setSessionAgentEditMode);
     const {
         toggleFavoriteModel,
         isFavoriteModel,
@@ -506,21 +503,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
         return getCurrentAgent?.();
     }, [agents, getCurrentAgent, uiAgentName]);
 
-    const agentEditAction = React.useMemo<PermissionAction>(() => {
-        if (!currentAgent) {
-            return 'deny';
-        }
-        return resolveWildcardPermissionAction(currentAgent.permission, 'edit') ?? 'allow';
-    }, [currentAgent]);
-
-    const selectionContextReady = Boolean(uiAgentName);
-
-    const approveEditsAvailable = agentEditAction === 'ask';
-    const approveEditsChecked = approveEditsAvailable
-        ? sessionEditMode === 'allow' || sessionEditMode === 'full'
-        : agentEditAction === 'allow';
-    const approveEditsDisabled = !selectionContextReady || !approveEditsAvailable;
-
     const sizeVariant: 'mobile' | 'vscode' | 'default' = isMobile ? 'mobile' : isVSCodeRuntime ? 'vscode' : 'default';
     const buttonHeight = sizeVariant === 'mobile' ? 'h-9' : sizeVariant === 'vscode' ? 'h-6' : 'h-8';
     const editToggleIconClass = sizeVariant === 'mobile' ? 'h-5 w-5' : sizeVariant === 'vscode' ? 'h-4 w-4' : 'h-4 w-4';
@@ -544,13 +526,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
         }
         return <RiQuestionLine className={combinedClassName} style={iconStyle} />;
     }, [editToggleIconClass]);
-
-    const handleApproveEditsToggle = React.useCallback((checked: boolean) => {
-        if (!selectionContextReady || !currentAgentName || !approveEditsAvailable) {
-            return;
-        }
-        setSessionAgentEditMode(sessionIdForEditMode, currentAgentName, checked ? 'allow' : 'ask', 'ask');
-    }, [approveEditsAvailable, currentAgentName, selectionContextReady, setSessionAgentEditMode, sessionIdForEditMode]);
 
     const currentProvider = getCurrentProvider();
     const models = Array.isArray(currentProvider?.models) ? currentProvider.models : [];
@@ -594,31 +569,45 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
     ];
 
     const prevAgentNameRef = React.useRef<string | undefined>(undefined);
+    const latestLoadedUserChoiceRestoreRef = React.useRef<string | null>(null);
 
-    const currentSessionMessageCount = currentSessionId ? (messages.get(currentSessionId)?.length ?? -1) : -1;
+    const currentSessionDirectory = currentSessionId ? getDirectoryForSession(currentSessionId) : undefined;
+    const hasCurrentSessionMessagesEntry = useDirectorySync(
+        React.useCallback(
+            (state) => (currentSessionId ? state.message[currentSessionId] !== undefined : false),
+            [currentSessionId],
+        ),
+        currentSessionDirectory ?? undefined,
+    );
+    const currentSessionMessagesFromSync = useSessionMessages(currentSessionId ?? '', currentSessionDirectory ?? undefined);
+    const latestLoadedUserChoice = React.useMemo(() => {
+        for (let i = currentSessionMessagesFromSync.length - 1; i >= 0; i -= 1) {
+            const message = currentSessionMessagesFromSync[i] as typeof currentSessionMessagesFromSync[number] & {
+                model?: { providerID?: string; modelID?: string };
+                variant?: string;
+                mode?: string;
+            };
+            if (message.role !== 'user') {
+                continue;
+            }
 
-    const sessionInitializationRef = React.useRef<{
-        sessionId: string;
-        resolved: boolean;
-        inFlight: boolean;
-    } | null>(null);
+            const providerID = typeof message.model?.providerID === 'string' && message.model.providerID.trim().length > 0
+                ? message.model.providerID
+                : undefined;
+            const modelID = typeof message.model?.modelID === 'string' && message.model.modelID.trim().length > 0
+                ? message.model.modelID
+                : undefined;
+            const agent = typeof message.agent === 'string' && message.agent.trim().length > 0
+                ? message.agent
+                : (typeof message.mode === 'string' && message.mode.trim().length > 0 ? message.mode : undefined);
+            const variant = typeof message.variant === 'string' && message.variant.trim().length > 0
+                ? message.variant
+                : undefined;
 
-    // If we have an explicit per-session agent selection (eg. server-injected mode switch),
-    // treat the session as resolved and don't run inference/fallback that could cause flicker.
-    React.useEffect(() => {
-        if (!currentSessionId) {
-            return;
+            return { id: message.id, agent, providerID, modelID, variant };
         }
-        const refState = sessionInitializationRef.current;
-        if (!refState || refState.sessionId !== currentSessionId) {
-            return;
-        }
-
-        if (sessionSavedAgentName && agents.some((agent) => agent.name === sessionSavedAgentName)) {
-            refState.resolved = true;
-            refState.inFlight = false;
-        }
-    }, [agents, currentSessionId, sessionSavedAgentName]);
+        return null;
+    }, [currentSessionMessagesFromSync]);
 
     const tryApplyModelSelection = React.useCallback(
         (providerId: string, modelId: string, agentName?: string): ModelApplyResult => {
@@ -637,21 +626,93 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                 return 'model-missing';
             }
 
+            const providerMatches = currentProviderId === providerId;
+            const modelMatches = currentModelId === modelId;
+            if (providerMatches && modelMatches) {
+                return 'applied';
+            }
+
             setProvider(providerId);
             setModel(modelId);
 
-            if (currentSessionId && agentName) {
-                saveAgentModelForSession(currentSessionId, agentName, providerId, modelId);
+            if (currentSessionId) {
+                saveSessionModelSelection(currentSessionId, providerId, modelId);
+                if (agentName) {
+                    saveAgentModelForSession(currentSessionId, agentName, providerId, modelId);
+                }
             }
 
             return 'applied';
         },
-        [providers, setProvider, setModel, currentSessionId, saveAgentModelForSession],
+        [providers, currentProviderId, currentModelId, setProvider, setModel, currentSessionId, saveAgentModelForSession, saveSessionModelSelection],
     );
 
     React.useEffect(() => {
         if (!currentSessionId) {
-            sessionInitializationRef.current = null;
+            latestLoadedUserChoiceRestoreRef.current = null;
+            return;
+        }
+
+        if (!contextHydrated || providers.length === 0 || !hasCurrentSessionMessagesEntry || !latestLoadedUserChoice?.providerID || !latestLoadedUserChoice.modelID) {
+            return;
+        }
+
+        const restoreKey = [
+            currentSessionId,
+            latestLoadedUserChoice.id,
+            latestLoadedUserChoice.agent ?? '',
+            latestLoadedUserChoice.providerID,
+            latestLoadedUserChoice.modelID,
+            latestLoadedUserChoice.variant ?? '',
+        ].join('|');
+
+        if (latestLoadedUserChoiceRestoreRef.current === restoreKey) {
+            return;
+        }
+
+        if (latestLoadedUserChoice.agent && currentAgentName !== latestLoadedUserChoice.agent) {
+            setAgent(latestLoadedUserChoice.agent);
+        }
+
+        const applyResult = tryApplyModelSelection(
+            latestLoadedUserChoice.providerID,
+            latestLoadedUserChoice.modelID,
+            latestLoadedUserChoice.agent || currentAgentName || undefined,
+        );
+        if (applyResult !== 'applied') {
+            return;
+        }
+
+        if (latestLoadedUserChoice.agent) {
+            saveSessionAgentSelection(currentSessionId, latestLoadedUserChoice.agent);
+            saveAgentModelVariantForSession(
+                currentSessionId,
+                latestLoadedUserChoice.agent,
+                latestLoadedUserChoice.providerID,
+                latestLoadedUserChoice.modelID,
+                latestLoadedUserChoice.variant,
+            );
+        }
+        saveSessionModelSelection(currentSessionId, latestLoadedUserChoice.providerID, latestLoadedUserChoice.modelID);
+        latestLoadedUserChoiceRestoreRef.current = restoreKey;
+
+    }, [
+        currentSessionId,
+        currentAgentName,
+        contextHydrated,
+        providers,
+        hasCurrentSessionMessagesEntry,
+        latestLoadedUserChoice,
+        setAgent,
+        tryApplyModelSelection,
+        saveSessionAgentSelection,
+        saveAgentModelVariantForSession,
+        saveSessionModelSelection,
+    ]);
+
+    React.useEffect(() => {
+        if (!currentSessionId) {
+            latestLoadedUserChoiceRestoreRef.current = null;
             return;
         }
 
@@ -659,31 +720,10 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
             return;
         }
 
-        if (!sessionInitializationRef.current || sessionInitializationRef.current.sessionId !== currentSessionId) {
-            sessionInitializationRef.current = { sessionId: currentSessionId, resolved: false, inFlight: false };
-        }
-
-        const state = sessionInitializationRef.current;
-        if (!state || state.resolved || state.inFlight) {
-            return;
-        }
-
-        let isCancelled = false;
-
-        const finalize = () => {
-            if (isCancelled) {
-                return;
-            }
-            const refState = sessionInitializationRef.current;
-            if (refState && refState.sessionId === currentSessionId) {
-                refState.resolved = true;
-                refState.inFlight = false;
-            }
-        };
-
         const applySavedSelections = (): 'resolved' | 'waiting' | 'continue' => {
+            const savedSessionModel = getSessionModelSelection(currentSessionId);
             const savedAgentName = currentSessionId
-                ? (useContextStore.getState().getSessionAgentSelection(currentSessionId) || stickySessionAgentRef.current)
+                ? useSelectionStore.getState().getSessionAgentSelection(currentSessionId)
                 : null;
             if (savedAgentName) {
                 if (currentAgentName !== savedAgentName) {
@@ -699,8 +739,16 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                     if (result === 'provider-missing') {
                         return 'waiting';
                     }
-                } else {
+                }
+            }
+
+            if (savedSessionModel) {
+                const result = tryApplyModelSelection(savedSessionModel.providerId, savedSessionModel.modelId, savedAgentName || currentAgentName || undefined);
+                if (result === 'applied') {
                     return 'resolved';
+                }
+                if (result === 'provider-missing') {
+                    return 'waiting';
                 }
             }
 
@@ -714,7 +762,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                     setAgent(agent.name);
                 }
 
-                const existingSelection = useContextStore.getState().getSessionAgentSelection(currentSessionId) || stickySessionAgentRef.current;
+                const existingSelection = useSelectionStore.getState().getSessionAgentSelection(currentSessionId) || stickySessionAgentRef.current;
                 if (!existingSelection) {
                     saveSessionAgentSelection(currentSessionId, agent.name);
                 }
@@ -736,14 +784,14 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
             }
 
             const existingSelection = currentSessionId
-                ? (useContextStore.getState().getSessionAgentSelection(currentSessionId) || stickySessionAgentRef.current)
+                ? (useSelectionStore.getState().getSessionAgentSelection(currentSessionId) || stickySessionAgentRef.current)
                 : null;
 
             // If we already have a valid agent selected (often from server-injected mode switch),
             // don't override it with a fallback.
             const preferred =
                 (currentSessionId
-                    ? (useContextStore.getState().getSessionAgentSelection(currentSessionId) || stickySessionAgentRef.current)
+                    ? (useSelectionStore.getState().getSessionAgentSelection(currentSessionId) || stickySessionAgentRef.current)
                     : null) ||
                 currentAgentName;
             if (preferred && agents.some((agent) => agent.name === preferred)) {
@@ -771,174 +819,38 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
             }
         };
 
-        const resolveSessionPreferences = async () => {
-            try {
-                const savedOutcome = applySavedSelections();
-                if (savedOutcome === 'resolved') {
-                    finalize();
-                    return;
-                }
-                if (savedOutcome === 'waiting') {
-                    return;
-                }
+        const savedOutcome = applySavedSelections();
+        if (savedOutcome === 'resolved' || savedOutcome === 'waiting') {
+            return;
+        }
 
-                if (currentSessionMessageCount === -1) {
-                    return;
-                }
-
-                if (currentSessionMessageCount > 0) {
-                    state.inFlight = true;
-                    try {
-                        const discoveredChoices = await analyzeAndSaveExternalSessionChoices(currentSessionId, agents);
-                        if (isCancelled) {
-                            return;
-                        }
-
-                        if (discoveredChoices.size > 0) {
-                            let latestAgent: string | null = null;
-                            let latestTimestamp = -Infinity;
-
-                            for (const [agentName, choice] of discoveredChoices) {
-                                if (choice.timestamp > latestTimestamp) {
-                                    latestTimestamp = choice.timestamp;
-                                    latestAgent = agentName;
-                                }
-                            }
-
-                            if (latestAgent) {
-                                // If server/user already selected an agent for this session, don't override
-                                // with heuristic inference mid-stream.
-                                const latestSaved = useContextStore.getState().getSessionAgentSelection(currentSessionId) || stickySessionAgentRef.current;
-                                if (latestSaved && latestSaved !== latestAgent) {
-                                    finalize();
-                                    return;
-                                }
-
-                                if (!latestSaved) {
-                                    saveSessionAgentSelection(currentSessionId, latestAgent);
-                                }
-                                if (currentAgentName !== latestAgent) {
-                                    setAgent(latestAgent);
-                                }
-
-                                const latestChoice = discoveredChoices.get(latestAgent);
-                                if (latestChoice) {
-                                    const applyResult = tryApplyModelSelection(
-                                        latestChoice.providerId,
-                                        latestChoice.modelId,
-                                        latestAgent,
-                                    );
-
-                                    if (applyResult === 'applied') {
-                                        finalize();
-                                        return;
-                                    }
-
-                                    if (applyResult === 'provider-missing') {
-                                        return;
-                                    }
-                                } else {
-                                    finalize();
-                                    return;
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        if (!isCancelled) {
-                            console.error('[ModelControls] Error resolving session from messages:', error);
-                        }
-                    } finally {
-                        const refState = sessionInitializationRef.current;
-                        if (!isCancelled && refState && refState.sessionId === currentSessionId) {
-                            refState.inFlight = false;
-                        }
-                    }
-                }
-
-                if (isCancelled) {
-                    return;
-                }
-
-                applyFallbackAgent();
-                finalize();
-            } catch (error) {
-                if (!isCancelled) {
-                    console.error('[ModelControls] Error in session switch:', error);
-                }
+        if (!hasCurrentSessionMessagesEntry) {
+            if (!sync.isLoading(currentSessionId)) {
+                void sync.syncSession(currentSessionId);
             }
-        };
+            return;
+        }
 
-        resolveSessionPreferences();
+        if (latestLoadedUserChoice) {
+            return;
+        }
 
-        return () => {
-            isCancelled = true;
-        };
+        applyFallbackAgent();
     }, [
         currentSessionId,
-        currentSessionMessageCount,
+        hasCurrentSessionMessagesEntry,
+        latestLoadedUserChoice,
         agents,
         primaryAgents,
         currentAgentName,
+        getSessionModelSelection,
         getAgentModelForSession,
         setAgent,
         tryApplyModelSelection,
-        analyzeAndSaveExternalSessionChoices,
         saveSessionAgentSelection,
         contextHydrated,
         providers,
-        sessionSavedAgentName,
-    ]);
-
-    React.useEffect(() => {
-        if (!contextHydrated || !currentSessionId || providers.length === 0 || agents.length === 0) {
-            return;
-        }
-
-        const preferredAgent = sessionSavedAgentName || currentAgentName;
-        if (!preferredAgent) {
-            return;
-        }
-
-        const preferredSelection = getAgentModelForSession(currentSessionId, preferredAgent);
-        if (!preferredSelection) {
-            return;
-        }
-
-        const provider = providers.find(p => p.id === preferredSelection.providerId);
-        if (!provider) {
-            return;
-        }
-
-        const modelExists = Array.isArray(provider.models)
-            ? provider.models.some((m: ProviderModel) => m.id === preferredSelection.modelId)
-            : false;
-        if (!modelExists) {
-            return;
-        }
-
-        const providerMatches = currentProviderId === preferredSelection.providerId;
-        const modelMatches = currentModelId === preferredSelection.modelId;
-        if (providerMatches && modelMatches) {
-            return;
-        }
-
-        if (preferredAgent !== currentAgentName) {
-            setAgent(preferredAgent);
-        }
-
-        tryApplyModelSelection(preferredSelection.providerId, preferredSelection.modelId, preferredAgent);
-    }, [
-        contextHydrated,
-        currentSessionId,
-        currentAgentName,
-        currentProviderId,
-        currentModelId,
-        providers,
-        agents,
-        getAgentModelForSession,
-        tryApplyModelSelection,
-        setAgent,
-        sessionSavedAgentName,
+        sync,
     ]);
 
     React.useEffect(() => {
@@ -1819,23 +1731,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                 onClose={closeMobilePanel}
                 title="Select agent"
                 contentMaxHeightClassName="max-h-[min(52dvh,360px)]"
-                footer={(
-                    <div className="flex items-center justify-between">
-                        <span
-                            className={cn(
-                                'typography-meta font-medium',
-                                approveEditsDisabled ? 'text-muted-foreground' : 'text-foreground'
-                            )}
-                        >
-                            Auto-approve edits
-                        </span>
-                        <Switch
-                            checked={approveEditsChecked}
-                            disabled={approveEditsDisabled}
-                            onCheckedChange={handleApproveEditsToggle}
-                        />
-                    </div>
-                )}
             >
                 <div className="flex flex-col gap-2">
                     {selectableDesktopAgents.map((agent) => {
@@ -2302,10 +2197,9 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
 
                                     {/* Favorites Section */}
                                     {filteredFavorites.length > 0 && (
-                                        <>
+                                        <div>
                                             <DropdownMenuLabel
-                                                style={{ backgroundColor: 'var(--surface-elevated)' }}
-                                                className="typography-micro font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 -mx-1 px-3 py-1.5 sticky top-0 z-10 border-b border-border/30"
+                                                className="typography-micro font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 -mx-1 px-3 py-1.5 border-b border-border/30"
                                             >
                                                 <RiStarFill className="h-4 w-4 text-primary" />
                                                 Favorites
@@ -2314,16 +2208,15 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                                 const idx = currentFlatIndex++;
                                                 return renderModelRow(model, providerID, modelID, 'fav', idx, modelSelectedIndex === idx);
                                             })}
-                                        </>
+                                        </div>
                                     )}
 
                                     {/* Recents Section */}
                                     {filteredRecents.length > 0 && (
-                                        <>
+                                        <div>
                                             {filteredFavorites.length > 0 && <DropdownMenuSeparator />}
                                             <DropdownMenuLabel
-                                                style={{ backgroundColor: 'var(--surface-elevated)' }}
-                                                className="typography-micro font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 -mx-1 px-3 py-1.5 sticky top-0 z-10 border-b border-border/30"
+                                                className="typography-micro font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 -mx-1 px-3 py-1.5 border-b border-border/30"
                                             >
                                                 <RiTimeLine className="h-4 w-4" />
                                                 Recent
@@ -2332,7 +2225,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                                 const idx = currentFlatIndex++;
                                                 return renderModelRow(model, providerID, modelID, 'recent', idx, modelSelectedIndex === idx);
                                             })}
-                                        </>
+                                        </div>
                                     )}
 
                                     {/* Separator before providers */}
@@ -2342,7 +2235,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
 
                                     {/* All Providers - Flat List */}
                                     {providerSections.map(({ provider, isExpanded, visibleModels }, index) => (
-                                        <React.Fragment key={provider.id}>
+                                        <div key={provider.id}>
                                             {index > 0 && <DropdownMenuSeparator />}
                                             <div
                                                 role="button"
@@ -2366,8 +2259,8 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                                     }
                                                 }}
                                                 className={cn(
-                                                    'typography-micro font-semibold text-muted-foreground uppercase tracking-wider flex w-full items-center gap-2 -mx-1 px-3 py-1.5 sticky top-0 z-10 border-b border-border/30',
-                                                    'bg-[var(--surface-elevated)] text-left transition-colors',
+                                                    'typography-micro font-semibold text-muted-foreground uppercase tracking-wider flex w-full items-center gap-2 -mx-1 px-3 py-1.5 border-b border-border/30',
+                                                    'text-left transition-colors',
                                                     forceExpandProviders ? 'cursor-default' : 'cursor-pointer'
                                                 )}
                                                 aria-expanded={isExpanded}
@@ -2392,7 +2285,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                                 const idx = currentFlatIndex++;
                                                 return renderModelRow(model, provider.id as string, model.id as string, 'provider', idx, modelSelectedIndex === idx);
                                             })}
-                                        </React.Fragment>
+                                        </div>
                                     ))}
                                 </div>
                             </ScrollableOverlay>
@@ -2755,24 +2648,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                                         )}
                                     </div>
                                 </ScrollableOverlay>
-                                <DropdownMenuSeparator />
-                                <div className="flex flex-col gap-1 px-1 py-0.5">
-                                    <div className="rounded-xl bg-transparent">
-                                        <div className="flex items-center justify-between px-2 py-2">
-                                            <span className={cn(
-                                                'typography-meta font-medium',
-                                                approveEditsDisabled ? 'text-muted-foreground' : 'text-foreground'
-                                            )}>
-                                                Auto-approve edits
-                                            </span>
-                                            <Switch
-                                                checked={approveEditsChecked}
-                                                disabled={approveEditsDisabled}
-                                                onCheckedChange={handleApproveEditsToggle}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
                             </DropdownMenuContent>
                         </DropdownMenu>
                         {renderAgentTooltipContent()}

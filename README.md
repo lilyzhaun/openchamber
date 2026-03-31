@@ -6,15 +6,6 @@
 [![Discord](https://img.shields.io/badge/Discord-join.svg?style=flat&labelColor=100F0F&color=8B7EC8&logo=discord&logoColor=FFFCF0)](https://discord.gg/ZYRSdnwwKA)
 [![Support the project](https://img.shields.io/badge/Support-Project-black?style=flat&labelColor=100F0F&color=EC8B49&logo=ko-fi&logoColor=FFFCF0)](https://ko-fi.com/G2G41SAWNS)
 
-> [!IMPORTANT]
-> **Desktop users:** Please re-download and reinstall **OpenChamber v1.8.6** from [GitHub Releases](https://github.com/btriapitsyn/openchamber/releases).
-> We rotated the desktop updater signing key after moving the repository to the organization, so in-app auto-update from older desktop builds may fail signature verification.
-> This is a one-time reinstall and does not affect app functionality.
-
-> [!IMPORTANT]
-> **CLI users:** A startup regression in global npm/bun installs (symlink/wrapper entrypoints) is fixed in **OpenChamber v1.8.7**.
-> If `openchamber` exited without output on `--version`/`status`, update to **v1.8.7** from npm: `npm i -g @openchamber/web@1.8.7` or `bun add -g @openchamber/web@1.8.7`.
-
 ## **OpenCode, everywhere.** Desktop. Browser. Phone.
 
 ### A rich interface for [OpenCode](https://opencode.ai). Review diffs, manage agents, run dev servers, and keep the big picture while your AI codes.
@@ -106,7 +97,7 @@ _requires Node.js 20+_
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/btriapitsyn/openchamber/main/scripts/install.sh | bash
-openchamber --ui-password be-creative-here --daemon
+openchamber --ui-password be-creative-here
 ```
 
 <details>
@@ -136,6 +127,77 @@ OPENCODE_PORT=4096 OPENCODE_SKIP_START=true openchamber
 OPENCODE_HOST=https://myhost:4096 OPENCODE_SKIP_START=true openchamber
 ```
 
+Bind managed OpenCode server to all interfaces (use only on trusted networks):
+```bash
+OPENCHAMBER_OPENCODE_HOSTNAME=0.0.0.0 openchamber --port 3000
+```
+
+</details>
+
+<details>
+<summary>systemd service (VPN / LAN access)</summary>
+
+Run OpenChamber and OpenCode as separate persistent services — useful when you want to access your
+dev machine over a VPN (e.g. Tailscale) or LAN without a Cloudflare tunnel.
+
+**How it works:**
+- OpenCode runs as its own service, binding only to `localhost`.
+- OpenChamber connects to it via `OPENCODE_HOST` and `--host 0.0.0.0` makes it reachable on your VPN IP.
+- `--foreground` keeps the CLI process alive so systemd can track and restart it.
+
+**`~/.config/systemd/user/opencode.service`**
+```ini
+[Unit]
+Description=OpenCode Server
+
+[Service]
+Type=simple
+ExecStart=opencode serve --port 4095
+Environment="PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/home/YOU/.local/bin:/home/YOU/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+> **Why set `PATH` and `SSH_AUTH_SOCK`?**
+> systemd user services start with a minimal environment — no shell profile is sourced.
+> Without an explicit `PATH`, OpenCode won't find tools installed via Homebrew, npm, or `~/.local/bin`.
+> Without `SSH_AUTH_SOCK`, git operations over SSH (push, pull, clone) will fail because the agent socket isn't inherited.
+> Adjust the `PATH` to match your own tool installation paths.
+> `%t` expands to `$XDG_RUNTIME_DIR` (e.g. `/run/user/1000`), where most SSH agents write their socket.
+
+**`~/.config/systemd/user/openchamber.service`**
+```ini
+[Unit]
+Description=OpenChamber Web Server
+After=opencode.service
+
+[Service]
+Type=simple
+ExecStart=openchamber serve --port 3000 --host 0.0.0.0 --ui-password your-password --foreground
+Environment="OPENCODE_HOST=http://localhost:4095"
+Environment="OPENCODE_SKIP_START=true"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now opencode openchamber
+```
+
+OpenChamber will be reachable at `http://<your-vpn-hostname>:3000` from any device on your VPN.
+
+> **Note:** `--host 0.0.0.0` is required to listen on all interfaces. The default
+> bind address is `127.0.0.1` (localhost only). Use `--host <ip>` or
+> `OPENCHAMBER_HOST=<ip>` to bind to a specific interface instead.
+
 </details>
 
 <details>
@@ -153,27 +215,31 @@ environment:
   UI_PASSWORD: your_secure_password
 ```
 
-**Cloudflare Tunnel:**
+**Cloudflare Tunnel (optional):**
 ```yaml
 environment:
-  CF_TUNNEL: "true" # Options: true, qr, password
+  OPENCHAMBER_TUNNEL_MODE: quick # quick | managed-remote | managed-local
+  OPENCHAMBER_TUNNEL_PROVIDER: cloudflare
 ```
 
-| Value      | Description                     |
-| ---------- | ------------------------------- |
-| `true`     | Enable tunnel only              |
-| `qr`       | Enable tunnel + QR code         |
-| `password` | Enable tunnel + password in URL |
+For `managed-remote` mode, provide:
 
-### Managed Cloudflare Tunnel (persistent hostname)
+```yaml
+environment:
+  OPENCHAMBER_TUNNEL_MODE: managed-remote
+  OPENCHAMBER_TUNNEL_HOSTNAME: app.example.com
+  OPENCHAMBER_TUNNEL_TOKEN: <token>
+```
 
-OpenChamber also supports managed-remote mode for more reliable long-lived access with your Cloudflare account and custom hostname.
+For `managed-local` mode, optionally provide:
 
-- Configure it in-app at **Settings -> OpenChamber -> Tunnel** and switch mode to **Managed Remote Tunnel**.
-- Managed-remote tunnels require a domain in your Cloudflare account.
-- Cloudflare setup guide: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/
-- Managed-local mode uses your local cloudflared config, for example:
-  - `openchamber tunnel start --provider cloudflare --mode managed-local --config ~/.cloudflared/config.yml`
+```yaml
+environment:
+  OPENCHAMBER_TUNNEL_MODE: managed-local
+  OPENCHAMBER_TUNNEL_CONFIG: /home/openchamber/.cloudflared/config.yml
+```
+
+Managed-local path note: `OPENCHAMBER_TUNNEL_CONFIG` must point to a path inside the container user home (`/home/openchamber/...`). If your Cloudflare config references a credentials JSON file, that file path must also be accessible inside the container (mount with `volumes`).
 
 ### Tunnel behavior notes
 
@@ -237,7 +303,7 @@ chown -R 1000:1000 data/
 <details>
 <summary><strong>Web / PWA</strong></summary>
 
-- Cloudflare tunnel with Quick and Named modes, secure one-time connect links, and QR onboarding
+- Cloudflare tunnel with quick, managed-remote, and managed-local modes, secure one-time connect links, and QR onboarding
 - Mobile-first: optimized chat controls, keyboard-safe layouts, drag-to-reorder projects
 - Background notifications and cross-tab session tracking
 - Self-update + restart flow that keeps your server settings intact
@@ -324,6 +390,8 @@ Independent project, not affiliated with the OpenCode team.
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and guidelines.
+
+Docs source lives in [`packages/docs`](packages/docs/README.md).
 
 ## License
 

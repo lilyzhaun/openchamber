@@ -8,6 +8,149 @@ import { promisify } from 'util';
 const fsp = fs.promises;
 const execFileAsync = promisify(execFile);
 const gpgconfCandidates = ['gpgconf', '/opt/homebrew/bin/gpgconf', '/usr/local/bin/gpgconf'];
+let resolvedGitBinary = null;
+const worktreeBootstrapState = new Map();
+
+const WORKTREE_BOOTSTRAP_PENDING = 'pending';
+const WORKTREE_BOOTSTRAP_READY = 'ready';
+const WORKTREE_BOOTSTRAP_FAILED = 'failed';
+
+const toBootstrapStateKey = (directory) => {
+  const normalized = normalizeDirectoryPath(directory);
+  if (!normalized) {
+    return '';
+  }
+  return path.resolve(normalized);
+};
+
+const setWorktreeBootstrapState = (directory, status, error = null) => {
+  const key = toBootstrapStateKey(directory);
+  if (!key) {
+    return;
+  }
+  worktreeBootstrapState.set(key, {
+    status,
+    error: typeof error === 'string' && error.trim().length > 0 ? error.trim() : null,
+    updatedAt: Date.now(),
+  });
+};
+
+const clearWorktreeBootstrapState = (directory) => {
+  const key = toBootstrapStateKey(directory);
+  if (!key) {
+    return;
+  }
+  worktreeBootstrapState.delete(key);
+};
+
+const isExecutableFile = (candidate) => {
+  if (typeof candidate !== 'string' || candidate.trim().length === 0) {
+    return false;
+  }
+  try {
+    const stat = fs.statSync(candidate);
+    if (!stat.isFile()) {
+      return false;
+    }
+    if (process.platform === 'win32') {
+      const ext = path.extname(candidate).toLowerCase();
+      return ext.length === 0 || ext === '.exe' || ext === '.cmd' || ext === '.bat' || ext === '.com';
+    }
+    fs.accessSync(candidate, fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const normalizeGitExecutableCandidate = (candidate) => {
+  if (typeof candidate !== 'string') {
+    return null;
+  }
+  const trimmed = candidate.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const ext = path.extname(trimmed).toLowerCase();
+  if (ext === '.cmd' || ext === '.bat' || ext === '.com') {
+    const exeCandidate = trimmed.slice(0, -ext.length) + '.exe';
+    if (isExecutableFile(exeCandidate)) {
+      return exeCandidate;
+    }
+  }
+
+  return trimmed;
+};
+
+const listPathExecutableCandidates = (binaryName) => {
+  const currentPath = process.env.PATH || '';
+  const seen = new Set();
+  const matches = [];
+  for (const segment of currentPath.split(path.delimiter)) {
+    const dir = typeof segment === 'string' ? segment.trim() : '';
+    if (!dir || seen.has(dir)) {
+      continue;
+    }
+    seen.add(dir);
+    matches.push(path.join(dir, binaryName));
+  }
+  return matches;
+};
+
+const listWindowsGitInstallCandidates = () => {
+  const roots = [
+    process.env.ProgramFiles,
+    process.env['ProgramFiles(x86)'],
+    process.env.LocalAppData,
+  ]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean);
+
+  const candidates = [];
+  for (const root of roots) {
+    candidates.push(path.join(root, 'Git', 'cmd', 'git.exe'));
+    candidates.push(path.join(root, 'Git', 'bin', 'git.exe'));
+    candidates.push(path.join(root, 'Git', 'mingw64', 'bin', 'git.exe'));
+    candidates.push(path.join(root, 'Programs', 'Git', 'cmd', 'git.exe'));
+    candidates.push(path.join(root, 'Programs', 'Git', 'bin', 'git.exe'));
+  }
+  return candidates;
+};
+
+const resolveGitBinary = () => {
+  if (process.platform !== 'win32') {
+    return 'git';
+  }
+  if (resolvedGitBinary) {
+    return resolvedGitBinary;
+  }
+
+  const explicit = [process.env.GIT_BINARY, process.env.OPENCHAMBER_GIT_BINARY]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean);
+  for (const candidate of explicit) {
+    if (isExecutableFile(candidate)) {
+      resolvedGitBinary = candidate;
+      return resolvedGitBinary;
+    }
+  }
+
+  const discovered = [
+    ...listPathExecutableCandidates('git.exe'),
+    ...listPathExecutableCandidates('git'),
+    ...listWindowsGitInstallCandidates(),
+  ]
+    .map(normalizeGitExecutableCandidate)
+    .filter(Boolean)
+    .filter((candidate) => isExecutableFile(candidate));
+
+  const preferredExe = discovered.find((candidate) => candidate.toLowerCase().endsWith('.exe'));
+  resolvedGitBinary = preferredExe || discovered[0] || 'git.exe';
+  return resolvedGitBinary;
+};
+
+const getGitBinary = () => resolveGitBinary();
 
 /**
  * Escape an SSH key path for use in core.sshCommand.
@@ -126,10 +269,19 @@ const buildGitEnv = async () => {
 const createGit = async (directory) => {
   const env = await buildGitEnv();
   const spawnOptions = { windowsHide: true };
+  const binary = getGitBinary();
+  const hasCustomBinary = typeof binary === 'string' && binary.trim() && binary !== 'git' && binary !== 'git.exe';
+  const unsafe = hasCustomBinary ? { allowUnsafeCustomBinary: true } : undefined;
   if (!directory) {
-    return simpleGit({ env, spawnOptions });
+    return simpleGit({ env, spawnOptions, binary, unsafe });
   }
-  return simpleGit({ baseDir: normalizeDirectoryPath(directory), env, spawnOptions });
+  return simpleGit({
+    baseDir: normalizeDirectoryPath(directory),
+    env,
+    spawnOptions,
+    binary,
+    unsafe,
+  });
 };
 
 const normalizeDirectoryPath = (value) => {
@@ -411,9 +563,14 @@ const parseGitErrorText = (error) => {
     .trim();
 };
 
+const isNotGitRepositoryError = (error) => {
+  const text = parseGitErrorText(error);
+  return /not a git repository/i.test(text);
+};
+
 const runGitCommand = async (cwd, args) => {
   try {
-    const { stdout, stderr } = await execFileAsync('git', args, {
+    const { stdout, stderr } = await execFileAsync(getGitBinary(), args, {
       cwd,
       env: await buildGitEnv(),
       windowsHide: true,
@@ -623,6 +780,7 @@ const runWorktreeStartCommand = async (directory, command) => {
     const result = await execFileAsync('cmd', ['/c', text], {
       cwd: directory,
       env: await buildGitEnv(),
+      windowsHide: true,
       maxBuffer: 20 * 1024 * 1024,
     }).then(({ stdout, stderr }) => ({ success: true, stdout, stderr })).catch((error) => ({
       success: false,
@@ -660,6 +818,25 @@ const loadProjectStartCommand = async (projectID) => {
 
 const getProjectStoragePath = (projectID) => {
   return path.join(getOpenCodeDataPath(), 'storage', 'project', `${projectID}.json`);
+};
+
+const syncSandboxesToOpenCodeDb = (projectID, sandboxes) => {
+  try {
+    const { Database } = require('bun:sqlite');
+    const dbPath = path.join(getOpenCodeDataPath(), 'opencode.db');
+    if (!fs.existsSync(dbPath)) return;
+    const db = new Database(dbPath);
+    try {
+      const row = db.query('SELECT sandboxes FROM project WHERE id = ?').get(projectID);
+      if (!row) return;
+      const json = JSON.stringify(sandboxes);
+      db.query('UPDATE project SET sandboxes = ?, time_updated = ? WHERE id = ?').run(json, Date.now(), projectID);
+    } finally {
+      db.close();
+    }
+  } catch (error) {
+    console.warn('Failed to sync sandboxes to OpenCode DB:', error instanceof Error ? error.message : String(error));
+  }
 };
 
 const updateProjectSandboxes = async (projectID, primaryWorktree, updater) => {
@@ -701,6 +878,9 @@ const updateProjectSandboxes = async (projectID, primaryWorktree, updater) => {
   )];
 
   await fsp.writeFile(storagePath, `${JSON.stringify(current, null, 2)}\n`, 'utf8');
+
+  // Sync to OpenCode's SQLite database so project.sandboxes is visible via the SDK
+  syncSandboxesToOpenCodeDb(projectID, current.sandboxes);
 };
 
 const syncProjectSandboxAdd = async (projectID, primaryWorktree, sandboxPath) => {
@@ -725,30 +905,69 @@ const syncProjectSandboxRemove = async (projectID, primaryWorktree, sandboxPath)
   });
 };
 
-const queueWorktreeStartScripts = (directory, projectID, startCommand) => {
+const runWorktreeStartScripts = async (directory, projectID, startCommand) => {
+  const projectStart = await loadProjectStartCommand(projectID);
+  if (projectStart) {
+    const projectResult = await runWorktreeStartCommand(directory, projectStart);
+    if (!projectResult.success) {
+      console.warn('Worktree project start command failed:', projectResult.message || projectResult.stderr || projectResult.stdout);
+      return;
+    }
+  }
+
+  const extraCommand = String(startCommand || '').trim();
+  if (!extraCommand) {
+    return;
+  }
+  const extraResult = await runWorktreeStartCommand(directory, extraCommand);
+  if (!extraResult.success) {
+    console.warn('Worktree start command failed:', extraResult.message || extraResult.stderr || extraResult.stdout);
+  }
+};
+
+const queueWorktreeBootstrap = (args) => {
+  const {
+    directory,
+    projectID,
+    primaryWorktree,
+    localBranch,
+    setUpstream,
+    upstreamRemote,
+    upstreamBranch,
+    ensureRemoteName,
+    ensureRemoteUrl,
+    startCommand,
+  } = args;
   setTimeout(() => {
     const run = async () => {
-      const projectStart = await loadProjectStartCommand(projectID);
-      if (projectStart) {
-        const projectResult = await runWorktreeStartCommand(directory, projectStart);
-        if (!projectResult.success) {
-          console.warn('Worktree project start command failed:', projectResult.message || projectResult.stderr || projectResult.stdout);
-          return;
-        }
+      await runGitCommandOrThrow(directory, ['reset', '--hard'], 'Failed to populate worktree');
+      if (setUpstream) {
+        await applyUpstreamConfiguration({
+          primaryWorktree,
+          worktreeDirectory: directory,
+          localBranch,
+          setUpstream,
+          upstreamRemote,
+          upstreamBranch,
+          ensureRemoteName,
+          ensureRemoteUrl,
+        }).catch((error) => {
+          console.warn('Worktree upstream configuration failed:', error instanceof Error ? error.message : String(error));
+        });
       }
-
-      const extraCommand = String(startCommand || '').trim();
-      if (!extraCommand) {
-        return;
-      }
-      const extraResult = await runWorktreeStartCommand(directory, extraCommand);
-      if (!extraResult.success) {
-        console.warn('Worktree start command failed:', extraResult.message || extraResult.stderr || extraResult.stdout);
-      }
+      await runWorktreeStartScripts(directory, projectID, startCommand).catch((error) => {
+        console.warn('Worktree start script task failed:', error instanceof Error ? error.message : String(error));
+      });
+      setWorktreeBootstrapState(directory, WORKTREE_BOOTSTRAP_READY);
     };
 
     void run().catch((error) => {
-      console.warn('Worktree start script task failed:', error instanceof Error ? error.message : String(error));
+      setWorktreeBootstrapState(
+        directory,
+        WORKTREE_BOOTSTRAP_FAILED,
+        error instanceof Error ? error.message : String(error)
+      );
+      console.warn('Worktree bootstrap task failed:', error instanceof Error ? error.message : String(error));
     });
   }, 0);
 };
@@ -873,8 +1092,8 @@ export async function isGitRepository(directory) {
     return false;
   }
 
-  const gitDir = path.join(directoryPath, '.git');
-  return fs.existsSync(gitDir);
+  const result = await runGitCommand(directoryPath, ['rev-parse', '--git-dir']);
+  return result.success;
 }
 
 export async function getGlobalIdentity() {
@@ -990,18 +1209,22 @@ export async function setLocalIdentity(directory, profile) {
   }
 }
 
-export async function getStatus(directory) {
+export async function getStatus(directory, options = {}) {
   const directoryPath = normalizeDirectoryPath(directory);
   const git = await createGit(directoryPath);
+  const lightMode = options.mode === 'light';
 
   try {
     // Use -uall to show all untracked files individually, not just directories
     const status = await git.status(['-uall']);
 
-    const [stagedStatsRaw, workingStatsRaw] = await Promise.all([
-      git.raw(['diff', '--cached', '--numstat']).catch(() => ''),
-      git.raw(['diff', '--numstat']).catch(() => ''),
-    ]);
+    // Light mode: skip numstat + new-file line counting for faster response
+    const [stagedStatsRaw, workingStatsRaw] = lightMode
+      ? ['', '']
+      : await Promise.all([
+          git.raw(['diff', '--cached', '--numstat']).catch(() => ''),
+          git.raw(['diff', '--numstat']).catch(() => ''),
+        ]);
 
     const diffStatsMap = new Map();
 
@@ -1037,7 +1260,7 @@ export async function getStatus(directory) {
 
     const diffStats = Object.fromEntries(diffStatsMap.entries());
 
-    const newFileStats = await Promise.all(
+    const newFileStats = lightMode ? [] : await Promise.all(
       status.files.map(async (file) => {
         const working = (file.working_dir || '').trim();
         const indexStatus = (file.index || '').trim();
@@ -1136,7 +1359,8 @@ export async function getStatus(directory) {
 
     // When no upstream is configured (common for new worktree branches), Git doesn't report ahead/behind.
     // We still want to show the number of unpublished commits to the user.
-    if (!tracking && status.current) {
+    // Light mode skips this — the basic ahead/behind from git status is sufficient for polling.
+    if (!lightMode && !tracking && status.current) {
       const baseRef = await selectBaseRefForUnpublished();
       if (baseRef) {
         const countRaw = await git
@@ -1214,12 +1438,14 @@ export async function getStatus(directory) {
         working_dir: f.working_dir,
       })),
       isClean: status.isClean(),
-      diffStats,
+      diffStats: lightMode ? undefined : diffStats,
       mergeInProgress,
       rebaseInProgress,
     };
   } catch (error) {
-    console.error('Failed to get Git status:', error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error('Failed to get Git status:', error);
+    }
     throw error;
   }
 }
@@ -1451,9 +1677,10 @@ export async function getFileDiff(directory, { path: filePath, staged = false } 
     if (isImage) {
       // For images, use git show with raw output and convert to base64
       try {
-        const { stdout } = await execFileAsync('git', ['show', `HEAD:${filePath}`], {
+        const { stdout } = await execFileAsync(getGitBinary(), ['show', `HEAD:${filePath}`], {
           cwd: directoryPath,
           encoding: 'buffer',
+          windowsHide: true,
           maxBuffer: 50 * 1024 * 1024, // 50MB max
         });
         if (stdout && stdout.length > 0) {
@@ -2105,6 +2332,27 @@ export async function validateWorktreeCreate(directory, input = {}) {
   }
 }
 
+export async function previewWorktreeCreate(directory, input = {}) {
+  const mode = input?.mode === 'existing' ? 'existing' : 'new';
+  const context = await resolveWorktreeProjectContext(directory);
+  await fsp.mkdir(context.worktreeRoot, { recursive: true });
+
+  const preferredName = String(input?.worktreeName || input?.name || '').trim();
+  const preferredBranchName = cleanBranchName(String(input?.branchName || '').trim());
+  const candidate = await resolveCandidateDirectory(
+    context.worktreeRoot,
+    preferredName,
+    mode === 'new' && preferredBranchName ? preferredBranchName : '',
+    context.primaryWorktree
+  );
+
+  return {
+    name: candidate.name,
+    branch: mode === 'new' ? candidate.branch : preferredBranchName,
+    path: candidate.directory,
+  };
+}
+
 export async function createWorktree(directory, input = {}) {
   const mode = input?.mode === 'existing' ? 'existing' : 'new';
   const context = await resolveWorktreeProjectContext(directory);
@@ -2196,7 +2444,6 @@ export async function createWorktree(directory, input = {}) {
   }
 
   await runGitCommandOrThrow(context.primaryWorktree, worktreeAddArgs, 'Failed to create git worktree');
-  await runGitCommandOrThrow(candidate.directory, ['reset', '--hard'], 'Failed to populate worktree');
 
   try {
     await syncProjectSandboxAdd(context.projectID, context.primaryWorktree, candidate.directory);
@@ -2208,20 +2455,20 @@ export async function createWorktree(directory, input = {}) {
   const upstreamRemote = String(input?.upstreamRemote || inferredUpstream?.remote || '').trim();
   const upstreamBranch = String(input?.upstreamBranch || inferredUpstream?.branch || '').trim();
 
-  if (shouldSetUpstream) {
-    await applyUpstreamConfiguration({
-      primaryWorktree: context.primaryWorktree,
-      worktreeDirectory: candidate.directory,
-      localBranch,
-      setUpstream: shouldSetUpstream,
-      upstreamRemote,
-      upstreamBranch,
-      ensureRemoteName,
-      ensureRemoteUrl,
-    });
-  }
+  setWorktreeBootstrapState(candidate.directory, WORKTREE_BOOTSTRAP_PENDING);
 
-  queueWorktreeStartScripts(candidate.directory, context.projectID, input?.startCommand);
+  queueWorktreeBootstrap({
+    directory: candidate.directory,
+    projectID: context.projectID,
+    primaryWorktree: context.primaryWorktree,
+    localBranch,
+    setUpstream: shouldSetUpstream,
+    upstreamRemote,
+    upstreamBranch,
+    ensureRemoteName,
+    ensureRemoteUrl,
+    startCommand: input?.startCommand,
+  });
 
   const headResult = await runGitCommand(candidate.directory, ['rev-parse', 'HEAD']);
   const head = String(headResult.stdout || '').trim();
@@ -2231,6 +2478,24 @@ export async function createWorktree(directory, input = {}) {
     name: candidate.name,
     branch: localBranch,
     path: candidate.directory,
+  };
+}
+
+export async function getWorktreeBootstrapStatus(directory) {
+  const key = toBootstrapStateKey(directory);
+  if (!key) {
+    throw new Error('Worktree directory is required');
+  }
+
+  const current = worktreeBootstrapState.get(key);
+  if (current) {
+    return current;
+  }
+
+  return {
+    status: WORKTREE_BOOTSTRAP_READY,
+    error: null,
+    updatedAt: Date.now(),
   };
 }
 
@@ -2275,6 +2540,8 @@ export async function removeWorktree(directory, input = {}) {
       console.warn('Failed to sync OpenCode sandbox metadata (remove):', error instanceof Error ? error.message : String(error));
     }
 
+    clearWorktreeBootstrapState(targetDirectory);
+
     return true;
   }
 
@@ -2300,6 +2567,8 @@ export async function removeWorktree(directory, input = {}) {
   } catch (error) {
     console.warn('Failed to sync OpenCode sandbox metadata (remove):', error instanceof Error ? error.message : String(error));
   }
+
+  clearWorktreeBootstrapState(matchedEntry.worktree);
 
   return true;
 }
@@ -2575,6 +2844,26 @@ export async function getRemotes(directory) {
     }));
   } catch (error) {
     console.error('Failed to get remotes:', error);
+    throw error;
+  }
+}
+
+export async function removeRemote(directory, options = {}) {
+  const remoteName = String(options.remote || '').trim();
+  if (!remoteName) {
+    throw new Error('remote is required to remove a remote');
+  }
+  if (remoteName === 'origin') {
+    throw new Error('Cannot remove origin remote');
+  }
+
+  const git = await createGit(directory);
+
+  try {
+    await git.removeRemote(remoteName);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to remove remote:', error);
     throw error;
   }
 }
