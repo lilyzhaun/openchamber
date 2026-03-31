@@ -376,7 +376,7 @@ export const AgentsPage: React.FC = () => {
   const applyPendingRule = React.useCallback((action: PermissionAction) => {
     const name = pendingRuleName.trim();
     if (!name) {
-      toast.error('Permission name is required');
+      toast.error('权限名称不能为空');
       return;
     }
 
@@ -397,12 +397,12 @@ export const AgentsPage: React.FC = () => {
   }, [globalPermission, pendingRuleName, pendingRulePattern, removeRule, setGlobalPermissionAndPrune, upsertRule]);
 
   const formatPermissionLabel = React.useCallback((permissionName: string): string => {
-    if (permissionName === '*') return 'Default';
+    if (permissionName === '*') return '默认';
     if (permissionName === 'webfetch') return 'WebFetch';
     if (permissionName === 'websearch') return 'WebSearch';
     if (permissionName === 'codesearch') return 'CodeSearch';
-    if (permissionName === 'doom_loop') return 'Doom Loop';
-    if (permissionName === 'external_directory') return 'External Directory';
+    if (permissionName === 'doom_loop') return '循环保护';
+    if (permissionName === 'external_directory') return '外部目录';
     if (permissionName === 'todowrite') return 'TodoWrite';
     if (permissionName === 'todoread') return 'TodoRead';
 
@@ -528,13 +528,13 @@ export const AgentsPage: React.FC = () => {
     const agentName = isNewAgent ? draftName.trim().replace(/\s+/g, '-') : selectedAgentName?.trim();
 
     if (!agentName) {
-      toast.error('Agent name is required');
+      toast.error('代理名称不能为空');
       return;
     }
 
     // Check for duplicate name when creating new agent
     if (isNewAgent && agents.some((a) => a.name === agentName)) {
-      toast.error('An agent with this name already exists');
+      toast.error('已存在同名代理');
       return;
     }
 
@@ -566,13 +566,13 @@ export const AgentsPage: React.FC = () => {
       }
 
       if (success) {
-        toast.success(isNewAgent ? 'Agent created successfully' : 'Agent updated successfully');
+        toast.success(isNewAgent ? '代理创建成功' : '代理更新成功');
       } else {
-        toast.error(isNewAgent ? 'Failed to create agent' : 'Failed to update agent');
+        toast.error(isNewAgent ? '创建代理失败' : '更新代理失败');
       }
     } catch (error) {
       console.error('Error saving agent:', error);
-      const message = error instanceof Error && error.message ? error.message : 'An error occurred while saving';
+      const message = error instanceof Error && error.message ? error.message : '保存时发生错误';
       toast.error(message);
     } finally {
       setIsSaving(false);
@@ -585,8 +585,8 @@ export const AgentsPage: React.FC = () => {
       <div className="flex h-full items-center justify-center">
         <div className="text-center text-muted-foreground">
           <RiRobot2Line className="mx-auto mb-3 h-12 w-12 opacity-50" />
-          <p className="typography-body">Select an agent from the sidebar</p>
-          <p className="typography-meta mt-1 opacity-75">or create a new one</p>
+          <p className="typography-body">请从侧边栏选择一个代理</p>
+          <p className="typography-meta mt-1 opacity-75">或新建一个</p>
         </div>
       </div>
     );
@@ -600,10 +600,10 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-4 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <h2 className="typography-ui-header font-semibold text-foreground truncate">
-              {isNewAgent ? 'New Agent' : selectedAgentName}
+               {isNewAgent ? '新建代理' : selectedAgentName}
             </h2>
             <p className="typography-meta text-muted-foreground truncate">
-              {isNewAgent ? 'Configure a new assistant persona' : 'Edit agent settings'}
+               {isNewAgent ? '配置新的助手角色' : '编辑代理设置'}
             </p>
           </div>
         </div>
@@ -612,7 +612,7 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Identity & Role
+               身份与角色
             </h3>
           </div>
 
@@ -621,7 +621,7 @@ export const AgentsPage: React.FC = () => {
             {isNewAgent && (
               <div className="flex flex-col gap-2 py-1.5 sm:flex-row sm:items-center sm:gap-8">
                 <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
-                  <span className="typography-ui-label text-foreground">Agent Name</span>
+                  <span className="typography-ui-label text-foreground">代理名称</span>
                 </div>
                 <div className="flex min-w-0 flex-1 items-center gap-2 sm:w-fit sm:flex-initial">
                   <div className="flex items-center">
@@ -635,19 +635,19 @@ export const AgentsPage: React.FC = () => {
                   </div>
                   <Select value={draftScope} onValueChange={(v) => setDraftScope(v as AgentScope)}>
                     <SelectTrigger className="w-fit min-w-[100px]">
-                      <SelectValue placeholder="Scope" />
+                       <SelectValue placeholder="作用域" />
                     </SelectTrigger>
                     <SelectContent align="end">
                       <SelectItem value="user">
                         <div className="flex items-center gap-2">
                           <RiUser3Line className="h-3.5 w-3.5" />
-                          <span>Global</span>
+                           <span>全局</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="project">
                         <div className="flex items-center gap-2">
                           <RiFolderLine className="h-3.5 w-3.5" />
-                          <span>Project</span>
+                           <span>项目</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -657,12 +657,12 @@ export const AgentsPage: React.FC = () => {
             )}
 
             <div className="py-1.5">
-              <span className="typography-ui-label text-foreground">Description</span>
+              <span className="typography-ui-label text-foreground">描述</span>
               <div className="mt-1.5">
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What does this agent do?"
+                  placeholder="这个代理是做什么的？"
                   rows={2}
                   className="w-full resize-none min-h-[60px] bg-transparent"
                 />
@@ -672,13 +672,13 @@ export const AgentsPage: React.FC = () => {
             <div className="pb-1.5 pt-0.5">
               <div className="flex min-w-0 flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="typography-ui-label text-foreground">Mode</span>
+                  <span className="typography-ui-label text-foreground">模式</span>
                   <Tooltip delayDuration={1000}>
                     <TooltipTrigger asChild>
                       <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent sideOffset={8} className="max-w-xs">
-                      Primary vs Subagent visibility
+                       控制主代理与子代理的可见范围
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -694,7 +694,7 @@ export const AgentsPage: React.FC = () => {
                       : 'text-foreground'
                   )}
                 >
-                  Primary
+                   主代理
                 </Button>
                 <Button
                   variant="outline"
@@ -707,7 +707,7 @@ export const AgentsPage: React.FC = () => {
                       : 'text-foreground'
                   )}
                 >
-                  Subagent
+                   子代理
                 </Button>
                 <Button
                   variant="outline"
@@ -720,7 +720,7 @@ export const AgentsPage: React.FC = () => {
                       : 'text-foreground'
                   )}
                 >
-                  All
+                   全部
                 </Button>
                 </div>
               </div>
@@ -733,7 +733,7 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Model & Parameters
+               模型与参数
             </h3>
           </div>
 
@@ -741,7 +741,7 @@ export const AgentsPage: React.FC = () => {
 
             <div className="flex flex-col gap-2 py-1.5 sm:flex-row sm:items-center sm:gap-8">
               <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
-                <span className="typography-ui-label text-foreground">Override Model</span>
+                 <span className="typography-ui-label text-foreground">覆盖模型</span>
               </div>
               <div className="flex min-w-0 flex-1 items-center gap-2 sm:w-fit sm:flex-initial">
                 <ModelSelector
@@ -767,7 +767,7 @@ export const AgentsPage: React.FC = () => {
                       <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent sideOffset={8} className="max-w-xs">
-                      Controls randomness. Higher = creative, Lower = focused.
+                       控制随机性。越高越有创造性，越低越聚焦。
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -793,8 +793,8 @@ export const AgentsPage: React.FC = () => {
                     variant="ghost"
                     onClick={() => setTemperature(undefined)}
                     className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                    aria-label="Clear temperature override"
-                    title="Clear"
+                     aria-label="清除温度覆盖"
+                     title="清除"
                   >
                     <RiCloseLine className="h-3.5 w-3.5" />
                   </Button>
@@ -811,7 +811,7 @@ export const AgentsPage: React.FC = () => {
                       <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent sideOffset={8} className="max-w-xs">
-                      Nucleus sampling diversity. Lower = likely tokens only.
+                       核采样多样性。越低越偏向高概率 token。
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -837,8 +837,8 @@ export const AgentsPage: React.FC = () => {
                     variant="ghost"
                     onClick={() => setTopP(undefined)}
                     className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                    aria-label="Clear top p override"
-                    title="Clear"
+                     aria-label="清除 Top P 覆盖"
+                     title="清除"
                   >
                     <RiCloseLine className="h-3.5 w-3.5" />
                   </Button>
@@ -853,7 +853,7 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
             <h3 className="typography-ui-header font-medium text-foreground">
-              System Prompt
+               系统提示词
             </h3>
           </div>
 
@@ -861,7 +861,7 @@ export const AgentsPage: React.FC = () => {
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="You are an expert coding assistant..."
+               placeholder="你是一名专业的编码助手..."
               rows={8}
               className="w-full font-mono typography-meta min-h-[120px] max-h-[60vh] bg-transparent resize-y"
             />
@@ -872,7 +872,7 @@ export const AgentsPage: React.FC = () => {
         <div className="mb-2">
           <div className="mb-1 px-1 flex items-center justify-between gap-4">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Tool Permissions
+               工具权限
             </h3>
             <Button
               variant="outline"
@@ -880,7 +880,7 @@ export const AgentsPage: React.FC = () => {
               className="!font-normal"
               onClick={() => setShowPermissionEditor((prev) => !prev)}
             >
-              {showPermissionEditor ? 'Hide Editor' : 'Advanced Editor'}
+               {showPermissionEditor ? '隐藏编辑器' : '高级编辑器'}
             </Button>
           </div>
 
@@ -898,12 +898,12 @@ export const AgentsPage: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       {patternRulesCount > 0 ? (
-                        <span className="typography-micro text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">Global: {summary}</span>
+                         <span className="typography-micro text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">全局：{summary}</span>
                       ) : (
                         <span className={cn("typography-micro capitalize px-1.5 py-0.5 rounded", summary === 'allow' ? "text-[var(--status-success)] bg-[var(--status-success)]/10" : summary === 'deny' ? "text-[var(--status-error)] bg-[var(--status-error)]/10" : "text-[var(--status-warning)] bg-[var(--status-warning)]/10")}>{summary}</span>
                       )}
                       {patternRulesCount > 0 && (
-                        <span className="typography-micro text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">Rules: {patternSummary}</span>
+                         <span className="typography-micro text-muted-foreground bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">规则：{patternSummary}</span>
                       )}
                     </div>
                   </div>
@@ -914,7 +914,7 @@ export const AgentsPage: React.FC = () => {
             <div className="space-y-6 px-2">
               <div className="flex items-center justify-between gap-4 py-1.5">
                 <div className="flex items-center gap-2">
-                  <span className="typography-ui-label text-foreground">Global Default</span>
+                   <span className="typography-ui-label text-foreground">全局默认</span>
                   <span className="typography-micro text-muted-foreground/70 font-mono">*</span>
                 </div>
                 <Select
@@ -925,9 +925,9 @@ export const AgentsPage: React.FC = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="allow">Allow</SelectItem>
-                    <SelectItem value="ask">Ask</SelectItem>
-                    <SelectItem value="deny">Deny</SelectItem>
+                     <SelectItem value="allow">允许</SelectItem>
+                     <SelectItem value="ask">询问</SelectItem>
+                     <SelectItem value="deny">拒绝</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -949,14 +949,14 @@ export const AgentsPage: React.FC = () => {
                           <span className="typography-micro text-muted-foreground/70 font-mono">{permissionName}</span>
                         </div>
                         <div className="typography-micro text-muted-foreground">
-                          {patternRulesCount > 0 ? `Global: ${defaultAction}` : defaultAction}
+                           {patternRulesCount > 0 ? `全局：${defaultAction}` : defaultAction}
                         </div>
                       </div>
 
                       <div className="space-y-1 pl-2 mt-1">
                         <div className="flex flex-wrap items-center justify-between gap-2 py-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="typography-micro text-muted-foreground">Pattern</span>
+                             <span className="typography-micro text-muted-foreground">模式</span>
                             <span className="typography-micro font-mono text-foreground bg-[var(--surface-muted)] px-1 rounded">*</span>
                             {wildcardOverride && (
                               <Button size="sm"
@@ -982,7 +982,7 @@ export const AgentsPage: React.FC = () => {
                                <SelectValue />
                              </SelectTrigger>
                              <SelectContent>
-                               <SelectItem value="global">Global</SelectItem>
+                               <SelectItem value="global">全局</SelectItem>
                               {wildcardOptions.map((action) => (
                                 <SelectItem key={action} value={action} className="capitalize">
                                   {action}
@@ -1001,10 +1001,10 @@ export const AgentsPage: React.FC = () => {
                           return (
                             <div key={ruleKey} className="flex flex-wrap items-center justify-between gap-2 py-0.5 border-t border-[var(--surface-subtle)]">
                               <div className="flex items-center gap-2">
-                                <span className="typography-micro text-muted-foreground">Pattern</span>
+                             <span className="typography-micro text-muted-foreground">模式</span>
                                 <span className="typography-micro font-mono text-foreground bg-[var(--surface-muted)] px-1 rounded">{rule.pattern}</span>
-                                {isAdded && <span className="typography-micro text-[var(--status-success)]">New</span>}
-                                {isModified && <span className="typography-micro text-[var(--status-warning)]">Modified</span>}
+                                 {isAdded && <span className="typography-micro text-[var(--status-success)]">新增</span>}
+                                 {isModified && <span className="typography-micro text-[var(--status-warning)]">已修改</span>}
                                 {(isAdded || isModified) && (
                                   <Button size="sm"
                                     variant="ghost"
@@ -1023,9 +1023,9 @@ export const AgentsPage: React.FC = () => {
                                    <SelectValue />
                                  </SelectTrigger>
                                  <SelectContent>
-                                   <SelectItem value="allow">Allow</SelectItem>
-                                  <SelectItem value="ask">Ask</SelectItem>
-                                  <SelectItem value="deny">Deny</SelectItem>
+                                    <SelectItem value="allow">允许</SelectItem>
+                                   <SelectItem value="ask">询问</SelectItem>
+                                   <SelectItem value="deny">拒绝</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1038,14 +1038,14 @@ export const AgentsPage: React.FC = () => {
               </div>
 
               <div className="border-t border-[var(--surface-subtle)] pt-3">
-                <h4 className="typography-ui-label text-foreground mb-2">Add Custom Rule</h4>
+                 <h4 className="typography-ui-label text-foreground mb-2">添加自定义规则</h4>
                 <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
                   <Select value={pendingRuleName} onValueChange={setPendingRuleName}>
                     <SelectTrigger className="w-full sm:w-[160px]">
                       {pendingRuleName ? (
                         <span className="truncate">{formatPermissionLabel(pendingRuleName)}</span>
                       ) : (
-                        <span className="text-muted-foreground">Permission...</span>
+                         <span className="text-muted-foreground">权限...</span>
                       )}
                     </SelectTrigger>
                     <SelectContent>
@@ -1062,14 +1062,14 @@ export const AgentsPage: React.FC = () => {
                   <Input
                     value={pendingRulePattern}
                     onChange={(e) => setPendingRulePattern(e.target.value)}
-                    placeholder="Pattern (e.g. *)"
+                     placeholder="模式（例如 *）"
                     className="h-7 flex-1 font-mono text-xs"
                   />
 
                   <div className="flex gap-1">
-                    <Button variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('allow')}>Allow</Button>
-                    <Button variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('ask')}>Ask</Button>
-                    <Button variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('deny')}>Deny</Button>
+                     <Button variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('allow')}>允许</Button>
+                     <Button variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('ask')}>询问</Button>
+                     <Button variant="outline" size="xs" className="!font-normal" onClick={() => applyPendingRule('deny')}>拒绝</Button>
                   </div>
                 </div>
               </div>
@@ -1085,7 +1085,7 @@ export const AgentsPage: React.FC = () => {
             size="xs"
             className="!font-normal"
           >
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? '保存中...' : '保存更改'}
           </Button>
         </div>
 

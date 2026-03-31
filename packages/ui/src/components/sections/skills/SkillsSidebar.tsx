@@ -79,10 +79,10 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
     setIsDeletePending(true);
     const success = await deleteSkill(deleteDialogSkill.name);
     if (success) {
-      toast.success(`Skill "${deleteDialogSkill.name}" deleted successfully`);
+      toast.success(`技能“${deleteDialogSkill.name}”已删除`);
       setDeleteDialogSkill(null);
     } else {
-      toast.error('Failed to delete skill');
+      toast.error('删除技能失败');
     }
     setIsDeletePending(false);
   };
@@ -100,7 +100,7 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
     // Get full skill detail to copy
     const detail = await getSkillDetail(skill.name);
     if (!detail) {
-      toast.error('Failed to load skill details for duplication');
+      toast.error('加载技能详情用于复制失败');
       return;
     }
 
@@ -128,7 +128,7 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
     const sanitizedName = renameNewName.trim().replace(/\s+/g, '-').toLowerCase();
 
     if (!sanitizedName) {
-      toast.error('Skill name is required');
+      toast.error('技能名称不能为空');
       return;
     }
 
@@ -138,14 +138,14 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
     }
 
     if (skills.some((s) => s.name === sanitizedName)) {
-      toast.error('A skill with this name already exists');
+      toast.error('已存在同名技能');
       return;
     }
 
     // Get full detail to copy
     const detail = await getSkillDetail(renameDialogSkill.name);
     if (!detail) {
-      toast.error('Failed to load skill details');
+      toast.error('加载技能详情失败');
       setRenameDialogSkill(null);
       return;
     }
@@ -153,7 +153,7 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
     // Create new skill with new name
     const success = await createSkill({
       name: sanitizedName,
-      description: 'Renamed skill', // Will need proper description
+      description: '已重命名的技能', // Will need proper description
       scope: renameDialogSkill.scope,
       source: renameDialogSkill.source,
     });
@@ -162,13 +162,13 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
       // Delete old skill
       const deleteSuccess = await deleteSkill(renameDialogSkill.name);
       if (deleteSuccess) {
-        toast.success(`Skill renamed to "${sanitizedName}"`);
+        toast.success(`技能已重命名为“${sanitizedName}”`);
         setSelectedSkill(sanitizedName);
       } else {
-        toast.error('Failed to remove old skill after rename');
+        toast.error('重命名后删除旧技能失败');
       }
     } else {
-      toast.error('Failed to rename skill');
+      toast.error('重命名技能失败');
     }
 
     setRenameDialogSkill(null);
@@ -202,10 +202,10 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
   return (
     <div className={cn('flex h-full flex-col', bgClass)}>
       <div className="border-b px-3 pt-4 pb-3">
-        <h2 className="text-base font-semibold text-foreground mb-3">Skills</h2>
+        <h2 className="text-base font-semibold text-foreground mb-3">技能</h2>
         <SettingsProjectSelector className="mb-3" />
         <div className="flex items-center justify-between gap-2">
-          <span className="typography-meta text-muted-foreground">Total {skills.length}</span>
+          <span className="typography-meta text-muted-foreground">共 {skills.length} 个</span>
           <Button size="sm"
             variant="ghost"
             className="h-7 w-7 px-0 -my-1 text-muted-foreground"
@@ -220,15 +220,15 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
         {skills.length === 0 ? (
           <div className="py-12 px-4 text-center text-muted-foreground">
             <RiBookOpenLine className="mx-auto mb-3 h-10 w-10 opacity-50" />
-            <p className="typography-ui-label font-medium">No skills configured</p>
-            <p className="typography-meta mt-1 opacity-75">Use the + button above to create one</p>
+            <p className="typography-ui-label font-medium">尚未配置技能</p>
+            <p className="typography-meta mt-1 opacity-75">使用上方的 + 按钮创建一个</p>
           </div>
         ) : (
           <>
             {projectSkills.length > 0 && (
               <>
                 <div className="px-2 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Project Skills
+                  项目技能
                 </div>
                 {groupedProjectSkills.sortedGroups.map(({ name: groupName, skills: groupSkills }) => (
                   <SidebarGroup
@@ -279,7 +279,7 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
             {userSkills.length > 0 && (
               <>
                 <div className="px-2 pb-1.5 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  User Skills
+                  用户技能
                 </div>
                 {groupedUserSkills.sortedGroups.map(({ name: groupName, skills: groupSkills }) => (
                   <SidebarGroup
@@ -340,9 +340,9 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Skill</DialogTitle>
+            <DialogTitle>删除技能</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete skill "{deleteDialogSkill?.name}"?
+              确定要删除技能“{deleteDialogSkill?.name}”吗？
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -353,10 +353,10 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
               onClick={() => setDeleteDialogSkill(null)}
               disabled={isDeletePending}
             >
-              Cancel
+               取消
             </Button>
             <Button size="sm" onClick={handleConfirmDeleteSkill} disabled={isDeletePending}>
-              Delete
+               删除
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -366,15 +366,15 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
       <Dialog open={renameDialogSkill !== null} onOpenChange={(open) => !open && setRenameDialogSkill(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Skill</DialogTitle>
+            <DialogTitle>重命名技能</DialogTitle>
             <DialogDescription>
-              Enter a new name for the skill "{renameDialogSkill?.name}"
+              为技能“{renameDialogSkill?.name}”输入一个新名称
             </DialogDescription>
           </DialogHeader>
           <Input
             value={renameNewName}
             onChange={(e) => setRenameNewName(e.target.value)}
-            placeholder="New skill name..."
+            placeholder="新技能名称..."
             className="text-foreground placeholder:text-muted-foreground"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -389,10 +389,10 @@ export const SkillsSidebar: React.FC<SkillsSidebarProps> = ({ onItemSelect }) =>
               variant="ghost"
               onClick={() => setRenameDialogSkill(null)}
             >
-              Cancel
+              取消
             </Button>
             <Button size="sm" onClick={handleRenameSkill}>
-              Rename
+              重命名
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -477,7 +477,7 @@ const SkillListItem: React.FC<SkillListItemProps> = ({
               }}
             >
               <RiEditLine className="h-4 w-4 mr-px" />
-              Rename
+                重命名
             </DropdownMenuItem>
 
             <DropdownMenuItem
@@ -487,7 +487,7 @@ const SkillListItem: React.FC<SkillListItemProps> = ({
               }}
             >
               <RiFileCopyLine className="h-4 w-4 mr-px" />
-              Duplicate
+               复制
             </DropdownMenuItem>
 
             <DropdownMenuItem
@@ -498,7 +498,7 @@ const SkillListItem: React.FC<SkillListItemProps> = ({
               className="text-destructive focus:text-destructive"
             >
               <RiDeleteBinLine className="h-4 w-4 mr-px" />
-              Delete
+               删除
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

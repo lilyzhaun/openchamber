@@ -61,31 +61,31 @@ const isPortInUseError = (error: unknown): boolean => {
 const phaseLabel = (phase?: string): string => {
   switch (phase) {
     case 'config_resolved':
-      return 'Resolving configuration';
+      return '正在解析配置';
     case 'auth_check':
-      return 'Checking auth';
+      return '正在检查认证';
     case 'master_connecting':
-      return 'Establishing SSH';
+      return '正在建立 SSH 连接';
     case 'remote_probe':
-      return 'Probing remote';
+      return '正在探测远端';
     case 'installing':
-      return 'Installing OpenChamber';
+      return '正在安装 OpenChamber';
     case 'updating':
-      return 'Updating OpenChamber';
+      return '正在更新 OpenChamber';
     case 'server_detecting':
-      return 'Detecting server';
+      return '正在检测服务器';
     case 'server_starting':
-      return 'Starting server';
+      return '正在启动服务器';
     case 'forwarding':
-      return 'Forwarding ports';
+      return '正在转发端口';
     case 'ready':
-      return 'Ready';
+      return '已就绪';
     case 'degraded':
-      return 'Reconnecting';
+      return '正在重连';
     case 'error':
-      return 'Error';
+      return '错误';
     default:
-      return 'Idle';
+      return '空闲';
   }
 };
 
@@ -164,11 +164,11 @@ const HintLabel: React.FC<{ label: string; hint: React.ReactNode }> = ({ label, 
 const forwardTypeDescription = (type: DesktopSshPortForwardType): string => {
   switch (type) {
     case 'remote':
-      return 'Remote (-R): expose a port on the remote machine and send that traffic back to this laptop.';
+      return '远程 (-R)：在远端机器上暴露一个端口，并将该流量回传到当前电脑。';
     case 'dynamic':
-      return 'Dynamic (-D): create a local SOCKS5 proxy on this laptop (for apps that support SOCKS proxy settings).';
+      return '动态 (-D)：在当前电脑上创建本地 SOCKS5 代理（适用于支持 SOCKS 代理设置的应用）。';
     default:
-      return 'Local (-L): open a port on this laptop and send it to a remote host:port over SSH (use this to access remote services locally).';
+      return '本地 (-L)：在当前电脑上打开一个端口，并通过 SSH 转发到远端主机:端口（用于在本地访问远端服务）。';
   }
 };
 
@@ -345,13 +345,13 @@ export const RemoteInstancesPage: React.FC = () => {
     const normalized = normalizeForSave(draft);
 
     if (!normalized.sshCommand.trim()) {
-      toast.error('SSH command is required');
+      toast.error('SSH 命令不能为空');
       return;
     }
 
     if (normalized.localForward.bindHost === '0.0.0.0') {
       const allow = window.confirm(
-        'Binding local forwards to 0.0.0.0 makes the forwarded port reachable from other devices on your network. Continue?',
+        '将本地转发绑定到 0.0.0.0 会使局域网中的其他设备也能访问该端口。是否继续？',
       );
       if (!allow) {
         return;
@@ -363,7 +363,7 @@ export const RemoteInstancesPage: React.FC = () => {
       normalized.auth.sshPassword.value?.trim() &&
       normalized.auth.sshPassword.store !== 'settings'
     ) {
-      const store = window.confirm('Store SSH password in settings.json as plaintext?');
+      const store = window.confirm('是否将 SSH 密码以明文形式存储到 settings.json 中？');
       normalized.auth.sshPassword.store = store ? 'settings' : 'never';
       if (!store) {
         normalized.auth.sshPassword.value = undefined;
@@ -375,7 +375,7 @@ export const RemoteInstancesPage: React.FC = () => {
       normalized.auth.openchamberPassword.value?.trim() &&
       normalized.auth.openchamberPassword.store !== 'settings'
     ) {
-      const store = window.confirm('Store OpenChamber UI password in settings.json as plaintext?');
+      const store = window.confirm('是否将 OpenChamber UI 密码以明文形式存储到 settings.json 中？');
       normalized.auth.openchamberPassword.store = store ? 'settings' : 'never';
       if (!store) {
         normalized.auth.openchamberPassword.value = undefined;
@@ -384,9 +384,9 @@ export const RemoteInstancesPage: React.FC = () => {
 
     try {
       await upsertInstance(normalized);
-      toast.success('SSH instance saved');
+      toast.success('SSH 实例已保存');
     } catch (error) {
-      toast.error('Failed to save SSH instance', {
+      toast.error('保存 SSH 实例失败', {
         description: error instanceof Error ? error.message : String(error),
       });
     }
@@ -398,10 +398,10 @@ export const RemoteInstancesPage: React.FC = () => {
       try {
         await createFromCommand(id, `ssh ${destination}`, host);
         setSelectedId(id);
-        toast.success('SSH instance created');
+        toast.success('SSH 实例已创建');
         return true;
       } catch (error) {
-        toast.error('Failed to create SSH instance', {
+        toast.error('创建 SSH 实例失败', {
           description: error instanceof Error ? error.message : String(error),
         });
         return false;
@@ -437,7 +437,7 @@ export const RemoteInstancesPage: React.FC = () => {
       return;
     }
     if (!destination) {
-      toast.error('Destination is required');
+      toast.error('目标地址不能为空');
       return;
     }
 
@@ -463,7 +463,7 @@ export const RemoteInstancesPage: React.FC = () => {
         throw error;
       }
 
-      const allow = window.confirm('Local port is already in use. Pick a random free local port and retry?');
+      const allow = window.confirm('本地端口已被占用。是否随机选择一个空闲端口并重试？');
       if (!allow) {
         throw error;
       }
@@ -478,7 +478,7 @@ export const RemoteInstancesPage: React.FC = () => {
 
       await upsertInstance(nextInstance);
       await connect(nextInstance.id);
-      toast.success('Retried with a random local port');
+      toast.success('已使用随机本地端口重试');
     }
   }, [connect, selectedInstance, upsertInstance]);
 
@@ -538,12 +538,12 @@ export const RemoteInstancesPage: React.FC = () => {
 
   const handleCopyAllLogs = React.useCallback(() => {
     if (!logLinesText.trim()) {
-      toast.error('No logs to copy');
+      toast.error('没有可复制的日志');
       return;
     }
     void copyTextToClipboard(logLinesText).then((result) => {
       if (result.ok) {
-        toast.success('Logs copied');
+        toast.success('日志已复制');
       }
     });
   }, [logLinesText]);
@@ -555,9 +555,9 @@ export const RemoteInstancesPage: React.FC = () => {
     try {
       await desktopSshLogsClear(draft.id);
       setLogDialogLines([]);
-      toast.success('Logs cleared');
+      toast.success('日志已清空');
     } catch (error) {
-      toast.error('Failed to clear logs', {
+      toast.error('清空日志失败', {
         description: error instanceof Error ? error.message : String(error),
       });
     }
@@ -565,13 +565,13 @@ export const RemoteInstancesPage: React.FC = () => {
 
   const handleOpenCurrentInstance = React.useCallback(async () => {
     if (!status?.localUrl) {
-      toast.error('Instance URL is not available yet');
+      toast.error('实例 URL 暂不可用');
       return;
     }
 
     const target = status.localUrl.trim();
     if (!target) {
-      toast.error('Instance URL is not available yet');
+      toast.error('实例 URL 暂不可用');
       return;
     }
 
@@ -587,8 +587,8 @@ export const RemoteInstancesPage: React.FC = () => {
     const operation = canDisconnect ? disconnect(draft.id) : connectWithPortRecovery();
     void operation
       .catch((error) => {
-        const actionLabel = canDisconnect ? (isReady ? 'disconnect' : 'cancel connection') : 'connect';
-        toast.error(`Failed to ${actionLabel}`, {
+        const actionLabel = canDisconnect ? (isReady ? '断开连接' : '取消连接') : '连接';
+        toast.error(`${actionLabel}失败`, {
           description: error instanceof Error ? error.message : String(error),
         });
       })
@@ -613,7 +613,7 @@ export const RemoteInstancesPage: React.FC = () => {
 
     void operation
       .catch((error) => {
-        toast.error('Retry failed', {
+        toast.error('重试失败', {
           description: error instanceof Error ? error.message : String(error),
         });
       })
@@ -623,12 +623,12 @@ export const RemoteInstancesPage: React.FC = () => {
   }, [connectWithPortRecovery, disconnect, draft, isConnecting, isReconnecting, retry]);
 
   const retryButtonLabel = isConnecting
-    ? 'Connecting...'
+    ? '连接中...'
     : isReconnecting
       ? reconnectAppearsStuck
-        ? 'Reconnect now'
-        : 'Reconnecting...'
-      : 'Retry';
+        ? '立即重连'
+        : '重连中...'
+      : '重试';
 
   const canRetry =
     !isPrimaryActionPending &&
@@ -636,30 +636,30 @@ export const RemoteInstancesPage: React.FC = () => {
     (statusPhase === 'error' || statusPhase === 'idle' || !statusPhase || (isReconnecting && reconnectAppearsStuck)) &&
     !isConnecting;
 
-  const primaryButtonLabel = isReady ? 'Disconnect' : canDisconnect ? 'Cancel' : 'Connect';
+  const primaryButtonLabel = isReady ? '断开连接' : canDisconnect ? '取消' : '连接';
 
   if (!draft) {
     return (
       <SettingsPageLayout>
         <div className="mb-8">
           <div className="mb-1 px-1 space-y-0.5">
-            <h3 className="typography-ui-header font-medium text-foreground">Remote Instances</h3>
-            <p className="typography-meta text-muted-foreground">Manage SSH-backed OpenChamber instances.</p>
+            <h3 className="typography-ui-header font-medium text-foreground">远程实例</h3>
+            <p className="typography-meta text-muted-foreground">管理基于 SSH 的 OpenChamber 实例。</p>
           </div>
           <section className="px-2 pb-2 pt-0 space-y-3">
-            <p className="typography-meta text-muted-foreground">Select an instance from the sidebar or import one from SSH config.</p>
+            <p className="typography-meta text-muted-foreground">请从侧边栏选择一个实例，或从 SSH 配置中导入。</p>
           </section>
         </div>
 
         <div className="mb-8 border-t border-[var(--surface-subtle)] pt-8">
           <div className="mb-1 px-1 space-y-0.5">
-            <h3 className="typography-ui-header font-medium text-foreground">Import from SSH config</h3>
+            <h3 className="typography-ui-header font-medium text-foreground">从 SSH 配置导入</h3>
           </div>
           <section className="px-2 pb-2 pt-0">
           {isImportsLoading ? (
-            <p className="typography-meta text-muted-foreground">Loading SSH hosts...</p>
+            <p className="typography-meta text-muted-foreground">正在加载 SSH 主机...</p>
           ) : importCandidates.length === 0 ? (
-            <p className="typography-meta text-muted-foreground">No SSH config hosts found.</p>
+            <p className="typography-meta text-muted-foreground">未找到 SSH 配置中的主机。</p>
           ) : (
             <div className="space-y-2">
               {importCandidates.map((candidate) => (
@@ -667,9 +667,9 @@ export const RemoteInstancesPage: React.FC = () => {
                   <div className="min-w-0">
                     <div className="typography-ui-label text-foreground truncate">
                       {candidate.host}
-                      {candidate.pattern ? ' (pattern)' : ''}
+                      {candidate.pattern ? '（模式）' : ''}
                     </div>
-                    <div className="typography-micro text-muted-foreground">{candidate.source} config</div>
+                    <div className="typography-micro text-muted-foreground">{candidate.source} 配置</div>
                   </div>
                   <Button
                     type="button"
@@ -678,7 +678,7 @@ export const RemoteInstancesPage: React.FC = () => {
                     className="!font-normal"
                     onClick={() => void handleImportCandidate(candidate.host, candidate.pattern)}
                   >
-                    Create
+                    创建
                   </Button>
                 </div>
               ))}
@@ -697,9 +697,9 @@ export const RemoteInstancesPage: React.FC = () => {
         >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Create from wildcard pattern</DialogTitle>
+              <DialogTitle>从通配模式创建</DialogTitle>
               <DialogDescription>
-                {patternHost ? `${patternHost} requires a concrete destination.` : 'Enter destination.'}
+                {patternHost ? `${patternHost} 需要一个具体目标地址。` : '请输入目标地址。'}
               </DialogDescription>
             </DialogHeader>
             <form
@@ -717,10 +717,10 @@ export const RemoteInstancesPage: React.FC = () => {
               />
               <div className="flex items-center justify-end gap-2">
                 <Button type="button" variant="outline" size="xs" className="!font-normal" onClick={closePatternDialog} disabled={patternCreating}>
-                  Cancel
+                  取消
                 </Button>
                 <Button type="submit" size="xs" className="!font-normal" disabled={patternCreating}>
-                  Create
+                  创建
                 </Button>
               </div>
             </form>
@@ -741,14 +741,14 @@ export const RemoteInstancesPage: React.FC = () => {
           <span className={`h-2.5 w-2.5 rounded-full ${phaseDotClass(statusPhase)}`} />
           <span>{phaseLabel(statusPhase)}</span>
           {status?.localUrl ? <span className="font-mono text-foreground/80">{status.localUrl}</span> : null}
-          {reconnectAppearsStuck ? <span>reconnect stale</span> : null}
+          {reconnectAppearsStuck ? <span>重连状态已停滞</span> : null}
         </div>
       </div>
 
       <div className="mb-8">
         <div className="mb-1 px-1 space-y-0.5">
-          <h3 className="typography-ui-header font-medium text-foreground">Actions</h3>
-          <p className="typography-meta text-muted-foreground">Connect, inspect logs, and manage this instance.</p>
+            <h3 className="typography-ui-header font-medium text-foreground">操作</h3>
+            <p className="typography-meta text-muted-foreground">连接、查看日志并管理此实例。</p>
         </div>
         <section className="px-2 pb-2 pt-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -784,7 +784,7 @@ export const RemoteInstancesPage: React.FC = () => {
               }}
             >
               <RiTerminalWindowLine className="h-3.5 w-3.5" />
-              Logs
+              日志
             </Button>
             <Button
               type="button"
@@ -792,27 +792,27 @@ export const RemoteInstancesPage: React.FC = () => {
               size="xs"
               className="!font-normal text-[var(--status-error)] border-[var(--status-error)]/30 hover:text-[var(--status-error)]"
               onClick={() => {
-                const ok = window.confirm('Remove this SSH instance?');
+                const ok = window.confirm('确定要移除此 SSH 实例吗？');
                 if (!ok) return;
                 void removeInstance(draft.id)
                   .then(() => {
                     setSelectedId(null);
-                    toast.success('SSH instance removed');
+                    toast.success('SSH 实例已移除');
                   })
                   .catch((err) => {
-                    toast.error('Failed to remove SSH instance', {
+                    toast.error('移除 SSH 实例失败', {
                       description: err instanceof Error ? err.message : String(err),
                     });
                   });
               }}
             >
               <RiDeleteBinLine className="h-3.5 w-3.5" />
-              Remove
+              移除
             </Button>
           </div>
           {status?.localUrl ? (
             <div className="flex flex-wrap items-center gap-2 typography-meta text-muted-foreground">
-              <span>Current local URL:</span>
+              <span>当前本地 URL：</span>
               <span className="font-mono text-foreground/90">{status.localUrl}</span>
             </div>
           ) : null}
@@ -821,12 +821,12 @@ export const RemoteInstancesPage: React.FC = () => {
 
       <div className="mb-8">
         <div className="mb-1 px-1 space-y-0.5">
-          <h3 className="typography-ui-header font-medium text-foreground">Instance</h3>
-          <p className="typography-meta text-muted-foreground">Core SSH settings.</p>
+            <h3 className="typography-ui-header font-medium text-foreground">实例</h3>
+            <p className="typography-meta text-muted-foreground">核心 SSH 设置。</p>
         </div>
         <section className="px-2 pb-2 pt-0 space-y-3">
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
-            <span className="typography-ui-label text-foreground w-56 shrink-0">SSH command</span>
+            <span className="typography-ui-label text-foreground w-56 shrink-0">SSH 命令</span>
             <Input
               className="h-7 md:max-w-xl"
               value={draft.sshCommand}
@@ -840,7 +840,7 @@ export const RemoteInstancesPage: React.FC = () => {
             />
           </div>
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
-            <span className="typography-ui-label text-foreground w-56 shrink-0">Nickname</span>
+            <span className="typography-ui-label text-foreground w-56 shrink-0">昵称</span>
             <Input
               className="h-7 md:max-w-sm"
               value={draft.nickname || ''}
@@ -850,11 +850,11 @@ export const RemoteInstancesPage: React.FC = () => {
                   nickname: event.target.value,
                 }))
               }
-              placeholder="Production Host"
+              placeholder="生产环境主机"
             />
           </div>
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
-            <span className="typography-ui-label text-foreground w-56 shrink-0">Connection timeout (sec)</span>
+            <span className="typography-ui-label text-foreground w-56 shrink-0">连接超时（秒）</span>
             <NumberInput
               containerClassName="w-fit"
               min={5}
@@ -875,15 +875,15 @@ export const RemoteInstancesPage: React.FC = () => {
 
       <div className="mb-8 border-t border-[var(--surface-subtle)] pt-8">
         <div className="mb-1 px-1 space-y-0.5">
-          <h3 className="typography-ui-header font-medium text-foreground">Remote server</h3>
-          <p className="typography-meta text-muted-foreground">How OpenChamber is discovered or started on the remote machine.</p>
+            <h3 className="typography-ui-header font-medium text-foreground">远程服务器</h3>
+            <p className="typography-meta text-muted-foreground">设置如何在远程机器上发现或启动 OpenChamber。</p>
         </div>
         <section className="px-2 pb-2 pt-0 space-y-3">
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
             <div className="w-56 shrink-0">
               <HintLabel
-                label="Mode"
-                hint="Managed installs/updates and starts OpenChamber remotely. External assumes it is already running."
+                label="模式"
+                hint="托管模式会在远端安装/更新并启动 OpenChamber；外部模式则假定它已在运行。"
               />
             </div>
             <Select
@@ -899,11 +899,11 @@ export const RemoteInstancesPage: React.FC = () => {
               }
             >
               <SelectTrigger className="h-7 w-fit min-w-[140px]">
-                <SelectValue placeholder="Select mode" />
+                <SelectValue placeholder="选择模式" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="managed">Managed (auto start)</SelectItem>
-                <SelectItem value="external">External (already running)</SelectItem>
+                <SelectItem value="managed">托管（自动启动）</SelectItem>
+                <SelectItem value="external">外部（已在运行）</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -911,8 +911,8 @@ export const RemoteInstancesPage: React.FC = () => {
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
             <div className="w-56 shrink-0">
               <HintLabel
-                label="Preferred remote port"
-                hint="Port OpenChamber should use on the remote host. Leave empty to let the runtime choose."
+                label="首选远程端口"
+                hint="OpenChamber 在远程主机上优先使用的端口。留空则由运行时自动选择。"
               />
             </div>
             <NumberInput
@@ -940,7 +940,7 @@ export const RemoteInstancesPage: React.FC = () => {
                   },
                 }));
               }}
-              emptyLabel="Auto"
+              emptyLabel="自动"
             />
           </div>
 
@@ -948,8 +948,8 @@ export const RemoteInstancesPage: React.FC = () => {
             <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
               <div className="w-56 shrink-0">
                 <HintLabel
-                  label="Install method"
-                  hint="How OpenChamber gets installed/updated remotely when mode is Managed."
+                  label="安装方式"
+                  hint="在托管模式下，OpenChamber 在远端如何安装或更新。"
                 />
               </div>
               <Select
@@ -968,13 +968,13 @@ export const RemoteInstancesPage: React.FC = () => {
                 }
               >
                 <SelectTrigger className="h-7 w-fit min-w-[140px]">
-                  <SelectValue placeholder="Select install method" />
+                  <SelectValue placeholder="选择安装方式" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bun">bun</SelectItem>
                   <SelectItem value="npm">npm</SelectItem>
-                  <SelectItem value="download_release">download release</SelectItem>
-                  <SelectItem value="upload_bundle">upload bundle</SelectItem>
+                  <SelectItem value="download_release">下载发行版</SelectItem>
+                  <SelectItem value="upload_bundle">上传打包文件</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -984,8 +984,8 @@ export const RemoteInstancesPage: React.FC = () => {
             <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
               <div className="w-56 shrink-0">
                 <HintLabel
-                  label="Keep server running"
-                  hint="If enabled, OpenChamber daemon is left running remotely when you disconnect."
+                  label="保持服务器运行"
+                  hint="启用后，在你断开连接时远端的 OpenChamber 守护进程会继续运行。"
                 />
               </div>
               <div className="flex w-full items-center gap-2 md:max-w-xs">
@@ -1009,15 +1009,15 @@ export const RemoteInstancesPage: React.FC = () => {
 
       <div className="mb-8 border-t border-[var(--surface-subtle)] pt-8">
         <div className="mb-1 px-1 space-y-0.5">
-          <h3 className="typography-ui-header font-medium text-foreground">Main tunnel</h3>
-          <p className="typography-meta text-muted-foreground">Primary local URL that points to the remote OpenChamber server.</p>
+            <h3 className="typography-ui-header font-medium text-foreground">主隧道</h3>
+            <p className="typography-meta text-muted-foreground">指向远程 OpenChamber 服务器的主要本地 URL。</p>
         </div>
         <section className="px-2 pb-2 pt-0 space-y-3">
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
             <div className="w-56 shrink-0">
               <HintLabel
-                label="Bind host"
-                hint="Network interface for the main local URL. Use 127.0.0.1/localhost for local-only access."
+                label="绑定主机"
+                hint="主本地 URL 使用的网络接口。若只允许本机访问，请使用 127.0.0.1/localhost。"
               />
             </div>
             <Select
@@ -1025,7 +1025,7 @@ export const RemoteInstancesPage: React.FC = () => {
               onValueChange={(value) => {
                 if (value === '0.0.0.0') {
                   const allow = window.confirm(
-                    'Binding to 0.0.0.0 exposes forwarded ports to your local network. Continue?',
+                    '绑定到 0.0.0.0 会将转发端口暴露给你的本地网络。是否继续？',
                   );
                   if (!allow) return;
                 }
@@ -1039,7 +1039,7 @@ export const RemoteInstancesPage: React.FC = () => {
               }}
             >
               <SelectTrigger className="h-7 w-fit min-w-[140px]">
-                <SelectValue placeholder="Select bind host" />
+                <SelectValue placeholder="选择绑定主机" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="127.0.0.1">127.0.0.1</SelectItem>
@@ -1052,8 +1052,8 @@ export const RemoteInstancesPage: React.FC = () => {
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
             <div className="w-56 shrink-0">
               <HintLabel
-                label="Preferred local port"
-                hint="Preferred local port for the main OpenChamber tunnel. Leave empty for auto-select."
+                label="首选本地端口"
+                hint="主 OpenChamber 隧道优先使用的本地端口。留空则自动选择。"
               />
             </div>
             <div className="flex w-full items-center gap-2 md:max-w-sm">
@@ -1082,14 +1082,14 @@ export const RemoteInstancesPage: React.FC = () => {
                     },
                   }));
                 }}
-                emptyLabel="Auto"
+                emptyLabel="自动"
               />
               <Button
                 type="button"
                 variant="outline"
                 size="xs"
                 className="!font-normal h-7 w-7 px-0"
-                title="Pick random port"
+                title="随机选择端口"
                 onClick={() =>
                   updateDraft((current) => ({
                     ...current,
@@ -1109,12 +1109,12 @@ export const RemoteInstancesPage: React.FC = () => {
 
       <div className="mb-8 border-t border-[var(--surface-subtle)] pt-8">
         <div className="mb-1 px-1 space-y-0.5">
-          <h3 className="typography-ui-header font-medium text-foreground">Authentication</h3>
-          <p className="typography-meta text-muted-foreground">Optional credentials for SSH and remote UI.</p>
+            <h3 className="typography-ui-header font-medium text-foreground">认证</h3>
+            <p className="typography-meta text-muted-foreground">可选的 SSH 和远程 UI 凭据。</p>
         </div>
         <section className="px-2 pb-2 pt-0 space-y-3">
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
-            <span className="typography-ui-label text-foreground w-56 shrink-0">SSH password (optional)</span>
+            <span className="typography-ui-label text-foreground w-56 shrink-0">SSH 密码（可选）</span>
             <Input
               className="h-7 md:max-w-sm"
               type="password"
@@ -1132,12 +1132,12 @@ export const RemoteInstancesPage: React.FC = () => {
                   },
                 }))
               }
-              placeholder="Password or key passphrase"
+              placeholder="密码或密钥口令"
             />
           </div>
 
           <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
-            <span className="typography-ui-label text-foreground w-56 shrink-0">OpenChamber UI password (optional)</span>
+            <span className="typography-ui-label text-foreground w-56 shrink-0">OpenChamber UI 密码（可选）</span>
             <Input
               className="h-7 md:max-w-sm"
               type="password"
@@ -1155,7 +1155,7 @@ export const RemoteInstancesPage: React.FC = () => {
                   },
                 }))
               }
-              placeholder="Protect remote UI with password"
+              placeholder="为远程 UI 设置密码保护"
             />
           </div>
         </section>
@@ -1163,12 +1163,12 @@ export const RemoteInstancesPage: React.FC = () => {
 
       <div className="mb-8 border-t border-[var(--surface-subtle)] pt-8">
         <div className="mb-1 px-1 space-y-0.5">
-          <h3 className="typography-ui-header font-medium text-foreground">Port Forwards</h3>
-          <p className="typography-meta text-muted-foreground">Optional extra SSH forwards in addition to the primary OpenChamber tunnel.</p>
+            <h3 className="typography-ui-header font-medium text-foreground">端口转发</h3>
+            <p className="typography-meta text-muted-foreground">除主 OpenChamber 隧道外的可选额外 SSH 转发。</p>
         </div>
         <section className="px-2 pb-2 pt-0 space-y-2">
           {draft.portForwards.length === 0 ? (
-            <p className="typography-micro text-muted-foreground/80">No extra forwards configured yet.</p>
+            <p className="typography-micro text-muted-foreground/80">尚未配置额外转发。</p>
           ) : null}
 
           {draft.portForwards.map((forward, index) => {
@@ -1181,14 +1181,14 @@ export const RemoteInstancesPage: React.FC = () => {
               }));
             };
 
-            const localLabel = forward.type === 'remote' ? 'Local target' : 'Local listen';
+            const localLabel = forward.type === 'remote' ? '本地目标' : '本地监听';
             const localHint = forward.type === 'remote'
-              ? 'Local host and port on your machine that receives traffic from remote -R listener.'
-              : 'Local host and port where this forward listens on your machine.';
-            const remoteLabel = forward.type === 'remote' ? 'Remote listen' : 'Remote target';
+              ? '你的电脑上接收远程 -R 监听流量的本地主机和端口。'
+              : '此转发在你的电脑上监听的本地主机和端口。';
+            const remoteLabel = forward.type === 'remote' ? '远程监听' : '远程目标';
             const remoteHint = forward.type === 'remote'
-              ? 'Remote host and port where SSH creates the -R listener.'
-              : 'Remote host and port that receives traffic from local -L listener.';
+              ? 'SSH 创建 -R 监听器时使用的远程主机和端口。'
+              : '接收本地 -L 监听器流量的远程主机和端口。';
 
             const localEndpoint = formatEndpoint(forward.localHost || 'localhost', forward.localPort);
             const remoteEndpoint = formatEndpoint(forward.remoteHost || 'localhost', forward.remotePort);
@@ -1200,7 +1200,7 @@ export const RemoteInstancesPage: React.FC = () => {
 
             const isForwardOpen = Boolean(expandedForwards[forward.id]);
 
-            const typeLabel = forward.type === 'local' ? 'Local (-L)' : forward.type === 'remote' ? 'Remote (-R)' : 'Dynamic (-D)';
+            const typeLabel = forward.type === 'local' ? '本地 (-L)' : forward.type === 'remote' ? '远程 (-R)' : '动态 (-D)';
 
             return (
               <Collapsible
@@ -1223,7 +1223,7 @@ export const RemoteInstancesPage: React.FC = () => {
                     </CollapsibleTrigger>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Switch checked={forward.enabled} onCheckedChange={(checked) => updateForward((item) => ({ ...item, enabled: checked }))} aria-label="Enable forward" />
+                    <Switch checked={forward.enabled} onCheckedChange={(checked) => updateForward((item) => ({ ...item, enabled: checked }))} aria-label="启用转发" />
                     <Button
                       type="button"
                       variant="ghost"
@@ -1246,8 +1246,8 @@ export const RemoteInstancesPage: React.FC = () => {
                     <div className="flex flex-col gap-1.5 py-1.5 md:flex-row md:items-center md:gap-8">
                       <div className="w-56 shrink-0">
                         <HintLabel
-                          label="Forward type"
-                          hint="Local (-L): laptop -> remote service. Remote (-R): remote machine -> this laptop. Dynamic (-D): local SOCKS5 proxy."
+                          label="转发类型"
+                          hint="本地 (-L)：当前电脑 → 远程服务。远程 (-R)：远程机器 → 当前电脑。动态 (-D)：本地 SOCKS5 代理。"
                         />
                       </div>
                       <Select
@@ -1260,12 +1260,12 @@ export const RemoteInstancesPage: React.FC = () => {
                         }
                       >
                         <SelectTrigger className="h-7 w-fit min-w-[140px]">
-                          <SelectValue placeholder="Type" />
+                          <SelectValue placeholder="类型" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="local">Local (-L)</SelectItem>
-                          <SelectItem value="remote">Remote (-R)</SelectItem>
-                          <SelectItem value="dynamic">Dynamic (-D)</SelectItem>
+                          <SelectItem value="local">本地 (-L)</SelectItem>
+                          <SelectItem value="remote">远程 (-R)</SelectItem>
+                          <SelectItem value="dynamic">动态 (-D)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1306,7 +1306,7 @@ export const RemoteInstancesPage: React.FC = () => {
                               localPort: undefined,
                             }));
                           }}
-                          emptyLabel="Auto"
+                          emptyLabel="自动"
                         />
                       </div>
                     </div>
@@ -1348,7 +1348,7 @@ export const RemoteInstancesPage: React.FC = () => {
                                 remotePort: undefined,
                               }));
                             }}
-                            emptyLabel="Auto"
+                          emptyLabel="自动"
                           />
                         </div>
                       </div>
@@ -1360,27 +1360,27 @@ export const RemoteInstancesPage: React.FC = () => {
                           <>
                             <RiComputerLine className="h-3.5 w-3.5" />
                             <span className="font-mono text-foreground">{localEndpoint}</span>
-                            <span>(local SOCKS5)</span>
+                            <span>（本地 SOCKS5）</span>
                           </>
                         ) : forward.type === 'remote' ? (
                           <>
                             <RiServerLine className="h-3.5 w-3.5" />
                             <span className="font-mono text-foreground">{remoteEndpoint}</span>
-                            <span>(remote)</span>
+                            <span>（远程）</span>
                             <RiArrowRightLine className="h-3.5 w-3.5" />
                             <RiComputerLine className="h-3.5 w-3.5" />
                             <span className="font-mono text-foreground">{localEndpoint}</span>
-                            <span>(local)</span>
+                            <span>（本地）</span>
                           </>
                         ) : (
                           <>
                             <RiComputerLine className="h-3.5 w-3.5" />
                             <span className="font-mono text-foreground">{localEndpoint}</span>
-                            <span>(local)</span>
+                            <span>（本地）</span>
                             <RiArrowRightLine className="h-3.5 w-3.5" />
                             <RiServerLine className="h-3.5 w-3.5" />
                             <span className="font-mono text-foreground">{remoteEndpoint}</span>
-                            <span>(remote)</span>
+                            <span>（远程）</span>
                           </>
                         )}
                       </div>
@@ -1394,13 +1394,13 @@ export const RemoteInstancesPage: React.FC = () => {
                           onClick={() => {
                             void openExternalUrl(localEndpointUrl).then((opened) => {
                               if (!opened) {
-                                toast.error('Failed to open local endpoint');
+                                toast.error('打开本地端点失败');
                               }
                             });
                           }}
                         >
                           <RiExternalLinkLine className="h-3.5 w-3.5" />
-                          Open local
+                          打开本地地址
                         </Button>
                       ) : null}
                     </div>
@@ -1428,20 +1428,20 @@ export const RemoteInstancesPage: React.FC = () => {
             }}
           >
             <RiAddLine className="h-3.5 w-3.5" />
-            Add forward
+            添加转发
           </Button>
         </section>
       </div>
 
       <div className="mb-8 border-t border-[var(--surface-subtle)] pt-8">
         <div className="mb-1 px-1 space-y-0.5">
-          <h3 className="typography-ui-header font-medium text-foreground">Import from SSH config</h3>
+            <h3 className="typography-ui-header font-medium text-foreground">从 SSH 配置导入</h3>
         </div>
         <section className="px-2 pb-2 pt-0">
         {isImportsLoading ? (
-          <p className="typography-meta text-muted-foreground">Loading SSH hosts...</p>
+          <p className="typography-meta text-muted-foreground">正在加载 SSH 主机...</p>
         ) : importCandidates.length === 0 ? (
-          <p className="typography-meta text-muted-foreground">No SSH hosts available.</p>
+          <p className="typography-meta text-muted-foreground">没有可用的 SSH 主机。</p>
         ) : (
           <div>
             {importCandidates.slice(0, 8).map((candidate, index) => (
@@ -1452,7 +1452,7 @@ export const RemoteInstancesPage: React.FC = () => {
                 <div className="min-w-0">
                   <div className="typography-ui-label text-foreground truncate">
                     {candidate.host}
-                    {candidate.pattern ? ' (pattern)' : ''}
+                    {candidate.pattern ? '（模式）' : ''}
                   </div>
                   <div className="typography-micro text-muted-foreground truncate">{candidate.sshCommand}</div>
                 </div>
@@ -1463,7 +1463,7 @@ export const RemoteInstancesPage: React.FC = () => {
                   className="!font-normal"
                   onClick={() => void handleImportCandidate(candidate.host, candidate.pattern)}
                 >
-                  Import
+                  导入
                 </Button>
               </div>
             ))}
@@ -1475,7 +1475,7 @@ export const RemoteInstancesPage: React.FC = () => {
       <div className="sticky bottom-0 z-10 -mx-3 sm:-mx-6 bg-[var(--surface-background)] border-t border-[var(--interactive-border)] px-3 sm:px-6 py-3">
         <div className="flex items-center gap-2">
           <Button type="button" size="xs" className="!font-normal" onClick={() => void handleSave()} disabled={!hasChanges || isSaving}>
-            Save changes
+            保存更改
           </Button>
           {status?.localUrl ? (
             <>
@@ -1487,13 +1487,13 @@ export const RemoteInstancesPage: React.FC = () => {
                 onClick={() => {
                   void copyTextToClipboard(status.localUrl || '').then((result) => {
                     if (result.ok) {
-                      toast.success('Local URL copied');
+                      toast.success('本地 URL 已复制');
                     }
                   });
                 }}
               >
                 <RiFileCopyLine className="h-3.5 w-3.5" />
-                Copy local URL
+                复制本地 URL
               </Button>
               <Button
                 type="button"
@@ -1505,7 +1505,7 @@ export const RemoteInstancesPage: React.FC = () => {
                 }}
               >
                 <RiExternalLinkLine className="h-3.5 w-3.5" />
-                Open
+                打开
               </Button>
             </>
           ) : null}
@@ -1516,28 +1516,28 @@ export const RemoteInstancesPage: React.FC = () => {
       <Dialog open={logDialogOpen} onOpenChange={setLogDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>SSH Logs</DialogTitle>
+            <DialogTitle>SSH 日志</DialogTitle>
             <DialogDescription>
-              {draft?.nickname?.trim() || draft?.sshParsed?.destination || draft?.id || 'Selected instance'}
+              {draft?.nickname?.trim() || draft?.sshParsed?.destination || draft?.id || '已选实例'}
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-end gap-2">
             <Button type="button" variant="outline" size="xs" className="!font-normal" onClick={handleCopyAllLogs} disabled={logDialogLoading || !logLinesText.trim()}>
               <RiFileCopyLine className="h-3.5 w-3.5" />
-              Copy all
+              全部复制
             </Button>
             <Button type="button" variant="outline" size="xs" className="!font-normal" onClick={() => void handleClearLogs()} disabled={logDialogLoading}>
               <RiDeleteBinLine className="h-3.5 w-3.5" />
-              Clear
+              清空
             </Button>
           </div>
           {logDialogLoading ? (
-            <div className="typography-meta text-muted-foreground">Loading logs...</div>
+            <div className="typography-meta text-muted-foreground">正在加载日志...</div>
           ) : logDialogError ? (
             <div className="typography-meta text-[var(--status-error)]">{logDialogError}</div>
           ) : (
             <pre className="max-h-[55vh] overflow-auto rounded-md border border-[var(--interactive-border)] bg-[var(--surface-elevated)] p-3 typography-micro text-foreground whitespace-pre-wrap break-words">
-              {logDialogLines.length > 0 ? logDialogLines.join('\n') : 'No SSH logs yet.'}
+              {logDialogLines.length > 0 ? logDialogLines.join('\n') : '暂时还没有 SSH 日志。'}
             </pre>
           )}
         </DialogContent>
@@ -1553,9 +1553,9 @@ export const RemoteInstancesPage: React.FC = () => {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create from wildcard pattern</DialogTitle>
+            <DialogTitle>从通配模式创建</DialogTitle>
             <DialogDescription>
-              {patternHost ? `${patternHost} requires a concrete destination.` : 'Enter destination.'}
+              {patternHost ? `${patternHost} 需要一个具体目标地址。` : '请输入目标地址。'}
             </DialogDescription>
           </DialogHeader>
           <form
@@ -1573,10 +1573,10 @@ export const RemoteInstancesPage: React.FC = () => {
             />
             <div className="flex items-center justify-end gap-2">
               <Button type="button" variant="outline" size="xs" className="!font-normal" onClick={closePatternDialog} disabled={patternCreating}>
-                Cancel
+                取消
               </Button>
               <Button type="submit" size="xs" className="!font-normal" disabled={patternCreating}>
-                Create
+                创建
               </Button>
             </div>
           </form>

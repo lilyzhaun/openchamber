@@ -192,7 +192,7 @@ export const ProvidersPage: React.FC = () => {
       } catch (error) {
         if (!isMounted) return;
         console.error('Failed to load provider auth methods:', error);
-        toast.error('Failed to load provider authentication methods');
+        toast.error('加载提供商认证方式失败');
       } finally {
         if (isMounted) {
           setAuthLoading(false);
@@ -229,7 +229,7 @@ export const ProvidersPage: React.FC = () => {
       } catch (error) {
         if (!isMounted) return;
         console.error('Failed to load available providers:', error);
-        setAvailableError('Unable to load provider list');
+        setAvailableError('无法加载提供商列表');
       } finally {
         if (isMounted) {
           setAvailableLoading(false);
@@ -296,7 +296,7 @@ export const ProvidersPage: React.FC = () => {
 
         const payload = await response.json().catch(() => null);
         if (!response.ok) {
-          throw new Error(payload?.error || 'Failed to load provider sources');
+            throw new Error(payload?.error || '加载提供商来源失败');
         }
 
         const sources = (payload?.sources ?? payload?.data?.sources) as ProviderSources | undefined;
@@ -326,7 +326,7 @@ export const ProvidersPage: React.FC = () => {
   const handleSaveApiKey = async (providerId: string) => {
     const apiKey = apiKeyInputs[providerId]?.trim() ?? '';
     if (!apiKey) {
-      toast.error('API key is required');
+      toast.error('API Key 不能为空');
       return;
     }
 
@@ -342,17 +342,17 @@ export const ProvidersPage: React.FC = () => {
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        const message = payload?.error || 'Failed to save API key';
+          const message = payload?.error || '保存 API Key 失败';
         throw new Error(message);
       }
 
-      toast.success('API key saved');
+      toast.success('API Key 已保存');
       setApiKeyInputs((prev) => ({ ...prev, [providerId]: '' }));
       await reloadOpenCodeConfiguration({ scopes: ["providers"], mode: "active" });
       setSelectedProvider(providerId);
     } catch (error) {
       console.error('Failed to save API key:', error);
-      toast.error('Failed to save API key');
+      toast.error('保存 API Key 失败');
     } finally {
       setAuthBusyKey(null);
     }
@@ -371,7 +371,7 @@ export const ProvidersPage: React.FC = () => {
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        const message = payload?.error || 'Failed to start OAuth flow';
+          const message = payload?.error || '启动 OAuth 流程失败';
         throw new Error(message);
       }
 
@@ -393,7 +393,7 @@ export const ProvidersPage: React.FC = () => {
         undefined;
 
       if (!urlCandidate && !instructions && !userCode) {
-        throw new Error('No OAuth details returned');
+        throw new Error('未返回 OAuth 详情');
       }
 
       const detailsKey = `${providerId}:${methodIndex}`;
@@ -410,10 +410,10 @@ export const ProvidersPage: React.FC = () => {
         void openExternalUrl(urlCandidate);
       }
       setPendingOAuth({ providerId, methodIndex });
-      toast.message('Complete the OAuth flow in your browser');
+      toast.message('请在浏览器中完成 OAuth 流程');
     } catch (error) {
       console.error('Failed to start OAuth flow:', error);
-      toast.error('Failed to start OAuth flow');
+      toast.error('启动 OAuth 流程失败');
     } finally {
       setAuthBusyKey(null);
     }
@@ -440,18 +440,18 @@ export const ProvidersPage: React.FC = () => {
 
       const responsePayload = await response.json().catch(() => null);
       if (!response.ok) {
-        const message = responsePayload?.error || 'Failed to complete OAuth flow';
+          const message = responsePayload?.error || '完成 OAuth 流程失败';
         throw new Error(message);
       }
 
-      toast.success('OAuth connection completed');
+      toast.success('OAuth 连接已完成');
       setOauthCodes((prev) => ({ ...prev, [codeKey]: '' }));
       setPendingOAuth(null);
       await reloadOpenCodeConfiguration({ scopes: ["providers"], mode: "active" });
       setSelectedProvider(providerId);
     } catch (error) {
       console.error('Failed to complete OAuth flow:', error);
-      toast.error('Failed to complete OAuth flow');
+      toast.error('完成 OAuth 流程失败');
     } finally {
       setAuthBusyKey(null);
     }
@@ -460,21 +460,21 @@ export const ProvidersPage: React.FC = () => {
   const handleCopyOAuthLink = async (url: string) => {
     const result = await copyTextToClipboard(url);
     if (result.ok) {
-      toast.success('OAuth link copied');
+      toast.success('OAuth 链接已复制');
       return;
     }
     console.error('Failed to copy OAuth link:', result.error);
-    toast.error('Failed to copy OAuth link');
+    toast.error('复制 OAuth 链接失败');
   };
 
   const handleCopyOAuthCode = async (code: string) => {
     const result = await copyTextToClipboard(code);
     if (result.ok) {
-      toast.success('Device code copied');
+      toast.success('设备代码已复制');
       return;
     }
     console.error('Failed to copy device code:', result.error);
-    toast.error('Failed to copy device code');
+    toast.error('复制设备代码失败');
   };
 
   const handleDisconnectProvider = async (providerId: string) => {
@@ -489,15 +489,15 @@ export const ProvidersPage: React.FC = () => {
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        const message = payload?.error || 'Failed to disconnect provider';
+          const message = payload?.error || '断开提供商失败';
         throw new Error(message);
       }
 
-      toast.success('Provider disconnected');
+      toast.success('提供商已断开连接');
       await reloadOpenCodeConfiguration({ scopes: ["providers"], mode: "active" });
     } catch (error) {
       console.error('Failed to disconnect provider:', error);
-      toast.error('Failed to disconnect provider');
+      toast.error('断开提供商失败');
     } finally {
       setAuthBusyKey(null);
     }
@@ -510,8 +510,8 @@ export const ProvidersPage: React.FC = () => {
       <div className="flex h-full items-center justify-center">
         <div className="text-center text-muted-foreground">
           <RiStackLine className="mx-auto mb-3 h-12 w-12 opacity-50" />
-          <p className="typography-body">No providers detected</p>
-          <p className="typography-meta mt-1 opacity-75">Check your OpenCode configuration</p>
+          <p className="typography-body">未检测到提供商</p>
+          <p className="typography-meta mt-1 opacity-75">请检查你的 OpenCode 配置</p>
         </div>
       </div>
     );
@@ -522,23 +522,23 @@ export const ProvidersPage: React.FC = () => {
       <ScrollableOverlay keyboardAvoid outerClassName="h-full" className="w-full">
         <div className="mx-auto w-full max-w-3xl p-3 sm:p-6 sm:pt-8">
           <div className="mb-4">
-            <h1 className="typography-ui-header font-semibold text-foreground">Connect Provider</h1>
+            <h1 className="typography-ui-header font-semibold text-foreground">连接提供商</h1>
           </div>
 
           <div className="mb-8">
             <div className="mb-1 px-1">
-              <h2 className="typography-ui-header font-medium text-foreground">Select Provider</h2>
+                <h2 className="typography-ui-header font-medium text-foreground">选择提供商</h2>
             </div>
 
             <section className="px-2 pb-2 pt-0">
               <div className="flex flex-wrap items-center gap-2 py-1.5">
-                <span className="typography-ui-label text-foreground">Provider</span>
+                <span className="typography-ui-label text-foreground">提供商</span>
                   {availableLoading ? (
-                    <p className="typography-meta text-muted-foreground">Loading...</p>
+                    <p className="typography-meta text-muted-foreground">加载中...</p>
                   ) : availableError ? (
                     <p className="typography-meta text-muted-foreground">{availableError}</p>
                   ) : unconnectedProviders.length === 0 ? (
-                    <p className="typography-meta text-muted-foreground">All providers connected.</p>
+                    <p className="typography-meta text-muted-foreground">所有提供商均已连接。</p>
                   ) : (
                     <DropdownMenu open={providerDropdownOpen} onOpenChange={(open) => {
                       setProviderDropdownOpen(open);
@@ -556,7 +556,7 @@ export const ProvidersPage: React.FC = () => {
                             <span className={cn("truncate typography-ui-label font-normal", candidateProviderId ? "text-foreground" : "text-muted-foreground")}>
                               {candidateProviderId
                                 ? (unconnectedProviders.find(p => p.id === candidateProviderId)?.name || candidateProviderId)
-                                : "Select provider"}
+                                : "选择提供商"}
                             </span>
                           </span>
                           <RiArrowDownSLine className="h-4 w-4 flex-shrink-0 text-muted-foreground/50" />
@@ -577,7 +577,7 @@ export const ProvidersPage: React.FC = () => {
                             value={providerSearchQuery}
                             onChange={(e) => setProviderSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.stopPropagation()}
-                            placeholder="Search..."
+                            placeholder="搜索..."
                             className="flex-1 bg-transparent typography-meta outline-none placeholder:text-muted-foreground"
                             autoFocus
                           />
@@ -589,7 +589,7 @@ export const ProvidersPage: React.FC = () => {
                               return (p.name || p.id).toLowerCase().includes(query) || p.id.toLowerCase().includes(query);
                             });
                             if (filtered.length === 0) {
-                              return <p className="py-4 text-center typography-meta text-muted-foreground">No providers found</p>;
+                              return <p className="py-4 text-center typography-meta text-muted-foreground">未找到提供商</p>;
                             }
                             return filtered.map((provider) => (
                               <DropdownMenuItem
@@ -622,11 +622,11 @@ export const ProvidersPage: React.FC = () => {
           {candidateProviderId && (
             <div className="mb-8">
               <div className="mb-1 px-1">
-                <h2 className="typography-ui-header font-medium text-foreground">Authentication</h2>
+                <h2 className="typography-ui-header font-medium text-foreground">认证</h2>
               </div>
 
               {authLoading ? (
-                <p className="typography-meta text-muted-foreground px-2">Loading authentication methods...</p>
+                <p className="typography-meta text-muted-foreground px-2">正在加载认证方式...</p>
               ) : (
                 <section className="px-2 pb-2 pt-0 space-y-4">
                   <div className="py-1.5">
@@ -637,7 +637,7 @@ export const ProvidersPage: React.FC = () => {
                           <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent sideOffset={8} className="max-w-xs">
-                          Keys are sent directly to OpenCode and never stored by OpenChamber.
+                          密钥会直接发送给 OpenCode，OpenChamber 不会存储它们。
                         </TooltipContent>
                       </Tooltip>
                     </label>
@@ -660,7 +660,7 @@ export const ProvidersPage: React.FC = () => {
                         onClick={() => handleSaveApiKey(candidateProviderId)}
                         disabled={authBusyKey === `api:${candidateProviderId}`}
                       >
-                        {authBusyKey === `api:${candidateProviderId}` ? 'Saving...' : 'Save Key'}
+                        {authBusyKey === `api:${candidateProviderId}` ? '保存中...' : '保存 Key'}
                       </Button>
                     </div>
                   </div>
@@ -701,7 +701,7 @@ export const ProvidersPage: React.FC = () => {
                                   onClick={() => handleOAuthStart(candidateProviderId, index)}
                                   disabled={authBusyKey === `oauth:${candidateProviderId}:${index}`}
                                 >
-                                  Connect
+                                  连接
                                 </Button>
                               </div>
 
@@ -714,7 +714,7 @@ export const ProvidersPage: React.FC = () => {
                               {oauthDetails[codeKey]?.userCode && (
                                 <div className="flex items-center gap-2 mt-2">
                                   <Input value={oauthDetails[codeKey]?.userCode} readOnly className="font-mono text-center tracking-widest" />
-                                  <Button variant="outline" size="xs" className="!font-normal" onClick={() => handleCopyOAuthCode(oauthDetails[codeKey]?.userCode ?? '')}>Copy Code</Button>
+                                  <Button variant="outline" size="xs" className="!font-normal" onClick={() => handleCopyOAuthCode(oauthDetails[codeKey]?.userCode ?? '')}>复制代码</Button>
                                 </div>
                               )}
 
@@ -722,8 +722,8 @@ export const ProvidersPage: React.FC = () => {
                                 <div className="flex items-center gap-2 mt-2">
                                   <Input value={oauthDetails[codeKey]?.url} readOnly className="text-xs text-muted-foreground" />
                                   <div className="flex gap-1 shrink-0">
-                                    <Button variant="outline" size="xs" className="!font-normal" onClick={() => openExternalUrl(oauthDetails[codeKey]?.url ?? '')}>Open</Button>
-                                    <Button variant="outline" size="xs" className="!font-normal" onClick={() => handleCopyOAuthLink(oauthDetails[codeKey]?.url ?? '')}>Copy</Button>
+                                    <Button variant="outline" size="xs" className="!font-normal" onClick={() => openExternalUrl(oauthDetails[codeKey]?.url ?? '')}>打开</Button>
+                                    <Button variant="outline" size="xs" className="!font-normal" onClick={() => handleCopyOAuthLink(oauthDetails[codeKey]?.url ?? '')}>复制</Button>
                                   </div>
                                 </div>
                               )}
@@ -738,7 +738,7 @@ export const ProvidersPage: React.FC = () => {
                                         [codeKey]: event.target.value,
                                       }))
                                     }
-                                    placeholder="Paste authorization code"
+                                    placeholder="粘贴授权码"
                                     className="font-mono text-xs"
                                   />
                                   <Button
@@ -747,7 +747,7 @@ export const ProvidersPage: React.FC = () => {
                                     onClick={() => handleOAuthComplete(candidateProviderId, index)}
                                     disabled={authBusyKey === `oauth-complete:${candidateProviderId}:${index}`}
                                   >
-                                    {authBusyKey === `oauth-complete:${candidateProviderId}:${index}` ? 'Saving...' : 'Complete'}
+                                    {authBusyKey === `oauth-complete:${candidateProviderId}:${index}` ? '保存中...' : '完成'}
                                   </Button>
                                 </div>
                               )}
@@ -771,8 +771,8 @@ export const ProvidersPage: React.FC = () => {
       <div className="flex h-full items-center justify-center">
         <div className="text-center text-muted-foreground">
           <RiStackLine className="mx-auto mb-3 h-12 w-12 opacity-50" />
-          <p className="typography-body">Select a provider from the sidebar</p>
-          <p className="typography-meta mt-1 opacity-75">Review details and configure auth</p>
+          <p className="typography-body">请从侧边栏选择一个提供商</p>
+          <p className="typography-meta mt-1 opacity-75">查看详情并配置认证</p>
         </div>
       </div>
     );
@@ -810,14 +810,14 @@ export const ProvidersPage: React.FC = () => {
         {/* Authentication */}
         <div className="mb-8">
           <div className="mb-1 px-1 flex items-center justify-between gap-2">
-            <h3 className="typography-ui-header font-medium text-foreground">Authentication</h3>
+            <h3 className="typography-ui-header font-medium text-foreground">认证</h3>
             <Button
               variant="outline"
               size="xs"
               className="!font-normal"
               onClick={() => setShowAuthPanel((prev) => !prev)}
             >
-              {showAuthPanel ? 'Hide' : 'Reconnect'}
+              {showAuthPanel ? '隐藏' : '重新连接'}
             </Button>
           </div>
 
@@ -825,11 +825,11 @@ export const ProvidersPage: React.FC = () => {
             {!showAuthPanel ? (
               <div className="flex items-center gap-1.5 py-1.5">
                 <RiCheckLine className="w-4 h-4 text-[var(--status-success)] shrink-0" />
-                <span className="typography-ui-label text-foreground">Connected</span>
-                <span className="typography-meta text-muted-foreground ml-1">· Use Reconnect to update credentials</span>
+                <span className="typography-ui-label text-foreground">已连接</span>
+                <span className="typography-meta text-muted-foreground ml-1">· 使用“重新连接”更新凭据</span>
               </div>
             ) : authLoading ? (
-              <div className="py-1.5 typography-meta text-muted-foreground">Loading authentication methods...</div>
+              <div className="py-1.5 typography-meta text-muted-foreground">正在加载认证方式...</div>
             ) : (
               <div className="space-y-4">
                 <div className="py-1.5">
@@ -840,7 +840,7 @@ export const ProvidersPage: React.FC = () => {
                         <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent sideOffset={8} className="max-w-xs">
-                        Keys are sent directly to OpenCode and never stored by OpenChamber.
+                        密钥会直接发送给 OpenCode，OpenChamber 不会存储它们。
                       </TooltipContent>
                     </Tooltip>
                   </label>
@@ -863,7 +863,7 @@ export const ProvidersPage: React.FC = () => {
                       onClick={() => handleSaveApiKey(selectedProvider.id)}
                       disabled={authBusyKey === `api:${selectedProvider.id}`}
                     >
-                      {authBusyKey === `api:${selectedProvider.id}` ? 'Saving...' : 'Save Key'}
+                      {authBusyKey === `api:${selectedProvider.id}` ? '保存中...' : '保存 Key'}
                     </Button>
                   </div>
                 </div>
@@ -894,7 +894,7 @@ export const ProvidersPage: React.FC = () => {
                               onClick={() => handleOAuthStart(selectedProvider.id, index)}
                               disabled={authBusyKey === `oauth:${selectedProvider.id}:${index}`}
                             >
-                              Connect
+                              连接
                             </Button>
                           </div>
 
@@ -907,7 +907,7 @@ export const ProvidersPage: React.FC = () => {
                           {oauthDetails[codeKey]?.userCode && (
                             <div className="flex items-center gap-2 mt-2">
                               <Input value={oauthDetails[codeKey]?.userCode} readOnly className="font-mono text-center tracking-widest" />
-                              <Button variant="outline" size="xs" className="!font-normal" onClick={() => handleCopyOAuthCode(oauthDetails[codeKey]?.userCode ?? '')}>Copy Code</Button>
+                              <Button variant="outline" size="xs" className="!font-normal" onClick={() => handleCopyOAuthCode(oauthDetails[codeKey]?.userCode ?? '')}>复制代码</Button>
                             </div>
                           )}
 
@@ -915,8 +915,8 @@ export const ProvidersPage: React.FC = () => {
                             <div className="flex items-center gap-2 mt-2">
                               <Input value={oauthDetails[codeKey]?.url} readOnly className="text-xs text-muted-foreground" />
                               <div className="flex gap-1 shrink-0">
-                                <Button variant="outline" size="xs" className="!font-normal" onClick={() => openExternalUrl(oauthDetails[codeKey]?.url ?? '')}>Open</Button>
-                                <Button variant="outline" size="xs" className="!font-normal" onClick={() => handleCopyOAuthLink(oauthDetails[codeKey]?.url ?? '')}>Copy</Button>
+                                <Button variant="outline" size="xs" className="!font-normal" onClick={() => openExternalUrl(oauthDetails[codeKey]?.url ?? '')}>打开</Button>
+                                <Button variant="outline" size="xs" className="!font-normal" onClick={() => handleCopyOAuthLink(oauthDetails[codeKey]?.url ?? '')}>复制</Button>
                               </div>
                             </div>
                           )}
@@ -931,7 +931,7 @@ export const ProvidersPage: React.FC = () => {
                                     [codeKey]: event.target.value,
                                   }))
                                 }
-                                placeholder="Paste authorization code"
+                                placeholder="粘贴授权码"
                                 className="font-mono text-xs"
                               />
                               <Button
@@ -940,7 +940,7 @@ export const ProvidersPage: React.FC = () => {
                                 onClick={() => handleOAuthComplete(selectedProvider.id, index)}
                                 disabled={authBusyKey === `oauth-complete:${selectedProvider.id}:${index}`}
                               >
-                                {authBusyKey === `oauth-complete:${selectedProvider.id}:${index}` ? 'Saving...' : 'Complete'}
+                                {authBusyKey === `oauth-complete:${selectedProvider.id}:${index}` ? '保存中...' : '完成'}
                               </Button>
                             </div>
                           )}
@@ -957,7 +957,7 @@ export const ProvidersPage: React.FC = () => {
         {/* Connection Details */}
         <div className="mb-8">
           <div className="mb-1 px-1">
-            <h3 className="typography-ui-header font-medium text-foreground">Connection Details</h3>
+            <h3 className="typography-ui-header font-medium text-foreground">连接详情</h3>
           </div>
 
           <section className="px-2 pb-2 pt-0">
@@ -965,15 +965,15 @@ export const ProvidersPage: React.FC = () => {
               <div className="flex min-w-0 flex-col">
                 {selectedSources && (selectedSources.auth.exists || selectedSources.user.exists || selectedSources.project.exists || selectedSources.custom?.exists) ? (
                   <span className="typography-meta text-muted-foreground">
-                    Configured in: {[
-                      selectedSources.auth.exists ? 'auth credentials' : null,
-                      selectedSources.user.exists ? 'user config' : null,
-                      selectedSources.project.exists ? 'project config' : null,
-                      selectedSources.custom?.exists ? 'custom config' : null,
+                    配置来源：{[
+                      selectedSources.auth.exists ? '认证凭据' : null,
+                      selectedSources.user.exists ? '用户配置' : null,
+                      selectedSources.project.exists ? '项目配置' : null,
+                      selectedSources.custom?.exists ? '自定义配置' : null,
                     ].filter(Boolean).join(', ')}
                   </span>
                 ) : (
-                  <span className="typography-meta text-muted-foreground">No active configuration source</span>
+                  <span className="typography-meta text-muted-foreground">没有生效中的配置来源</span>
                 )}
               </div>
 
@@ -984,7 +984,7 @@ export const ProvidersPage: React.FC = () => {
                 onClick={() => handleDisconnectProvider(selectedProvider.id)}
                 disabled={authBusyKey === `disconnect:${selectedProvider.id}`}
               >
-                {authBusyKey === `disconnect:${selectedProvider.id}` ? 'Disconnecting...' : 'Disconnect'}
+                {authBusyKey === `disconnect:${selectedProvider.id}` ? '断开中...' : '断开连接'}
               </Button>
             </div>
           </section>
@@ -994,7 +994,7 @@ export const ProvidersPage: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1 flex items-center justify-between gap-2">
             <h3 className="typography-ui-header font-medium text-foreground">
-              Available Models
+              可用模型
               {providerModels.length > 0 && (
                 <span className="ml-1.5 typography-micro text-muted-foreground font-normal">
                   ({providerModels.length})
@@ -1013,7 +1013,7 @@ export const ProvidersPage: React.FC = () => {
                   hideAllModels(selectedProvider.id, allIds);
                 }}
               >
-                Hide all
+                全部隐藏
               </Button>
               <Button
                 variant="outline"
@@ -1021,7 +1021,7 @@ export const ProvidersPage: React.FC = () => {
                 className="!font-normal"
                 onClick={() => showAllModels(selectedProvider.id)}
               >
-                Show all
+                全部显示
               </Button>
             </div>
           </div>
@@ -1032,13 +1032,13 @@ export const ProvidersPage: React.FC = () => {
               <Input
                 value={modelQuery}
                 onChange={(event) => setModelQuery(event.target.value)}
-                placeholder="Filter models..."
+                placeholder="筛选模型..."
                 className="h-7 pl-8 w-full"
               />
             </div>
 
             {filteredModels.length === 0 ? (
-              <p className="typography-meta text-muted-foreground py-4 text-center">No models match this filter.</p>
+              <p className="typography-meta text-muted-foreground py-4 text-center">没有模型匹配当前筛选条件。</p>
             ) : (
               <div className="divide-y divide-[var(--surface-subtle)]">
                 {filteredModels.map((model) => {
@@ -1053,9 +1053,9 @@ export const ProvidersPage: React.FC = () => {
                   const outputTokens = formatTokens(metadata?.limit?.output);
 
                   const capabilityIcons: Array<{ key: string; icon: typeof RiToolsLine; label: string }> = [];
-                  if (metadata?.tool_call) capabilityIcons.push({ key: 'tools', icon: RiToolsLine, label: 'Tool calling' });
-                  if (metadata?.reasoning) capabilityIcons.push({ key: 'reasoning', icon: RiBrainAi3Line, label: 'Reasoning' });
-                  if (metadata?.attachment) capabilityIcons.push({ key: 'image', icon: RiFileImageLine, label: 'Image input' });
+                  if (metadata?.tool_call) capabilityIcons.push({ key: 'tools', icon: RiToolsLine, label: '工具调用' });
+                  if (metadata?.reasoning) capabilityIcons.push({ key: 'reasoning', icon: RiBrainAi3Line, label: '推理' });
+                  if (metadata?.attachment) capabilityIcons.push({ key: 'image', icon: RiFileImageLine, label: '图片输入' });
 
                   return (
                     <div key={modelId} className="py-1.5">
@@ -1094,8 +1094,8 @@ export const ProvidersPage: React.FC = () => {
                           type="button"
                           onClick={() => toggleHiddenModel(selectedProvider.id, modelId)}
                           className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-[var(--interactive-hover)]/50"
-                          title={isHidden ? 'Show model in selectors' : 'Hide model from selectors'}
-                          aria-label={isHidden ? 'Show model' : 'Hide model'}
+                          title={isHidden ? '在选择器中显示模型' : '在选择器中隐藏模型'}
+                          aria-label={isHidden ? '显示模型' : '隐藏模型'}
                         >
                           {isHidden ? <RiEyeOffLine className="h-3.5 w-3.5" /> : <RiEyeLine className="h-3.5 w-3.5" />}
                         </button>

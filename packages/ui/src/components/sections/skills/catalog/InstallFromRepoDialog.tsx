@@ -156,7 +156,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
   const handleScan = async () => {
     const trimmed = source.trim();
     if (!trimmed) {
-      toast.error('Repository source is required');
+      toast.error('仓库来源不能为空');
       return;
     }
 
@@ -169,7 +169,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
     if (!result.ok) {
       if (result.error?.kind === 'authRequired') {
         if (isVSCodeRuntime()) {
-          toast.error('Private repositories are not supported in VS Code yet');
+          toast.error('VS Code 中暂不支持私有仓库');
           return;
         }
 
@@ -184,11 +184,11 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
               : ids[0].id;
           setGitIdentityId(preferred);
         }
-        toast.error('Authentication required. Select a Git identity and try scanning again.');
+        toast.error('需要认证。请选择一个 Git 身份后重新扫描。');
         return;
       }
 
-      toast.error(result.error?.message || 'Failed to scan repository');
+      toast.error(result.error?.message || '扫描仓库失败');
       return;
     }
 
@@ -205,12 +205,12 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
     setSelected(nextSelected);
 
     setIdentities([]);
-    toast.success(`Found ${nextItems.length} skill(s)`);
+    toast.success(`找到 ${nextItems.length} 个技能`);
   };
 
   const doInstall = async (opts: { conflictDecisions?: Record<string, ConflictDecision> }) => {
     if (selectedDirs.length === 0) {
-      toast.error('Select at least one skill to install');
+      toast.error('请至少选择一个要安装的技能');
       return;
     }
 
@@ -240,7 +240,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
     if (result.ok) {
       const installedCount = result.installed?.length || 0;
-      toast.success(installedCount > 0 ? `Installed ${installedCount} skill(s)` : 'Installation completed');
+      toast.success(installedCount > 0 ? `已安装 ${installedCount} 个技能` : '安装完成');
       onOpenChange(false);
       return;
     }
@@ -254,7 +254,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
     if (result.error?.kind === 'authRequired') {
       if (isVSCodeRuntime()) {
-        toast.error('Private repositories are not supported in VS Code yet');
+        toast.error('VS Code 中暂不支持私有仓库');
         return;
       }
       const ids = (result.error.identities || []) as IdentityOption[];
@@ -268,11 +268,11 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
             : ids[0].id;
         setGitIdentityId(preferred);
       }
-      toast.error('Authentication required. Select a Git identity and try installing again.');
+      toast.error('需要认证。请选择一个 Git 身份后重新安装。');
       return;
     }
 
-    toast.error(result.error?.message || 'Failed to install skills');
+    toast.error(result.error?.message || '安装技能失败');
   };
 
   return (
@@ -280,20 +280,20 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Install from Git repository</DialogTitle>
+            <DialogTitle>从 Git 仓库安装</DialogTitle>
             <DialogDescription>
-              Scan a repository for folders containing <code className="font-mono">SKILL.md</code>, then install selected skills.
+              扫描仓库中包含 <code className="font-mono">SKILL.md</code> 的文件夹，然后安装所选技能。
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 flex-shrink-0">
             <div className="space-y-2">
-              <label className="typography-ui-label font-medium text-foreground">Repository</label>
+                <label className="typography-ui-label font-medium text-foreground">仓库</label>
               <div className="flex items-center gap-2">
                 <Input
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  placeholder="owner/repo or git@github.com:owner/repo.git"
+                  placeholder="owner/repo 或 git@github.com:owner/repo.git"
                   className="text-foreground placeholder:text-muted-foreground"
                 />
                 <Button
@@ -304,27 +304,27 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                   className="gap-2"
                 >
                   <RiGitRepositoryLine className="h-4 w-4" />
-                  {isScanning ? 'Scanning…' : 'Scan'}
+                  {isScanning ? '扫描中…' : '扫描'}
                 </Button>
               </div>
               <p className="typography-meta text-muted-foreground">
-                For GitHub shorthand, you can add a subpath like <code className="font-mono">owner/repo/skills</code>.
+                对于 GitHub 简写，你可以附加子路径，例如 <code className="font-mono">owner/repo/skills</code>。
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <label className="typography-ui-label font-medium text-foreground">Optional subpath</label>
+                <label className="typography-ui-label font-medium text-foreground">可选子路径</label>
                 <Input
                   value={subpath}
                   onChange={(e) => setSubpath(e.target.value)}
-                  placeholder="e.g. skills"
+                  placeholder="例如：skills"
                   className="text-foreground placeholder:text-muted-foreground"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="typography-ui-label font-medium text-foreground">Target location</label>
+                <label className="typography-ui-label font-medium text-foreground">目标位置</label>
                 <Select
                   value={locationValueFrom(scope, targetSource)}
                   onValueChange={(v) => {
@@ -358,9 +358,9 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
             {scope === 'project' && (
               <div className="space-y-2">
-                <label className="typography-ui-label font-medium text-foreground">Project</label>
+                <label className="typography-ui-label font-medium text-foreground">项目</label>
                 {projects.length === 0 ? (
-                  <p className="typography-meta text-muted-foreground">No projects available</p>
+                  <p className="typography-meta text-muted-foreground">没有可用项目</p>
                 ) : (
                   <Select
                     value={resolvedTargetProjectId ?? ''}
@@ -368,7 +368,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                     disabled={projects.length === 1}
                   >
                     <SelectTrigger size="lg" className="w-full justify-between">
-                      <SelectValue placeholder="Choose project" />
+                      <SelectValue placeholder="选择项目" />
                     </SelectTrigger>
                     <SelectContent align="start">
                       {projects.map((p) => (
@@ -384,14 +384,14 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
             {identities.length > 0 && !isVSCodeRuntime() ? (
               <div className="rounded-lg border bg-muted/20 px-3 py-2">
-                <div className="typography-ui-label font-medium text-foreground">Authentication required</div>
+                 <div className="typography-ui-label font-medium text-foreground">需要认证</div>
                 <div className="typography-meta text-muted-foreground mt-1">
-                  Select a Git identity (SSH key) that can access this repository.
+                   请选择一个可以访问此仓库的 Git 身份（SSH 密钥）。
                 </div>
                 <div className="mt-2">
                   <Select value={gitIdentityId || ''} onValueChange={(v) => setGitIdentityId(v)}>
                     <SelectTrigger size="lg" className="w-full justify-between">
-                      <span>{identities.find((i) => i.id === gitIdentityId)?.name || 'Choose identity'}</span>
+                       <span>{identities.find((i) => i.id === gitIdentityId)?.name || '选择身份'}</span>
                     </SelectTrigger>
                     <SelectContent align="start">
                       {identities.map((id) => (
@@ -403,7 +403,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                   </Select>
                 </div>
                 <div className="typography-micro text-muted-foreground mt-2">
-                  Configure identities in Settings → Git Identities.
+                   请在“设置 → Git 身份”中配置身份。
                 </div>
               </div>
             ) : null}
@@ -413,8 +413,8 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
             {items.length === 0 ? (
               <div className="flex h-full items-center justify-center text-center text-muted-foreground">
                 <div>
-                  <p className="typography-body">No scan results yet</p>
-                  <p className="typography-meta mt-1 opacity-75">Scan a repository to discover skills</p>
+                  <p className="typography-body">暂无扫描结果</p>
+                  <p className="typography-meta mt-1 opacity-75">扫描仓库以发现技能</p>
                 </div>
               </div>
             ) : (
@@ -423,12 +423,12 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search skills…"
+                    placeholder="搜索技能…"
                     className="max-w-sm"
                   />
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => toggleAll(true)}>Select all</Button>
-                    <Button variant="outline" size="sm" onClick={() => toggleAll(false)}>Select none</Button>
+                    <Button variant="outline" size="sm" onClick={() => toggleAll(true)}>全选</Button>
+                    <Button variant="outline" size="sm" onClick={() => toggleAll(false)}>全不选</Button>
                   </div>
                 </div>
 
@@ -458,14 +458,14 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                             <div className="typography-ui-label truncate">{item.skillName}</div>
                             {installed ? (
                               <span className="typography-micro text-muted-foreground bg-muted px-1 rounded flex-shrink-0 leading-none pb-px border border-border/50">
-                                installed ({installed.scope}/{installed.source})
+                                 已安装（{installed.scope === 'project' ? '项目' : '用户'}/{installed.source === 'agents' ? 'agents' : installed.source === 'claude' ? 'claude' : 'opencode'})
                               </span>
                             ) : null}
                           </div>
                           {item.description ? (
                             <div className="typography-meta text-muted-foreground mt-0.5 line-clamp-2">{item.description}</div>
                           ) : (
-                            <div className="typography-micro text-muted-foreground mt-0.5">No description provided</div>
+                             <div className="typography-micro text-muted-foreground mt-0.5">未提供描述</div>
                           )}
                           {item.warnings?.length ? (
                             <div className="typography-micro text-muted-foreground mt-1">
@@ -479,7 +479,7 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
                 </ScrollableOverlay>
 
                 <div className="typography-meta text-muted-foreground">
-                  Selected: {selectedDirs.length} / {items.filter((i) => i.installable).length}
+                  已选择：{selectedDirs.length} / {items.filter((i) => i.installable).length}
                 </div>
               </div>
             )}
@@ -487,14 +487,14 @@ export const InstallFromRepoDialog: React.FC<InstallFromRepoDialogProps> = ({ op
 
           <DialogFooter className="flex-shrink-0">
             <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              取消
             </Button>
             <Button
               size="sm"
               disabled={isInstalling || selectedDirs.length === 0 || !source.trim() || (scope === 'project' && !directoryOverride)}
               onClick={() => void doInstall({})}
             >
-              {isInstalling ? 'Installing…' : 'Install selected'}
+              {isInstalling ? '安装中…' : '安装所选技能'}
             </Button>
           </DialogFooter>
         </DialogContent>

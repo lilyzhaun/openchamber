@@ -154,8 +154,8 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
               <div className="h-10">
                 <SortableTabsStrip
                   items={[
-                    { id: 'manual', label: 'Manual' },
-                    { id: 'external', label: 'External' },
+                     { id: 'manual', label: '手动' },
+                     { id: 'external', label: '外部' },
                   ]}
                   activeId={mode}
                   onSelect={(next) => onModeChange(next as 'manual' | 'external')}
@@ -167,13 +167,13 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
               </div>
             </div>
           )}
-          <h2 className="typography-ui-header font-semibold text-foreground px-1">Skills Catalog</h2>
+          <h2 className="typography-ui-header font-semibold text-foreground px-1">技能目录</h2>
         </div>
 
         {/* Source & Search */}
         <div className="mb-8">
           <div className="mb-1 px-1">
-            <h3 className="typography-ui-header font-medium text-foreground">Source Repository</h3>
+            <h3 className="typography-ui-header font-medium text-foreground">来源仓库</h3>
           </div>
 
           <section className="px-2 pb-2 pt-0 space-y-0">
@@ -183,7 +183,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 onValueChange={(v) => setSelectedSource(v)}
               >
                 <SelectTrigger className="w-fit">
-                  <SelectValue placeholder="Select source" />
+                  <SelectValue placeholder="选择来源" />
                 </SelectTrigger>
                 <SelectContent align="start">
                   {sources.map((src) => (
@@ -206,7 +206,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                   }
                 }}
                 disabled={isLoadingCatalog || isLoadingSource}
-                title="Refresh"
+                title="刷新"
               >
                 <RiRefreshLine className={cn("h-3.5 w-3.5", (isLoadingCatalog || isLoadingSource) && "animate-spin")} />
               </Button>
@@ -218,7 +218,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                   className="!font-normal h-6 w-6 px-0 text-[var(--status-error)] hover:text-[var(--status-error)]"
                   onClick={() => setIsRemoveCatalogDialogOpen(true)}
                   disabled={isRemovingCatalog}
-                  title="Remove Catalog"
+                  title="移除目录"
                 >
                   <RiDeleteBinLine className="h-3.5 w-3.5" />
                 </Button>
@@ -229,7 +229,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 className="!font-normal gap-1"
                 onClick={() => setAddCatalogOpen(true)}
               >
-                <RiAddLine className="h-3.5 w-3.5" /> Add Catalog
+                <RiAddLine className="h-3.5 w-3.5" /> 添加目录
               </Button>
             </div>
 
@@ -239,12 +239,12 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search skills..."
+                  placeholder="搜索技能..."
                   className="h-7 pl-8 w-full sm:w-64"
                 />
               </div>
               <span className="typography-meta text-muted-foreground mt-1 block">
-                {isLoadingCatalog ? 'Loading...' : `${filtered.length} skill(s) found`}
+                {isLoadingCatalog ? '加载中...' : `找到 ${filtered.length} 个技能`}
               </span>
             </div>
           </section>
@@ -253,7 +253,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
         {/* Error State */}
         {lastCatalogError && (
           <div className="mb-8 rounded-lg border border-[var(--status-error-border)] bg-[var(--status-error-background)] px-4 py-3">
-            <div className="typography-ui-label font-medium text-[var(--status-error)]">Catalog error</div>
+            <div className="typography-ui-label font-medium text-[var(--status-error)]">目录错误</div>
             <div className="typography-meta text-[var(--status-error)]/80 mt-1">{lastCatalogError.message}</div>
           </div>
         )}
@@ -263,13 +263,13 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
           <section className="px-2 pb-2 pt-0">
             {filtered.length === 0 && !isLoadingSource ? (
               <div className="py-8 text-center text-muted-foreground">
-                <p className="typography-body">No skills found</p>
-                <p className="typography-meta mt-1 opacity-75">Try a different search or refresh the catalog</p>
+                  <p className="typography-body">未找到技能</p>
+                  <p className="typography-meta mt-1 opacity-75">请尝试其他搜索条件或刷新目录</p>
               </div>
             ) : isLoadingSource ? (
               <div className="py-8 text-center text-muted-foreground">
                 <RiRefreshLine className="mx-auto mb-3 h-5 w-5 animate-spin opacity-50" />
-                <p className="typography-meta">Loading skills...</p>
+                  <p className="typography-meta">正在加载技能...</p>
               </div>
             ) : (
               <div className="divide-y divide-[var(--surface-subtle)]">
@@ -285,12 +285,12 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                             <span className="typography-ui-label font-medium text-foreground truncate">{item.skillName}</span>
                             {installed && (
                               <span className="typography-micro text-[var(--status-success)] bg-[var(--status-success)]/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                                installed ({installedScope || 'unknown'})
+                                已安装（{installedScope === 'project' ? '项目' : installedScope === 'user' ? '用户' : '未知'}）
                               </span>
                             )}
                             {!item.installable && (
                               <span className="typography-micro text-[var(--status-warning)] bg-[var(--status-warning)]/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                                not installable
+                                不可安装
                               </span>
                             )}
                           </div>
@@ -298,13 +298,13 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                           {item.description ? (
                             <div className="typography-meta text-muted-foreground mt-0.5 line-clamp-2">{item.description}</div>
                           ) : (
-                            <div className="typography-meta text-muted-foreground/50 mt-0.5 italic">No description provided</div>
+                            <div className="typography-meta text-muted-foreground/50 mt-0.5 italic">未提供描述</div>
                           )}
 
                           {item.clawdhub && (
                             <div className="typography-micro text-muted-foreground mt-1.5 flex items-center gap-3">
                               {item.clawdhub.owner && (
-                                <span>by <span className="font-medium text-foreground/80">{item.clawdhub.owner}</span></span>
+                                <span>作者 <span className="font-medium text-foreground/80">{item.clawdhub.owner}</span></span>
                               )}
                               <span className="flex items-center gap-1">
                                 <RiDownloadLine className="h-3 w-3" />
@@ -337,7 +337,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                             setInstallDialogOpen(true);
                           }}
                         >
-                          Install
+                          安装
                         </Button>
                       </div>
                     </div>
@@ -356,7 +356,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 onClick={() => void loadMoreClawdHub()}
                 disabled={isLoadingMore}
               >
-                {isLoadingMore ? 'Loading...' : 'Load More Skills'}
+                {isLoadingMore ? '加载中...' : '加载更多技能'}
               </Button>
             </div>
           )}
@@ -376,8 +376,8 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
         >
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Remove Catalog</DialogTitle>
-              <DialogDescription>Are you sure you want to remove this catalog?</DialogDescription>
+              <DialogTitle>移除目录</DialogTitle>
+              <DialogDescription>确定要移除此目录吗？</DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
@@ -386,10 +386,10 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 onClick={() => setIsRemoveCatalogDialogOpen(false)}
                 disabled={isRemovingCatalog}
               >
-                Cancel
+                取消
               </Button>
               <Button size="sm" variant="destructive" onClick={() => void removeSelectedCatalog()} disabled={isRemovingCatalog}>
-                Remove Catalog
+                移除目录
               </Button>
             </DialogFooter>
           </DialogContent>

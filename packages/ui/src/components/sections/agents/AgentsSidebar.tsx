@@ -141,7 +141,7 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
 
   const handleDeleteAgent = async (agent: Agent) => {
     if (isAgentBuiltIn(agent)) {
-      toast.error('Built-in agents cannot be deleted');
+      toast.error('内置代理不能删除');
       return;
     }
 
@@ -173,15 +173,15 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
 
     if (success) {
       if (confirmActionType === 'delete') {
-        toast.success(`Agent "${confirmActionAgent.name}" deleted successfully`);
+        toast.success(`代理“${confirmActionAgent.name}”已删除`);
       } else {
-        toast.success(`Agent "${confirmActionAgent.name}" reset to default`);
+        toast.success(`代理“${confirmActionAgent.name}”已重置为默认配置`);
       }
       closeConfirmActionDialog();
     } else if (confirmActionType === 'delete') {
-      toast.error('Failed to delete agent');
+      toast.error('删除代理失败');
     } else {
-      toast.error('Failed to reset agent');
+      toast.error('重置代理失败');
     }
 
     setIsConfirmActionPending(false);
@@ -231,7 +231,7 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
     const sanitizedName = renameNewName.trim().replace(/\s+/g, '-');
 
     if (!sanitizedName) {
-      toast.error('Agent name is required');
+      toast.error('代理名称不能为空');
       return;
     }
 
@@ -241,7 +241,7 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
     }
 
     if (agents.some((a) => a.name === sanitizedName)) {
-      toast.error('An agent with this name already exists');
+      toast.error('已存在同名代理');
       return;
     }
 
@@ -267,13 +267,13 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
       // Delete old agent
       const deleteSuccess = await deleteAgent(renameDialogAgent.name);
       if (deleteSuccess) {
-        toast.success(`Agent renamed to "${sanitizedName}"`);
+        toast.success(`代理已重命名为“${sanitizedName}”`);
         setSelectedAgent(sanitizedName);
       } else {
-        toast.error('Failed to remove old agent after rename');
+        toast.error('重命名后删除旧代理失败');
       }
     } else {
-      toast.error('Failed to rename agent');
+      toast.error('重命名代理失败');
     }
 
     setRenameDialogAgent(null);
@@ -319,10 +319,10 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
   return (
     <div className={cn('flex h-full flex-col', bgClass)}>
       <div className="border-b px-3 pt-4 pb-3">
-        <h2 className="text-base font-semibold text-foreground mb-3">Agents</h2>
+        <h2 className="text-base font-semibold text-foreground mb-3">代理</h2>
         <SettingsProjectSelector className="mb-3" />
         <div className="flex items-center justify-between gap-2">
-          <span className="typography-meta text-muted-foreground">Total {visibleAgents.length}</span>
+          <span className="typography-meta text-muted-foreground">共 {visibleAgents.length} 个</span>
           <Button size="sm"
             variant="ghost"
             className="h-7 w-7 px-0 -my-1 text-muted-foreground"
@@ -337,15 +337,15 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
         {visibleAgents.length === 0 ? (
           <div className="py-12 px-4 text-center text-muted-foreground">
             <RiRobot2Line className="mx-auto mb-3 h-10 w-10 opacity-50" />
-            <p className="typography-ui-label font-medium">No agents configured</p>
-            <p className="typography-meta mt-1 opacity-75">Use the + button above to create one</p>
+            <p className="typography-ui-label font-medium">尚未配置代理</p>
+            <p className="typography-meta mt-1 opacity-75">使用上方的 + 按钮创建一个</p>
           </div>
         ) : (
           <>
             {builtInAgents.length > 0 && (
               <>
                 <div className="px-2 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Built-in Agents
+                  内置代理
                 </div>
                 {builtInAgents.map((agent) => (
                   <AgentListItem
@@ -370,7 +370,7 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
             {customAgents.length > 0 && (
               <>
                 <div className="px-2 pb-1.5 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Custom Agents
+                  自定义代理
                 </div>
 
                 {/* Grouped agents by subfolder */}
@@ -437,11 +437,11 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{confirmActionType === 'delete' ? 'Delete Agent' : 'Reset Agent'}</DialogTitle>
+            <DialogTitle>{confirmActionType === 'delete' ? '删除代理' : '重置代理'}</DialogTitle>
             <DialogDescription>
               {confirmActionType === 'delete'
-                ? `Are you sure you want to delete agent "${confirmActionAgent?.name}"?`
-                : `Are you sure you want to reset agent "${confirmActionAgent?.name}" to its default configuration?`}
+                 ? `确定要删除代理“${confirmActionAgent?.name}”吗？`
+                 : `确定要将代理“${confirmActionAgent?.name}”重置为默认配置吗？`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -451,10 +451,10 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
               onClick={closeConfirmActionDialog}
               disabled={isConfirmActionPending}
             >
-              Cancel
+              取消
             </Button>
             <Button size="sm" onClick={handleConfirmAction} disabled={isConfirmActionPending}>
-              {confirmActionType === 'delete' ? 'Delete' : 'Reset'}
+              {confirmActionType === 'delete' ? '删除' : '重置'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -464,15 +464,15 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
       <Dialog open={renameDialogAgent !== null} onOpenChange={(open) => !open && setRenameDialogAgent(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Agent</DialogTitle>
+            <DialogTitle>重命名代理</DialogTitle>
             <DialogDescription>
-              Enter a new name for the agent "@{renameDialogAgent?.name}"
+              为代理“@{renameDialogAgent?.name}”输入一个新名称
             </DialogDescription>
           </DialogHeader>
           <Input
             value={renameNewName}
             onChange={(e) => setRenameNewName(e.target.value)}
-            placeholder="New agent name..."
+            placeholder="新代理名称..."
             className="text-foreground placeholder:text-muted-foreground"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -486,10 +486,10 @@ export const AgentsSidebar: React.FC<AgentsSidebarProps> = ({ onItemSelect }) =>
               variant="ghost"
               onClick={() => setRenameDialogAgent(null)}
             >
-              Cancel
+              取消
             </Button>
             <Button size="sm" onClick={handleRenameAgent}>
-              Rename
+              重命名
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -550,7 +550,7 @@ const AgentListItem: React.FC<AgentListItemProps> = ({
             {getAgentModeIcon(agent.mode)}
             {(extAgent.scope || isAgentBuiltIn(agent)) && (
               <span className="typography-micro text-muted-foreground bg-muted px-1 rounded flex-shrink-0 leading-none pb-px border border-border/50">
-                {isAgentBuiltIn(agent) ? 'system' : extAgent.scope}
+                 {isAgentBuiltIn(agent) ? '系统' : extAgent.scope === 'project' ? '项目' : '用户'}
               </span>
             )}
           </div>
@@ -580,7 +580,7 @@ const AgentListItem: React.FC<AgentListItemProps> = ({
                 }}
               >
                 <RiEditLine className="h-4 w-4 mr-px" />
-                Rename
+                重命名
               </DropdownMenuItem>
             )}
 
@@ -591,7 +591,7 @@ const AgentListItem: React.FC<AgentListItemProps> = ({
               }}
             >
               <RiFileCopyLine className="h-4 w-4 mr-px" />
-              Duplicate
+               复制
             </DropdownMenuItem>
 
             {onReset && (
@@ -602,7 +602,7 @@ const AgentListItem: React.FC<AgentListItemProps> = ({
                 }}
               >
                 <RiRestartLine className="h-4 w-4 mr-px" />
-                Reset
+                 重置
               </DropdownMenuItem>
             )}
 
@@ -615,7 +615,7 @@ const AgentListItem: React.FC<AgentListItemProps> = ({
                 className="text-destructive focus:text-destructive"
               >
                 <RiDeleteBinLine className="h-4 w-4 mr-px" />
-                Delete
+                 删除
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
