@@ -680,6 +680,8 @@ interface UIStore {
   setShortcutOverride: (actionId: string, combo: ShortcutCombo) => void;
   clearShortcutOverride: (actionId: string) => void;
   resetAllShortcutOverrides: () => void;
+  appLanguage: 'en' | 'zh-CN';
+  setAppLanguage: (language: 'en' | 'zh-CN') => void;
 }
 
 
@@ -788,6 +790,7 @@ export const useUIStore = create<UIStore>()(
         isExpandedInput: false,
         reportUsage: true,
         shortcutOverrides: {},
+        appLanguage: 'en' as const,
 
         setTheme: (theme) => {
           set({ theme });
@@ -1702,6 +1705,9 @@ export const useUIStore = create<UIStore>()(
         setReportUsage: (value) => {
           set({ reportUsage: value });
         },
+        setAppLanguage: (language) => {
+          set({ appLanguage: language });
+        },
         viewPagerPage: 'center',
         setViewPagerPage: (page: 'left' | 'center' | 'right') => {
           set({ viewPagerPage: page });
@@ -1882,6 +1888,7 @@ export const useUIStore = create<UIStore>()(
           showMobileSessionStatusBar: state.showMobileSessionStatusBar,
           isMobileSessionStatusBarCollapsed: state.isMobileSessionStatusBarCollapsed,
           shortcutOverrides: state.shortcutOverrides,
+          appLanguage: state.appLanguage,
         })
       }
     ),

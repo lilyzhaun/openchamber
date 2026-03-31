@@ -7,7 +7,9 @@ import { useCurrentSessionActivity } from '@/hooks/useSessionActivity';
 import { getAgentColor } from '@/lib/agentColors';
 import { parseSessionActivity } from '@/lib/messages/parseSessionActivity';
 import { useConfigStore } from '@/stores/useConfigStore';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionUIStore } from '@/sync/session-ui-store';
+import { getSyncSessions, getSyncMessages } from '@/sync/sync-refs';
+import { useSelectionStore } from '@/sync/selection-store';
 
 export type OfficeZone =
   | 'main_office'
@@ -106,13 +108,22 @@ export function usePixelOfficeState(): PixelOfficeState {
   const { working } = useAssistantStatus();
   const sessionActivity = useCurrentSessionActivity();
 
-  const currentSessionId = useSessionStore((state) => state.currentSessionId);
-  const sessions = useSessionStore((state) => state.sessions);
-  const sessionStatus = useSessionStore((state) => state.sessionStatus);
-  const getSessionAgentSelection = useSessionStore((state) => state.getSessionAgentSelection);
-  const currentAgentContext = useSessionStore((state) => state.currentAgentContext);
+  const currentSessionId = useSessionUIStore((state) => state.currentSessionId);
+  const sessions = React.useMemo(() => getSyncSessions() ?? [], [currentSessionId]);
+  const sessionStatus = React.useMemo<Record<string, { type?: string }>>(() => ({}), []);
+  const getSessionAgentSelection = React.useCallback((sessionId: string) => {
+    return useSelectionStore.getState().sessionAgentSelections.get(sessionId) ?? null;
+  }, []);
+  const currentAgentContext = React.useMemo<Map<string, string>>(() => new Map(), []);
   const agents = useConfigStore((state) => state.agents);
-  const messages = useSessionStore((state) => state.messages);
+  const messages = React.useMemo<Record<string, Message[]>>(() => {
+    const result: Record<string, Message[]> = {};
+    for (const s of sessions) {
+      const msgs = getSyncMessages(s.id);
+      if (msgs) result[s.id] = msgs;
+    }
+    return result;
+  }, [sessions]);
   const previousZonesRef = React.useRef<Map<string, OfficeZone>>(new Map());
 
   const fallbackAgent = React.useMemo(() => agents[0]?.name ?? 'agent', [agents]);
@@ -158,7 +169,7 @@ export function usePixelOfficeState(): PixelOfficeState {
 
     const toCard = (session: Session, slotId: RealAgentCard['slotId'], isLead: boolean): RealAgentCard => {
       const resolved = resolveAgentFromSession(session, getSessionAgentSelection, currentAgentContext, fallbackAgent);
-      const statusType = (sessionStatus?.get(session.id)?.type ?? 'idle') as 'busy' | 'retry' | 'idle';
+      const statusType = (sessionStatus[session.id]?.type ?? 'idle') as 'busy' | 'retry' | 'idle';
 
       // For the lead agent, use the pre-computed working state from useAssistantStatus.
       // For child agents, parse their own session messages to derive real activity.
@@ -174,7 +185,7 @@ export function usePixelOfficeState(): PixelOfficeState {
         source = toolName ? 'tool' : 'session';
       } else if (statusType !== 'idle') {
         // Child session is active — parse its messages for fine-grained activity
-        const childMessages = (messages.get(session.id) ?? []) as Array<{ info: Message; parts: Part[] }>;
+        const childMessages = (messages[session.id] ?? []) as unknown as Array<{ info: Message; parts: Part[] }>;
         const parsed = parseSessionActivity(childMessages);
 
         toolName = parsed.activeToolName ?? null;
