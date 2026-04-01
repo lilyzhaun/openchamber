@@ -46,6 +46,7 @@ import {
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useUIStore } from '@/stores/useUIStore';
 import { useI18n } from '@/contexts/useI18n';
+import { useDetectedWorktreeMetadata } from '@/hooks/useDetectedWorktreeRoot';
 import { IntegrateCommitsSection } from './git/IntegrateCommitsSection';
 
 import { GitHeader } from './git/GitHeader';
@@ -257,7 +258,7 @@ export const GitView: React.FC<GitViewProps> = () => {
 
     return undefined;
   }, [availableWorktrees, normalizedCurrentDirectory, worktreeMap]);
-  const worktreeMetadata = React.useMemo(() => {
+  const storeWorktreeMetadata = React.useMemo(() => {
     if (currentSessionId) {
       return worktreeMap.get(currentSessionId) ?? inferredWorktreeMetadata;
     }
@@ -269,12 +270,13 @@ export const GitView: React.FC<GitViewProps> = () => {
     return undefined;
   }, [currentSessionId, inferredWorktreeMetadata, newSessionDraft?.open, worktreeMap]);
 
-
   const { profiles, globalIdentity, defaultGitIdentityId, loadProfiles, loadGlobalIdentity, loadDefaultGitIdentityId } =
     useGitIdentitiesStore();
 
   const isGitRepo = useIsGitRepo(currentDirectory ?? null);
   const status = useGitStatus(currentDirectory ?? null);
+
+  const worktreeMetadata = useDetectedWorktreeMetadata(currentDirectory, storeWorktreeMetadata, status?.current ?? undefined);
   const branches = useGitBranches(currentDirectory ?? null);
   const log = useGitLog(currentDirectory ?? null);
   const currentIdentity = useGitIdentity(currentDirectory ?? null);
@@ -2088,6 +2090,7 @@ export const GitView: React.FC<GitViewProps> = () => {
                 <div className="space-y-4">
                   {integrateCommitsProps ? (
                     <IntegrateCommitsSection
+                      key={integrateCommitsProps.worktreeMetadata.path}
                       repoRoot={integrateCommitsProps.repoRoot}
                       sourceBranch={integrateCommitsProps.sourceBranch}
                       worktreeMetadata={integrateCommitsProps.worktreeMetadata}
