@@ -13,11 +13,9 @@ import { useI18n } from '@/contexts/useI18n';
 
 export const OpenCodeStatusDialog: React.FC = () => {
   const { t } = useI18n();
-  const {
-    isOpenCodeStatusDialogOpen,
-    setOpenCodeStatusDialogOpen,
-    openCodeStatusText,
-  } = useUIStore();
+  const isOpenCodeStatusDialogOpen = useUIStore((state) => state.isOpenCodeStatusDialogOpen);
+  const setOpenCodeStatusDialogOpen = useUIStore((state) => state.setOpenCodeStatusDialogOpen);
+  const openCodeStatusText = useUIStore((state) => state.openCodeStatusText);
 
   const handleCopy = React.useCallback(async () => {
     if (!openCodeStatusText) {

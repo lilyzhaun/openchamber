@@ -407,6 +407,10 @@ export function DesktopHostSwitcherDialog({
     };
     void run();
     const interval = window.setInterval(() => {
+      // Skip polling when tab is hidden to reduce background work
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+      }
       void run();
     }, 1_500);
 
@@ -1257,6 +1261,10 @@ export function DesktopHostSwitcherButton({ headerIconButtonClass }: DesktopHost
 
     void run();
     const interval = window.setInterval(() => {
+      // Skip polling when tab is hidden to reduce background work
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+      }
       void run();
     }, 10_000);
     return () => {
