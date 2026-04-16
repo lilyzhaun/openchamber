@@ -35,7 +35,6 @@ import {
 } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';
-import { useI18n } from '@/contexts/useI18n';
 import { isTauriShell, isDesktopShell } from '@/lib/desktop';
 import { useUIStore } from '@/stores/useUIStore';
 import {
@@ -98,6 +97,7 @@ const makeId = (): string => {
 const statusDotClass = (status: HostProbeResult['status'] | null): string => {
   if (status === 'ok') return 'bg-status-success';
   if (status === 'auth') return 'bg-status-warning';
+  if (status === 'wrong-service') return 'bg-status-error';
   if (status === 'unreachable') return 'bg-status-error';
   return 'bg-muted-foreground/40';
 };
@@ -105,6 +105,7 @@ const statusDotClass = (status: HostProbeResult['status'] | null): string => {
 const statusLabel = (status: HostProbeResult['status'] | null): string => {
   if (status === 'ok') return 'Connected';
   if (status === 'auth') return 'Auth required';
+  if (status === 'wrong-service') return 'Wrong service';
   if (status === 'unreachable') return 'Unreachable';
   return 'Unknown';
 };
@@ -112,6 +113,7 @@ const statusLabel = (status: HostProbeResult['status'] | null): string => {
 const statusIcon = (status: HostProbeResult['status'] | null) => {
   if (status === 'ok') return <RiCheckLine className="h-4 w-4" />;
   if (status === 'auth') return <RiShieldKeyholeLine className="h-4 w-4" />;
+  if (status === 'wrong-service') return <RiCloudOffLine className="h-4 w-4" />;
   if (status === 'unreachable') return <RiCloudOffLine className="h-4 w-4" />;
   return <RiEarthLine className="h-4 w-4" />;
 };
@@ -244,7 +246,6 @@ export function DesktopHostSwitcherDialog({
   embedded = false,
   onHostSwitched,
 }: DesktopHostSwitcherDialogProps) {
-  const { t } = useI18n();
   const setSettingsDialogOpen = useUIStore((state) => state.setSettingsDialogOpen);
   const setSettingsPage = useUIStore((state) => state.setSettingsPage);
 
@@ -499,7 +500,7 @@ export function DesktopHostSwitcherDialog({
           ...prev,
           error: message,
         }));
-        toast.error(t('desktop.hostSwitcher.sshFailedToConnect', { hostLabel: redactSensitiveUrl(host.label) }), {
+        toast.error(`SSH instance "${redactSensitiveUrl(host.label)}" failed to connect`, {
           description: message,
         });
         return;
@@ -518,8 +519,8 @@ export function DesktopHostSwitcherDialog({
         [host.id]: { status: probe.status, latencyMs: probe.latencyMs },
       }));
 
-      if (probe.status === 'unreachable') {
-        toast.error(t('desktop.hostSwitcher.instanceUnreachable', { hostLabel: redactSensitiveUrl(host.label) }));
+      if (probe.status === 'unreachable' || probe.status === 'wrong-service') {
+        toast.error(`Instance "${redactSensitiveUrl(host.label)}" is unreachable`);
         setSwitchingHostId(null);
         return;
       }
@@ -533,7 +534,7 @@ export function DesktopHostSwitcherDialog({
     } catch {
       window.location.href = target;
     }
-  }, [onHostSwitched, sshHostIds, sshStatusesById, t]);
+  }, [onHostSwitched, sshHostIds, sshStatusesById]);
 
   const beginEdit = React.useCallback((host: DesktopHost) => {
     setEditingId(host.id);
@@ -602,7 +603,7 @@ export function DesktopHostSwitcherDialog({
     if (!origin) return;
     const target = toNavigationUrl(origin);
     desktopOpenNewWindowAtUrl(target).catch((err: unknown) => {
-      toast.error(t('desktop.hostSwitcher.failedToOpenNewWindow'), {
+      toast.error('Failed to open new window', {
         description: err instanceof Error ? err.message : String(err),
       });
     });
@@ -664,19 +665,19 @@ export function DesktopHostSwitcherDialog({
         }));
       });
       if (readyStatus.phase === 'ready') {
-        toast.success(t('desktop.hostSwitcher.sshConnected', { hostLabel: redactSensitiveUrl(host.label) }));
+        toast.success(`SSH instance "${redactSensitiveUrl(host.label)}" connected`);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (message !== SSH_CONNECT_CANCELLED_ERROR) {
-        toast.error(t('desktop.hostSwitcher.sshFailedToConnect', { hostLabel: redactSensitiveUrl(host.label) }), {
+        toast.error(`SSH instance "${redactSensitiveUrl(host.label)}" failed to connect`, {
           description: message,
         });
       }
     } finally {
       setSwitchingHostId(null);
     }
-  }, [t]);
+  }, []);
 
   if (!isDesktopShell()) {
     return null;
@@ -911,7 +912,7 @@ export function DesktopHostSwitcherDialog({
                             )}
                             onClick={() => void setDefault(host.id)}
                             aria-label={isDefault ? 'Default instance' : 'Set as default'}
-                            disabled={isSaving}
+                            disabled={isSaving || (!isDefault && (statusKind === 'unreachable' || statusKind === 'wrong-service'))}
                           >
                             {isDefault ? <RiStarFill className="h-4 w-4" /> : <RiStarLine className="h-4 w-4" />}
                           </button>
@@ -927,7 +928,7 @@ export function DesktopHostSwitcherDialog({
                             type="button"
                               className={cn(
                                 'h-8 w-8 rounded-md inline-flex items-center justify-center hover:bg-interactive-hover transition-colors',
-                                statusKind === 'unreachable'
+                                statusKind === 'unreachable' || statusKind === 'wrong-service'
                                   ? 'text-muted-foreground/30 cursor-not-allowed'
                                   : 'text-muted-foreground/60 hover:text-foreground',
                               )}
@@ -935,14 +936,14 @@ export function DesktopHostSwitcherDialog({
                               e.stopPropagation();
                               openInNewWindow(host);
                             }}
-                            disabled={statusKind === 'unreachable'}
+                            disabled={statusKind === 'unreachable' || statusKind === 'wrong-service'}
                             aria-label="Open in new window"
                           >
                             <RiWindowLine className="h-4 w-4" />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent sideOffset={6}>
-                          {statusKind === 'unreachable' ? 'Instance unreachable' : 'Open in new window'}
+                          {(statusKind === 'unreachable' || statusKind === 'wrong-service') ? 'Instance unreachable' : 'Open in new window'}
                         </TooltipContent>
                       </Tooltip>
                     </div>
