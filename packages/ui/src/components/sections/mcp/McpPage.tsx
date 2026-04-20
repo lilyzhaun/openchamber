@@ -617,28 +617,20 @@ export const McpPage: React.FC = () => {
                 <span className="typography-ui-label text-foreground">传输模式</span>
                 <div className="flex flex-wrap items-center gap-1">
                   <Button
-                    variant="outline"
+                    variant="chip"
                     size="xs"
+                    aria-pressed={mcpType === 'local'}
                     onClick={() => setMcpType('local')}
-                    className={cn(
-                      '!font-normal',
-                      mcpType === 'local'
-                        ? 'border-[var(--primary-base)] text-[var(--primary-base)] bg-[var(--primary-base)]/10 hover:text-[var(--primary-base)]'
-                        : 'text-foreground'
-                    )}
+                    className="!font-normal"
                   >
                     本地 · stdio
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="chip"
                     size="xs"
+                    aria-pressed={mcpType === 'remote'}
                     onClick={() => setMcpType('remote')}
-                    className={cn(
-                      '!font-normal',
-                      mcpType === 'remote'
-                        ? 'border-[var(--primary-base)] text-[var(--primary-base)] bg-[var(--primary-base)]/10 hover:text-[var(--primary-base)]'
-                        : 'text-foreground'
-                    )}
+                    className="!font-normal"
                   >
                     远程 · SSE
                   </Button>
