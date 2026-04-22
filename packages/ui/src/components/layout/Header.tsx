@@ -38,6 +38,7 @@ import { useDeviceInfo } from '@/lib/device';
 import { cn, hasModifier } from '@/lib/utils';
 import { McpDropdownContent } from '@/components/mcp/McpDropdown';
 import { McpIcon } from '@/components/icons/McpIcon';
+import { useI18n } from '@/contexts/useI18n';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
 import { formatPercent, formatWindowLabel, QUOTA_PROVIDERS, calculatePace, calculateExpectedUsagePercent } from '@/lib/quota';
 import { UsageProgressBar } from '@/components/sections/usage/UsageProgressBar';
@@ -617,6 +618,7 @@ export const Header: React.FC<HeaderProps> = ({
   rightDrawerOpen,
   desktopRightSidebarActionsHost = null,
 }) => {
+  const { t } = useI18n();
   const setSessionSwitcherOpen = useUIStore((state) => state.setSessionSwitcherOpen);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const isSidebarOpen = useUIStore((state) => state.isSidebarOpen);
@@ -1425,17 +1427,17 @@ export const Header: React.FC<HeaderProps> = ({
   const tabs: TabConfig[] = React.useMemo(() => {
     if (isMobile) {
       const base: TabConfig[] = [
-        { id: 'chat', label: 'Chat', icon: RiChat4Line },
+        { id: 'chat', label: t('header.tabs.chat'), icon: RiChat4Line },
       ];
 
       if (showPlanTab) {
-        base.push({ id: 'plan', label: 'Plan', icon: RiFileTextLine });
+        base.push({ id: 'plan', label: t('header.tabs.plan'), icon: RiFileTextLine });
       }
 
       base.push(
-        { id: 'diff', label: 'Diff', icon: 'diff' },
-        { id: 'files', label: 'Files', icon: RiFolder6Line },
-        { id: 'terminal', label: 'Terminal', icon: RiTerminalBoxLine },
+        { id: 'diff', label: t('header.tabs.diff'), icon: 'diff' },
+        { id: 'files', label: t('header.tabs.files'), icon: RiFolder6Line },
+        { id: 'terminal', label: t('header.tabs.terminal'), icon: RiTerminalBoxLine },
       );
 
       return base;
@@ -1443,7 +1445,7 @@ export const Header: React.FC<HeaderProps> = ({
 
     // Desktop: no tabs in header
     return [];
-  }, [isMobile, showPlanTab]);
+  }, [isMobile, showPlanTab, t]);
 
   const shortcutLabel = React.useCallback((actionId: string) => {
     return formatShortcutForDisplay(getEffectiveShortcutCombo(actionId, shortcutOverrides));
@@ -1458,14 +1460,14 @@ export const Header: React.FC<HeaderProps> = ({
   const servicesTabs = React.useMemo(() => {
     const base: Array<{ value: 'instance' | 'usage' | 'mcp'; label: string; icon: RemixiconComponentType }> = [];
     if (isDesktopApp) {
-      base.push({ value: 'instance', label: 'Instance', icon: RiServerLine });
+      base.push({ value: 'instance', label: t('header.instanceTab'), icon: RiServerLine });
     }
     base.push(
-      { value: 'usage', label: 'Usage', icon: RiTimerLine },
-      { value: 'mcp', label: 'MCP', icon: McpIcon as unknown as RemixiconComponentType }
+      { value: 'usage', label: t('header.usageTab'), icon: RiTimerLine },
+      { value: 'mcp', label: t('header.mcpTab'), icon: McpIcon as unknown as RemixiconComponentType }
     );
     return base;
-  }, [isDesktopApp]);
+  }, [isDesktopApp, t]);
 
   const servicesTabItems = React.useMemo(() => {
     return servicesTabs.map((tab) => ({
@@ -1477,10 +1479,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   const quotaDisplayTabs = React.useMemo(() => {
     return [
-      { value: 'usage' as const, label: 'Used' },
-      { value: 'remaining' as const, label: 'Remaining' },
+      { value: 'usage' as const, label: t('header.usedTab') },
+      { value: 'remaining' as const, label: t('header.remainingTab') },
     ];
-  }, []);
+  }, [t]);
 
   const quotaDisplayTabItems = React.useMemo(() => {
     return quotaDisplayTabs.map((tab) => ({ id: tab.value, label: tab.label }));
@@ -1488,10 +1490,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   const mobileServicesTabItems = React.useMemo<SortableTabsStripItem[]>(() => {
     return [
-      { id: 'usage', label: 'Usage', icon: <RiTimerLine className="h-3.5 w-3.5" /> },
-      { id: 'mcp', label: 'MCP', icon: <RiCommandLine className="h-3.5 w-3.5" /> },
+      { id: 'usage', label: t('header.usageTab'), icon: <RiTimerLine className="h-3.5 w-3.5" /> },
+      { id: 'mcp', label: t('header.mcpTab'), icon: <RiCommandLine className="h-3.5 w-3.5" /> },
     ];
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1822,7 +1824,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={() => setSessionSwitcherOpen(false)}
             className="app-region-no-drag h-9 w-9 p-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md active:bg-interactive-active"
-            aria-label="Back"
+            aria-label={t('header.backAria')}
           >
             <RiArrowLeftSLine className="h-5 w-5" />
           </button>
@@ -1831,14 +1833,14 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={handleOpenSessionSwitcher}
             className="app-region-no-drag h-9 w-9 p-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md active:bg-interactive-active"
-            aria-label="Open sessions"
+            aria-label={t('header.openSessionsAria')}
           >
             <RiPlayListAddLine className="h-5 w-5" />
           </button>
         )}
 
         {isSessionSwitcherOpen && (
-          <span className="typography-ui-label font-semibold text-foreground">Sessions</span>
+          <span className="typography-ui-label font-semibold text-foreground">{t('header.sessions')}</span>
         )}
       </div>
 
@@ -1851,7 +1853,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div
                   className="flex items-center gap-0.5 rounded-lg bg-[var(--surface-muted)]/50 p-0.5"
                   role="tablist"
-                  aria-label="Main navigation"
+                  aria-label={t('header.mainNavigationAria')}
                 >
                   {tabs.map((tab) => {
                     const isActive = activeMainTab === tab.id;
@@ -1890,7 +1892,7 @@ export const Header: React.FC<HeaderProps> = ({
                             {tab.showDot && (
                               <span
                                 className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary"
-                                aria-label="Changes available"
+                                aria-label={t('header.changesAvailableAria')}
                               />
                             )}
                           </button>
@@ -1932,7 +1934,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      aria-label="View services"
+                      aria-label={t('header.servicesOpenAria')}
                       className={mobileHeaderIconButtonClass}
                     >
                       <RiStackLine className="h-5 w-5" />
@@ -1940,7 +1942,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Services</p>
+                  <p>{t('header.services')}</p>
                 </TooltipContent>
               </Tooltip>
               <DropdownMenuContent
@@ -1973,7 +1975,7 @@ export const Header: React.FC<HeaderProps> = ({
                         type="button"
                         onClick={() => setIsMobileRateLimitsOpen(false)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-interactive-hover"
-                        aria-label="Close services"
+                        aria-label={t('header.servicesCloseAria')}
                       >
                         <RiCloseLine className="h-5 w-5" />
                       </button>
@@ -1990,7 +1992,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <div className="border-b border-[var(--interactive-border)]">
                         <div className="flex items-center justify-between gap-3 px-4 py-3">
                           <div className="flex flex-col min-w-0 gap-0.5">
-                            <span className="typography-ui-header font-semibold text-foreground">Rate limits</span>
+                            <span className="typography-ui-header font-semibold text-foreground">{t('header.rateLimits')}</span>
                             <span className="truncate typography-micro text-muted-foreground">
                               {formatTime(quotaLastUpdated)}
                             </span>
@@ -2007,7 +2009,7 @@ export const Header: React.FC<HeaderProps> = ({
                                     : 'text-muted-foreground hover:text-foreground'
                                 )}
                               >
-                                Used
+                                {t('header.usedTab')}
                               </button>
                               <span className="text-muted-foreground typography-ui-label px-0.5">·</span>
                               <button
@@ -2020,7 +2022,7 @@ export const Header: React.FC<HeaderProps> = ({
                                     : 'text-muted-foreground hover:text-foreground'
                                 )}
                               >
-                                Remaining
+                                {t('header.remainingTab')}
                               </button>
                             </div>
                             <button
@@ -2032,7 +2034,7 @@ export const Header: React.FC<HeaderProps> = ({
                               )}
                               onClick={handleUsageRefresh}
                               disabled={isQuotaLoading || isUsageRefreshSpinning}
-                              aria-label="Refresh rate limits"
+                              aria-label={t('header.refreshRateLimitsAria')}
                             >
                               <RiRefreshLine className={cn('h-4 w-4', isUsageRefreshSpinning && 'animate-spin')} />
                             </button>

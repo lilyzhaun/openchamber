@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
+import { useI18n } from '@/contexts/useI18n';
 import { useMagicPromptsStore } from '@/stores/useMagicPromptsStore';
 import { cn } from '@/lib/utils';
 
@@ -8,46 +9,47 @@ interface MagicPromptsSidebarProps {
 }
 
 export const MagicPromptsSidebar: React.FC<MagicPromptsSidebarProps> = ({ onItemSelect }) => {
+  const { t } = useI18n();
   const selectedPromptId = useMagicPromptsStore((state) => state.selectedPromptId);
   const setSelectedPromptId = useMagicPromptsStore((state) => state.setSelectedPromptId);
 
   const grouped = React.useMemo(() => {
     return [
       {
-        group: 'Git',
+        group: t('settings.magicPromptsSidebar.group.git'),
         items: [
-          { id: 'git.commit.generate', title: 'Commit Generation' },
-          { id: 'git.pr.generate', title: 'PR Generation' },
-          { id: 'git.conflict.resolve', title: 'Merge/Rebase Conflict Resolution' },
-          { id: 'git.integrate.cherrypick.resolve', title: 'Cherry-pick Conflict Resolution' },
+          { id: 'git.commit.generate', title: t('settings.magicPrompts.prompt.commitGeneration.title') },
+          { id: 'git.pr.generate', title: t('settings.magicPrompts.prompt.prGeneration.title') },
+          { id: 'git.conflict.resolve', title: t('settings.magicPrompts.prompt.conflictResolution.title') },
+          { id: 'git.integrate.cherrypick.resolve', title: t('settings.magicPrompts.prompt.cherryPickConflictResolution.title') },
         ],
       },
       {
-        group: 'GitHub',
+        group: t('settings.magicPromptsSidebar.group.github'),
         items: [
-          { id: 'github.pr.review', title: 'PR Review' },
-          { id: 'github.issue.review', title: 'Issue Review' },
-          { id: 'github.pr.checks.review', title: 'PR Failed Checks Review' },
-          { id: 'github.pr.comments.review', title: 'PR Comments Review' },
-          { id: 'github.pr.comment.single', title: 'Single PR Comment Review' },
+          { id: 'github.pr.review', title: t('settings.magicPrompts.prompt.prReview.title') },
+          { id: 'github.issue.review', title: t('settings.magicPrompts.prompt.issueReview.title') },
+          { id: 'github.pr.checks.review', title: t('settings.magicPrompts.prompt.prFailedChecksReview.title') },
+          { id: 'github.pr.comments.review', title: t('settings.magicPrompts.prompt.prCommentsReview.title') },
+          { id: 'github.pr.comment.single', title: t('settings.magicPrompts.prompt.singlePrCommentReview.title') },
         ],
       },
       {
-        group: 'Planning',
+        group: t('settings.magicPromptsSidebar.group.planning'),
         items: [
-          { id: 'plan.todo', title: 'Todo Planning' },
-          { id: 'plan.improve', title: 'Improve Plan' },
-          { id: 'plan.implement', title: 'Implement Plan' },
+          { id: 'plan.todo', title: t('settings.magicPrompts.prompt.todoPlanning.title') },
+          { id: 'plan.improve', title: t('settings.magicPrompts.prompt.improvePlan.title') },
+          { id: 'plan.implement', title: t('settings.magicPrompts.prompt.implementPlan.title') },
         ],
       },
     ] as const;
-  }, []);
+  }, [t]);
 
   return (
     <div className="flex h-full flex-col bg-background">
       <div className="border-b px-3 pt-4 pb-3">
-        <h2 className="text-base font-semibold text-foreground">Magic Prompts</h2>
-        <p className="typography-meta mt-1 text-muted-foreground">Select a prompt template to edit.</p>
+        <h2 className="text-base font-semibold text-foreground">{t('settings.magicPromptsSidebar.title')}</h2>
+        <p className="typography-meta mt-1 text-muted-foreground">{t('settings.magicPromptsSidebar.description')}</p>
       </div>
 
       <ScrollableOverlay outerClassName="flex-1 min-h-0" className="space-y-3 px-3 py-2 overflow-x-hidden">

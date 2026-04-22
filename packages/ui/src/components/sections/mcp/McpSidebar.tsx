@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { SettingsProjectSelector } from '@/components/sections/shared/SettingsProjectSelector';
+import { useI18n } from '@/contexts/useI18n';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +60,7 @@ const StatusDot: React.FC<{ tone: StatusTone; enabled: boolean }> = ({ tone, ena
 };
 
 export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
+  const { t } = useI18n();
   const bgClass = 'bg-background';
 
   const { mcpServers, selectedMcpName, setSelectedMcp, setMcpDraft, loadMcpConfigs, deleteMcp } =
@@ -149,7 +151,7 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
         toast.success(result.message || `MCP server "${deleteTarget.name}" deleted`);
       }
     } else {
-      toast.error('Failed to delete MCP server');
+      toast.error(t('settings.mcpSidebar.failedDeleteMcpServer'));
     }
     setDeleteTarget(null);
     setIsDeleting(false);
@@ -159,14 +161,14 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
     <div className={cn('flex h-full flex-col', bgClass)}>
       <div className="border-b px-3 pt-4 pb-3">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-foreground">MCP Servers</h2>
+          <h2 className="text-base font-semibold text-foreground">{t('settings.mcpSidebar.title')}</h2>
           <button
             type="button"
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             disabled={isRefreshingStatus}
             onClick={handleRefresh}
-            aria-label="Refresh MCP status"
-            title="Refresh MCP status"
+            aria-label={t('settings.mcpSidebar.refreshStatusAria')}
+            title={t('settings.mcpSidebar.refreshStatusTitle')}
           >
             <RiRefreshLine className={cn('h-4 w-4', isRefreshingStatus && 'animate-spin')} />
           </button>
@@ -174,13 +176,13 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
         <SettingsProjectSelector className="mb-3" />
         <div className="flex items-center justify-between gap-2">
           <span className="typography-meta text-muted-foreground">
-            Total {mcpServers.length}
+            {t('settings.mcpSidebar.totalCount', { count: mcpServers.length })}
           </span>
           <Button size="sm"
             variant="ghost"
             className="h-7 w-7 px-0 -my-1 text-muted-foreground"
             onClick={handleCreateNew}
-            title="Add MCP server"
+            title={t('settings.mcpSidebar.addMcpServer')}
           >
             <RiAddLine className="h-3.5 w-3.5" />
           </Button>
@@ -192,15 +194,15 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
         {mcpServers.length === 0 ? (
           <div className="py-12 px-4 text-center text-muted-foreground">
             <RiPlugLine className="mx-auto mb-3 h-10 w-10 opacity-50" />
-            <p className="typography-ui-label font-medium">No MCP servers configured</p>
-            <p className="typography-meta mt-1 opacity-75">Use the + button above to add one</p>
+            <p className="typography-ui-label font-medium">{t('settings.mcpSidebar.emptyTitle')}</p>
+            <p className="typography-meta mt-1 opacity-75">{t('settings.mcpSidebar.emptyDesc')}</p>
           </div>
         ) : (
           <>
             {projectServers.length > 0 && (
               <>
                 <div className="px-2 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Project Servers
+                  {t('settings.mcpSidebar.projectServers')}
                 </div>
                 {projectServers.map((server) => {
                   const runtimeStatus = mcpStatus[server.name];
@@ -231,7 +233,7 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
                         <div className="flex items-center gap-2">
                           <StatusDot tone={tone} enabled={server.enabled} />
                           <span className="typography-ui-label font-normal truncate text-foreground">{server.name}</span>
-                          <span title={server.type === 'local' ? 'Local server' : 'Remote server'}>
+                          <span title={server.type === 'local' ? t('settings.mcpSidebar.localServer') : t('settings.mcpSidebar.remoteServer')}>
                             {server.type === 'local' ? (
                               <RiServerLine className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
                             ) : (
@@ -261,7 +263,7 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
                             className="text-destructive focus:text-destructive"
                           >
                             <RiDeleteBinLine className="h-4 w-4 mr-px" />
-                            Delete
+                            {t('settings.mcpSidebar.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -274,7 +276,7 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
             {userServers.length > 0 && (
               <>
                 <div className="px-2 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  User Servers
+                  {t('settings.mcpSidebar.userServers')}
                 </div>
                 {userServers.map((server) => {
                   const runtimeStatus = mcpStatus[server.name];
@@ -305,7 +307,7 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
                         <div className="flex items-center gap-2">
                           <StatusDot tone={tone} enabled={server.enabled} />
                           <span className="typography-ui-label font-normal truncate text-foreground">{server.name}</span>
-                          <span title={server.type === 'local' ? 'Local server' : 'Remote server'}>
+                          <span title={server.type === 'local' ? t('settings.mcpSidebar.localServer') : t('settings.mcpSidebar.remoteServer')}>
                             {server.type === 'local' ? (
                               <RiServerLine className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
                             ) : (
@@ -335,7 +337,7 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
                             className="text-destructive focus:text-destructive"
                           >
                             <RiDeleteBinLine className="h-4 w-4 mr-px" />
-                            Delete
+                            {t('settings.mcpSidebar.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -355,9 +357,9 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete MCP Server</DialogTitle>
+            <DialogTitle>{t('settings.mcpSidebar.deleteTitle')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deleteTarget?.name}"? This will remove it from{' '}
+              {t('settings.mcpSidebar.deleteDesc', { name: deleteTarget?.name ?? '' })}{' '}
               <code className="text-foreground">opencode.json</code>.
             </DialogDescription>
           </DialogHeader>
@@ -368,10 +370,10 @@ export const McpSidebar: React.FC<McpSidebarProps> = ({ onItemSelect }) => {
               onClick={() => setDeleteTarget(null)}
               disabled={isDeleting}
             >
-              Cancel
+              {t('settings.common.cancel')}
             </Button>
             <Button size="sm" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? 'Deleting…' : 'Delete'}
+              {isDeleting ? t('settings.mcpSidebar.deleting') : t('settings.mcpSidebar.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
