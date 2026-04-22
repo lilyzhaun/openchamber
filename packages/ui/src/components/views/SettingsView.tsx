@@ -116,6 +116,7 @@ const settingsPageTitleKeyBySlug: Record<SettingsPageSlug, string> = {
   'skills.installed': 'settings.pages.skillsInstalled',
   'skills.catalog': 'settings.pages.skillsCatalog',
   git: 'settings.pages.git',
+  'magic-prompts': 'settings.pages.magicPrompts',
   appearance: 'settings.pages.appearance',
   chat: 'settings.pages.chat',
   shortcuts: 'settings.pages.shortcuts',
