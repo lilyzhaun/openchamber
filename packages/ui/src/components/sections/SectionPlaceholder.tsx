@@ -1,6 +1,7 @@
 import React from 'react';
-import { SIDEBAR_SECTION_CONFIG_MAP, SIDEBAR_SECTION_DESCRIPTIONS } from '@/constants/sidebar';
+import { getSidebarSectionConfig } from '@/constants/sidebar';
 import type { SidebarSection } from '@/constants/sidebar';
+import { useI18n } from '@/contexts/useI18n';
 
 interface SectionPlaceholderProps {
     sectionId: SidebarSection;
@@ -8,7 +9,8 @@ interface SectionPlaceholderProps {
 }
 
 export const SectionPlaceholder: React.FC<SectionPlaceholderProps> = ({ sectionId, variant }) => {
-    const config = SIDEBAR_SECTION_CONFIG_MAP[sectionId];
+    const { t } = useI18n();
+    const config = React.useMemo(() => getSidebarSectionConfig(t).find((item) => item.id === sectionId)!, [sectionId, t]);
     const Icon = config.icon;
 
     if (variant === 'sidebar') {
@@ -19,7 +21,7 @@ export const SectionPlaceholder: React.FC<SectionPlaceholderProps> = ({ sectionI
                 </div>
                 <h3 className="typography-ui-label font-semibold text-foreground">{config.label}</h3>
                 <p className="typography-meta max-w-xs text-muted-foreground">
-                    {SIDEBAR_SECTION_DESCRIPTIONS[sectionId]}
+                    {config.description}
                 </p>
             </div>
         );
@@ -33,10 +35,10 @@ export const SectionPlaceholder: React.FC<SectionPlaceholderProps> = ({ sectionI
             <div className="flex flex-col gap-2">
                 <h2 className="typography-h2 font-semibold text-foreground">{config.label}</h2>
                 <p className="typography-body max-w-md text-muted-foreground">
-                    {SIDEBAR_SECTION_DESCRIPTIONS[sectionId]}
+                    {config.description}
                 </p>
             </div>
-            <p className="typography-meta text-muted-foreground/60">Coming soon...</p>
+            <p className="typography-meta text-muted-foreground/60">{t('sectionPlaceholder.comingSoon')}</p>
         </div>
     );
 };

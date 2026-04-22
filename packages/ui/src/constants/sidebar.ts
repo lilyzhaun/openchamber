@@ -13,6 +13,20 @@ export interface SidebarSectionConfig {
     icon: IconComponent;
 }
 
+export function getSidebarSectionConfig(t: (key: string) => string): SidebarSectionConfig[] {
+    return [
+        { id: 'sessions', label: t('sidebar.sections.sessions.label'), description: t('sidebar.sections.sessions.description'), icon: RiChatAi3Line },
+        { id: 'agents', label: t('sidebar.sections.agents.label'), description: t('sidebar.sections.agents.description'), icon: RiBrainAi3Line },
+        { id: 'commands', label: t('sidebar.sections.commands.label'), description: t('sidebar.sections.commands.description'), icon: RiCommandLine },
+        { id: 'skills', label: t('sidebar.sections.skills.label'), description: t('sidebar.sections.skills.description'), icon: RiBookLine },
+        { id: 'mcp', label: t('sidebar.sections.mcp.label'), description: t('sidebar.sections.mcp.description'), icon: RiPlugLine },
+        { id: 'providers', label: t('sidebar.sections.providers.label'), description: t('sidebar.sections.providers.description'), icon: RiStackLine },
+        { id: 'usage', label: t('sidebar.sections.usage.label'), description: t('sidebar.sections.usage.description'), icon: RiBarChart2Line },
+        { id: 'git-identities', label: t('sidebar.sections.gitIdentities.label'), description: t('sidebar.sections.gitIdentities.description'), icon: RiGitBranchLine },
+        { id: 'settings', label: t('sidebar.sections.settings.label'), description: t('sidebar.sections.settings.description'), icon: RiSettings3Line },
+    ];
+}
+
 export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
     {
         id: 'sessions',
