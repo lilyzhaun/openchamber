@@ -42,6 +42,13 @@ export const MagicPromptsSidebar: React.FC<MagicPromptsSidebarProps> = ({ onItem
           { id: 'plan.implement', title: t('settings.magicPrompts.prompt.implementPlan.title') },
         ],
       },
+      {
+        group: 'Session',
+        items: [
+          { id: 'session.summary', title: 'Session Summary' },
+          { id: 'session.review', title: 'Workspace Review' },
+        ],
+      },
     ] as const;
   }, [t]);
 

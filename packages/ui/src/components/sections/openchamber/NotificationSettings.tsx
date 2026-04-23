@@ -788,6 +788,11 @@ export const NotificationSettings: React.FC = () => {
                     />
                     <span className="typography-ui-label text-foreground">{t('settings.notifications.summarizeLastMessage')}</span>
                 </div>
+                <div className="pl-6 pb-1">
+                  <span className="typography-meta text-muted-foreground">
+                    Requires <code className="text-[var(--primary-base)]">{'{last_message}'}</code> in the notification template.
+                  </span>
+                </div>
 
                 <div className={cn("flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:gap-8")}>
                   <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
