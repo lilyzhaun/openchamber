@@ -21,6 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
+import { useI18n } from '@/contexts/useI18n';
 
 export interface SortableProjectItemProps {
   id: string;
@@ -77,11 +78,12 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
   onClose,
   sentinelRef,
   children,
-  showCreateButtons = true,
-  hideHeader = false,
+  showCreateButtons,
+  hideHeader,
   openSidebarMenuKey,
   setOpenSidebarMenuKey,
 }) => {
+  const { t } = useI18n();
   const { currentTheme } = useThemeSystem();
   const {
     attributes,
@@ -257,7 +259,7 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                               ? 'opacity-100'
                               : 'opacity-0 pointer-events-none group-hover/project:opacity-100 group-hover/project:pointer-events-auto group-focus-within/project:opacity-100 group-focus-within/project:pointer-events-auto',
                         )}
-                        aria-label="Project menu"
+                        aria-label={t('session.projectMenuAria')}
                         onPointerDown={handleMenuTriggerPointerDown}
                         onMouseDown={handleMenuTriggerMouseDown}
                         onClick={handleMenuTriggerClick}
@@ -269,19 +271,19 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                       {showCreateButtons && !isRepo && !hideDirectoryControls && onNewSession && (
                       <DropdownMenuItem onClick={onNewSession}>
                         <RiAddLine className="mr-1.5 h-4 w-4" />
-                        New Session
+                        {t('session.newSession')}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem onClick={onRenameStart}>
                       <RiPencilAiLine className="mr-1.5 h-4 w-4" />
-                      Rename
+                      {t('session.rename')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={onClose}
                       className="text-destructive focus:text-destructive"
                     >
                       <RiCloseLine className="mr-1.5 h-4 w-4" />
-                      Close Project
+                      {t('session.closeProject')}
                     </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -301,13 +303,13 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                           'inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-opacity',
                           mobileVariant ? 'opacity-100' : 'opacity-0 pointer-events-none group-hover/project:opacity-100 group-hover/project:pointer-events-auto group-focus-within/project:opacity-100 group-focus-within/project:pointer-events-auto',
                         )}
-                        aria-label={isRepo ? 'New draft session' : 'New session'}
+                        aria-label={isRepo ? t('session.newDraftSessionAria') : t('session.newSessionAria')}
                       >
                         <RiAddLine className="h-4 w-4" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={4}>
-                      <p>{isRepo ? 'New draft session' : 'New session'}</p>
+                      <p>{isRepo ? t('session.newDraftSession') : t('session.newSession')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
