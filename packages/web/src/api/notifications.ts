@@ -1,5 +1,46 @@
 import type { NotificationPayload, NotificationsAPI } from '@openchamber/ui/lib/api/types';
 
+const notifyWithServiceWorker = async (payload?: NotificationPayload): Promise<boolean> => {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+    return false;
+  }
+
+  if (typeof Notification === 'undefined') {
+    return false;
+  }
+
+  if (Notification.permission === 'default') {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.warn('Notification permission not granted');
+      return false;
+    }
+  }
+
+  if (Notification.permission !== 'granted') {
+    console.warn('Notification permission not granted');
+    return false;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) {
+      return false;
+    }
+
+    await registration.showNotification(payload?.title ?? 'OpenChamber', {
+      body: payload?.body,
+      tag: payload?.tag,
+      icon: '/apple-touch-icon-180x180.png',
+      badge: '/favicon-32.png',
+    });
+    return true;
+  } catch (error) {
+    console.warn('Failed to send notification via service worker', error);
+    return false;
+  }
+};
+
 const notifyWithWebAPI = async (payload?: NotificationPayload): Promise<boolean> => {
   if (typeof Notification === 'undefined') {
     console.info('Notifications not supported in this environment', payload);
@@ -58,7 +99,7 @@ const notifyWithTauri = async (payload?: NotificationPayload): Promise<boolean> 
 
 export const createWebNotificationsAPI = (): NotificationsAPI => ({
   async notifyAgentCompletion(payload?: NotificationPayload): Promise<boolean> {
-    return (await notifyWithTauri(payload)) || notifyWithWebAPI(payload);
+    return (await notifyWithTauri(payload)) || (await notifyWithServiceWorker(payload)) || notifyWithWebAPI(payload);
   },
   canNotify: () => {
     if (typeof window !== 'undefined') {
