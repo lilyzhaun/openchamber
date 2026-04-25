@@ -259,6 +259,18 @@
 - `packages/ui/src/components/views/SettingsView.tsx`
 - `packages/ui/src/constants/sidebar.ts`
 - `packages/ui/src/lib/i18n/locales.ts`
+- `packages/ui/src/index.css`
+
+### 本地相对 upstream 的 UI 行为偏差（非汉化）
+
+这些偏差不是上游 bug，而是 fork 为了更好的默认体验做的本地覆盖。合并时如果 upstream 改到同一处，务必**保留本地值**而不是直接接受 upstream。
+
+- **消息 footer 时间折叠阈值**
+  - 文件：`packages/ui/src/index.css`
+  - 规则：`@container message-footer`
+  - Upstream 值：`max-width: 24rem`（在常见宽度下就会隐藏时间文字，只剩图标，用户感知为"时间消失"）
+  - 本地值：`max-width: 12rem`（只有极窄布局才折叠，默认仍显示时间）
+  - 合并策略：保留 `12rem`，并保留 CSS 里解释偏差原因的块注释
 
 ---
 
