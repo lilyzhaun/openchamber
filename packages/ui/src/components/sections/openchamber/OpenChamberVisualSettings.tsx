@@ -23,50 +23,96 @@ import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop';
 import { useDeviceInfo } from '@/lib/device';
 import { usePwaDetection } from '@/hooks/usePwaDetection';
 import { updateDesktopSettings } from '@/lib/persistence';
+import { CODE_FONT_OPTIONS, DEFAULT_MONO_FONT, DEFAULT_UI_FONT, UI_FONT_OPTIONS, type MonoFontOption, type UiFontOption } from '@/lib/fontOptions';
+import { useI18n, type Locale } from '@/lib/i18n';
 import { useConfigStore } from '@/stores/useConfigStore';
 import {
     setDirectoryShowHidden,
     useDirectoryShowHidden,
 } from '@/lib/directoryShowHidden';
-import { useI18n } from '@/contexts/useI18n';
 
 interface Option<T extends string> {
     id: T;
+    labelKey: string;
+    descriptionKey?: string;
 }
 
-const THEME_MODE_OPTIONS: Array<{ value: ThemeMode }> = [
+const THEME_MODE_OPTIONS: Array<{ value: ThemeMode; labelKey: string }> = [
     {
         value: 'system',
+        labelKey: 'settings.openchamber.visual.option.themeMode.system',
     },
     {
         value: 'light',
+        labelKey: 'settings.openchamber.visual.option.themeMode.light',
     },
     {
         value: 'dark',
+        labelKey: 'settings.openchamber.visual.option.themeMode.dark',
     },
 ];
 
 const DIFF_LAYOUT_OPTIONS: Option<'dynamic' | 'inline' | 'side-by-side'>[] = [
-    { id: 'dynamic' },
-    { id: 'inline' },
-    { id: 'side-by-side' },
+    {
+        id: 'dynamic',
+        labelKey: 'settings.openchamber.visual.option.diffLayout.dynamic.label',
+        descriptionKey: 'settings.openchamber.visual.option.diffLayout.dynamic.description',
+    },
+    {
+        id: 'inline',
+        labelKey: 'settings.openchamber.visual.option.diffLayout.inline.label',
+        descriptionKey: 'settings.openchamber.visual.option.diffLayout.inline.description',
+    },
+    {
+        id: 'side-by-side',
+        labelKey: 'settings.openchamber.visual.option.diffLayout.sideBySide.label',
+        descriptionKey: 'settings.openchamber.visual.option.diffLayout.sideBySide.description',
+    },
 ];
 
 const DIFF_VIEW_MODE_OPTIONS: Option<'single' | 'stacked'>[] = [
-    { id: 'single' },
-    { id: 'stacked' },
+    {
+        id: 'single',
+        labelKey: 'settings.openchamber.visual.option.diffViewMode.single.label',
+        descriptionKey: 'settings.openchamber.visual.option.diffViewMode.single.description',
+    },
+    {
+        id: 'stacked',
+        labelKey: 'settings.openchamber.visual.option.diffViewMode.stacked.label',
+        descriptionKey: 'settings.openchamber.visual.option.diffViewMode.stacked.description',
+    },
 ];
 
 const MERMAID_RENDERING_OPTIONS: Option<'svg' | 'ascii'>[] = [
-    { id: 'svg' },
-    { id: 'ascii' },
+    {
+        id: 'svg',
+        labelKey: 'settings.openchamber.visual.option.mermaidRendering.svg.label',
+        descriptionKey: 'settings.openchamber.visual.option.mermaidRendering.svg.description',
+    },
+    {
+        id: 'ascii',
+        labelKey: 'settings.openchamber.visual.option.mermaidRendering.ascii.label',
+        descriptionKey: 'settings.openchamber.visual.option.mermaidRendering.ascii.description',
+    },
 ];
 
 const DEFAULT_PWA_INSTALL_NAME = 'OpenChamber - AI Coding Assistant';
 const PWA_ORIENTATION_OPTIONS: Option<'system' | 'portrait' | 'landscape'>[] = [
-    { id: 'system' },
-    { id: 'portrait' },
-    { id: 'landscape' },
+    {
+        id: 'system',
+        labelKey: 'settings.openchamber.visual.option.pwaOrientation.system.label',
+        descriptionKey: 'settings.openchamber.visual.option.pwaOrientation.system.description',
+    },
+    {
+        id: 'portrait',
+        labelKey: 'settings.openchamber.visual.option.pwaOrientation.portrait.label',
+        descriptionKey: 'settings.openchamber.visual.option.pwaOrientation.portrait.description',
+    },
+    {
+        id: 'landscape',
+        labelKey: 'settings.openchamber.visual.option.pwaOrientation.landscape.label',
+        descriptionKey: 'settings.openchamber.visual.option.pwaOrientation.landscape.description',
+    },
 ];
 
 type PwaInstallNameWindow = Window & {
@@ -80,36 +126,94 @@ const normalizePwaOrientation = (value: unknown): 'system' | 'portrait' | 'lands
 };
 
 const USER_MESSAGE_RENDERING_OPTIONS: Option<'markdown' | 'plain'>[] = [
-    { id: 'markdown' },
-    { id: 'plain' },
+    {
+        id: 'markdown',
+        labelKey: 'settings.openchamber.visual.option.userMessageRendering.markdown.label',
+        descriptionKey: 'settings.openchamber.visual.option.userMessageRendering.markdown.description',
+    },
+    {
+        id: 'plain',
+        labelKey: 'settings.openchamber.visual.option.userMessageRendering.plain.label',
+        descriptionKey: 'settings.openchamber.visual.option.userMessageRendering.plain.description',
+    },
 ];
 
 const CHAT_RENDER_MODE_OPTIONS: Option<'sorted' | 'live'>[] = [
-    { id: 'sorted' },
-    { id: 'live' },
+    {
+        id: 'sorted',
+        labelKey: 'settings.openchamber.visual.option.chatRenderMode.sorted.label',
+        descriptionKey: 'settings.openchamber.visual.option.chatRenderMode.sorted.description',
+    },
+    {
+        id: 'live',
+        labelKey: 'settings.openchamber.visual.option.chatRenderMode.live.label',
+        descriptionKey: 'settings.openchamber.visual.option.chatRenderMode.live.description',
+    },
 ];
 
 const MESSAGE_STREAM_TRANSPORT_OPTIONS: Option<'auto' | 'ws' | 'sse'>[] = [
-    { id: 'auto' },
-    { id: 'ws' },
-    { id: 'sse' },
+    {
+        id: 'auto',
+        labelKey: 'settings.openchamber.visual.option.messageTransport.auto.label',
+        descriptionKey: 'settings.openchamber.visual.option.messageTransport.auto.description',
+    },
+    {
+        id: 'ws',
+        labelKey: 'settings.openchamber.visual.option.messageTransport.ws.label',
+        descriptionKey: 'settings.openchamber.visual.option.messageTransport.ws.description',
+    },
+    {
+        id: 'sse',
+        labelKey: 'settings.openchamber.visual.option.messageTransport.sse.label',
+        descriptionKey: 'settings.openchamber.visual.option.messageTransport.sse.description',
+    },
 ];
 
 const ACTIVITY_RENDER_MODE_OPTIONS: Option<'collapsed' | 'summary'>[] = [
-    { id: 'collapsed' },
-    { id: 'summary' },
+    {
+        id: 'collapsed',
+        labelKey: 'settings.openchamber.visual.option.activityRenderMode.collapsed.label',
+        descriptionKey: 'settings.openchamber.visual.option.activityRenderMode.collapsed.description',
+    },
+    {
+        id: 'summary',
+        labelKey: 'settings.openchamber.visual.option.activityRenderMode.summary.label',
+        descriptionKey: 'settings.openchamber.visual.option.activityRenderMode.summary.description',
+    },
 ];
 
 const TIME_FORMAT_OPTIONS: Option<'auto' | '12h' | '24h'>[] = [
-    { id: 'auto' },
-    { id: '24h' },
-    { id: '12h' },
+    {
+        id: 'auto',
+        labelKey: 'settings.openchamber.visual.option.timeFormat.auto.label',
+        descriptionKey: 'settings.openchamber.visual.option.timeFormat.auto.description',
+    },
+    {
+        id: '24h',
+        labelKey: 'settings.openchamber.visual.option.timeFormat.24h.label',
+        descriptionKey: 'settings.openchamber.visual.option.timeFormat.24h.description',
+    },
+    {
+        id: '12h',
+        labelKey: 'settings.openchamber.visual.option.timeFormat.12h.label',
+        descriptionKey: 'settings.openchamber.visual.option.timeFormat.12h.description',
+    },
 ];
 
 const WEEK_START_OPTIONS: Option<'auto' | 'monday' | 'sunday'>[] = [
-    { id: 'auto' },
-    { id: 'monday' },
-    { id: 'sunday' },
+    {
+        id: 'auto',
+        labelKey: 'settings.openchamber.visual.option.weekStart.auto.label',
+        descriptionKey: 'settings.openchamber.visual.option.weekStart.auto.description',
+    },
+    {
+        id: 'monday',
+        labelKey: 'settings.openchamber.visual.option.weekStart.monday.label',
+    },
+    {
+        id: 'sunday',
+        labelKey: 'settings.openchamber.visual.option.weekStart.sunday.label',
+    },
 ];
 
 const normalizeUserMessageRenderingMode = (mode: unknown): 'markdown' | 'plain' => {
@@ -124,7 +228,8 @@ interface OpenChamberVisualSettingsProps {
 }
 
 export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps> = ({ visibleSettings }) => {
-    const { t } = useI18n();
+    const { locale, locales, setLocale, label, t } = useI18n();
+    const tUnsafe = React.useCallback((key: string) => t(key as Parameters<typeof t>[0]), [t]);
     const { isMobile } = useDeviceInfo();
     const { browserTab } = usePwaDetection();
     const directoryShowHidden = useDirectoryShowHidden();
@@ -145,6 +250,10 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
     const setFontSize = useUIStore(state => state.setFontSize);
     const terminalFontSize = useUIStore(state => state.terminalFontSize);
     const setTerminalFontSize = useUIStore(state => state.setTerminalFontSize);
+    const uiFont = useUIStore(state => state.uiFont);
+    const setUiFont = useUIStore(state => state.setUiFont);
+    const monoFont = useUIStore(state => state.monoFont);
+    const setMonoFont = useUIStore(state => state.setMonoFont);
     const padding = useUIStore(state => state.padding);
     const setPadding = useUIStore(state => state.setPadding);
     const inputBarOffset = useUIStore(state => state.inputBarOffset);
@@ -192,16 +301,6 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
     const [chatRenderPreviewTick, setChatRenderPreviewTick] = React.useState(0);
     const reportUsage = useUIStore(state => state.reportUsage);
     const setReportUsage = useUIStore(state => state.setReportUsage);
-
-    const getThemeModeLabel = React.useCallback((mode: ThemeMode) => t(`settings.appearance.theme.${mode}`), [t]);
-    const getTimeFormatLabel = React.useCallback((value: 'auto' | '12h' | '24h') => value === 'auto' ? t('settings.appearance.timeFormatOption.auto') : value === '24h' ? t('settings.appearance.timeFormatOption.24h') : t('settings.appearance.timeFormatOption.12h'), [t]);
-    const getWeekStartLabel = React.useCallback((value: 'auto' | 'monday' | 'sunday') => value === 'auto' ? t('settings.appearance.weekStartOption.auto') : value === 'monday' ? t('settings.appearance.weekStartOption.monday') : t('settings.appearance.weekStartOption.sunday'), [t]);
-    const getPwaOrientationLabel = React.useCallback((value: 'system' | 'portrait' | 'landscape') => t(`settings.appearance.orientationOption.${value}`), [t]);
-    const getBehaviorOptionLabel = React.useCallback((group: 'chatRenderMode' | 'messageTransport' | 'activityRenderMode' | 'userMessageRendering' | 'mermaidRendering' | 'diffLayout' | 'diffViewMode', id: string) => {
-        const normalizedId = group === 'diffLayout' && id === 'side-by-side' ? 'sideBySide' : id;
-        return t(`settings.behavior.${group}Option.${normalizedId}`);
-    }, [t]);
-    const getBehaviorOptionDescription = React.useCallback((group: 'messageTransport', id: 'auto' | 'ws' | 'sse') => t(`settings.behavior.${group}Desc.${id}`), [t]);
 
     // Sync reportUsage changes to server settings
     const handleReportUsageChange = React.useCallback((enabled: boolean) => {
@@ -350,7 +449,11 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
     };
 
     const isVSCode = isVSCodeRuntime();
-    const hasAppearanceSettings = (shouldShow('theme') || shouldShow('pwaInstallName') || shouldShow('pwaOrientation') || shouldShow('timeFormat') || shouldShow('weekStart')) && !isVSCode;
+    const hasThemeSettings = shouldShow('theme') && !isVSCode;
+    const hasLocalizationSettings = shouldShow('theme') || shouldShow('timeFormat') || shouldShow('weekStart');
+    const hasAppearanceSettings = isVSCode
+        ? hasLocalizationSettings
+        : (shouldShow('theme') || shouldShow('pwaInstallName') || shouldShow('pwaOrientation') || shouldShow('timeFormat') || shouldShow('weekStart'));
     const hasLayoutSettings = shouldShow('fontSize') || shouldShow('terminalFontSize') || shouldShow('spacing') || shouldShow('inputBarOffset');
     const hasNavigationSettings = shouldShow('terminalQuickKeys') && !isMobile;
     const hasBehaviorSettings = shouldShow('mermaidRendering')
@@ -373,6 +476,18 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
     const showPwaOrientationSetting = shouldShow('pwaOrientation') && isWebRuntime() && !isDesktopShell() && !isVSCode;
     const [pwaInstallName, setPwaInstallName] = React.useState('');
     const [pwaOrientation, setPwaOrientation] = React.useState<'system' | 'portrait' | 'landscape'>('system');
+    const selectedTimeFormatLabel = React.useMemo(() => {
+        const option = TIME_FORMAT_OPTIONS.find((item) => item.id === timeFormatPreference);
+        return tUnsafe(option?.labelKey ?? 'settings.openchamber.visual.option.timeFormat.auto.label');
+    }, [timeFormatPreference, tUnsafe]);
+    const selectedWeekStartLabel = React.useMemo(() => {
+        const option = WEEK_START_OPTIONS.find((item) => item.id === weekStartPreference);
+        return tUnsafe(option?.labelKey ?? 'settings.openchamber.visual.option.weekStart.auto.label');
+    }, [weekStartPreference, tUnsafe]);
+    const selectedPwaOrientationLabel = React.useMemo(() => {
+        const option = PWA_ORIENTATION_OPTIONS.find((item) => item.id === pwaOrientation);
+        return option ? tUnsafe(option.labelKey) : undefined;
+    }, [pwaOrientation, tUnsafe]);
 
     const applyPwaInstallName = React.useCallback(async (value: string) => {
         if (typeof window === 'undefined') {
@@ -474,12 +589,11 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                 {/* --- Appearance & Themes --- */}
                 {hasAppearanceSettings && (
-                    <div className="mb-8 space-y-3">
-                        <section className="px-2 pb-2 pt-0 space-y-0.5">
-
-                            <div className="pb-1.5">
+                    <div className="mb-8 space-y-6">
+                        {hasThemeSettings && (
+                            <section className="px-2 pb-2 pt-0 space-y-2">
                                 <div className="flex min-w-0 flex-col gap-1.5">
-                                    <span className="typography-ui-header font-medium text-foreground">{t('settings.appearance.colorMode')}</span>
+                                    <span className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.colorMode')}</span>
                                     <div className="flex flex-wrap items-center gap-1">
                                         {THEME_MODE_OPTIONS.map((option) => (
                                             <Button
@@ -490,133 +604,162 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                 className="!font-normal"
                                                 onClick={() => setThemeMode(option.value)}
                                             >
-                                                {getThemeModeLabel(option.value)}
+                                                {tUnsafe(option.labelKey)}
                                             </Button>
                                         ))}
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="mt-2 grid grid-cols-1 gap-2 py-1.5 md:grid-cols-[14rem_auto] md:gap-x-8 md:gap-y-2">
-                                <div className="flex min-w-0 items-center gap-2">
-                                    <span className="typography-ui-label text-foreground shrink-0">{t('settings.appearance.lightTheme')}</span>
-                                    <Select value={selectedLightTheme?.metadata.id ?? ''} onValueChange={setLightThemePreference}>
-                                        <SelectTrigger aria-label={t('settings.appearance.selectLightThemeAria')} className="w-fit">
-                                            <SelectValue placeholder={t('settings.appearance.selectTheme')}>
-                                                {selectedLightTheme
-                                                    ? formatThemeLabel(selectedLightTheme.metadata.name, 'light')
-                                                    : undefined}
-                                            </SelectValue>
+                                <div className="grid grid-cols-1 gap-2 py-1.5 md:grid-cols-[14rem_auto] md:gap-x-8 md:gap-y-2">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        <span className="typography-ui-label text-foreground shrink-0">{t('settings.openchamber.visual.field.lightTheme')}</span>
+                                        <Select value={selectedLightTheme?.metadata.id ?? ''} onValueChange={setLightThemePreference}>
+                                            <SelectTrigger aria-label={t('settings.openchamber.visual.field.selectLightThemeAria')} className="w-fit">
+                                                <SelectValue placeholder={t('settings.openchamber.visual.field.selectThemePlaceholder')}>
+                                                    {selectedLightTheme
+                                                        ? formatThemeLabel(selectedLightTheme.metadata.name, 'light')
+                                                        : undefined}
+                                                </SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {lightThemes.map((theme) => (
+                                                    <SelectItem key={theme.metadata.id} value={theme.metadata.id}>
+                                                        {formatThemeLabel(theme.metadata.name, 'light')}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        <span className="typography-ui-label text-foreground shrink-0">{t('settings.openchamber.visual.field.darkTheme')}</span>
+                                        <Select value={selectedDarkTheme?.metadata.id ?? ''} onValueChange={setDarkThemePreference}>
+                                            <SelectTrigger aria-label={t('settings.openchamber.visual.field.selectDarkThemeAria')} className="w-fit">
+                                                <SelectValue placeholder={t('settings.openchamber.visual.field.selectThemePlaceholder')}>
+                                                    {selectedDarkTheme
+                                                        ? formatThemeLabel(selectedDarkTheme.metadata.name, 'dark')
+                                                        : undefined}
+                                                </SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {darkThemes.map((theme) => (
+                                                    <SelectItem key={theme.metadata.id} value={theme.metadata.id}>
+                                                        {formatThemeLabel(theme.metadata.name, 'dark')}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 py-1.5">
+                                    <button
+                                        type="button"
+                                        disabled={customThemesLoading || themesReloading}
+                                        onClick={() => {
+                                            const startedAt = Date.now();
+                                            setThemesReloading(true);
+                                            void reloadCustomThemes().finally(() => {
+                                                const elapsed = Date.now() - startedAt;
+                                                if (elapsed < 500) {
+                                                    window.setTimeout(() => {
+                                                        setThemesReloading(false);
+                                                    }, 500 - elapsed);
+                                                    return;
+                                                }
+                                                setThemesReloading(false);
+                                            });
+                                        }}
+                                        className="inline-flex items-center typography-ui-label font-normal text-foreground underline decoration-[1px] underline-offset-2 hover:text-foreground/80 disabled:cursor-not-allowed disabled:text-muted-foreground/60"
+                                    >
+                                        {themesReloading ? t('settings.openchamber.visual.actions.reloadingThemes') : t('settings.openchamber.visual.actions.reloadThemes')}
+                                    </button>
+                                    <Tooltip delayDuration={700}>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                type="button"
+                                                className="flex items-center justify-center rounded-md p-1 text-muted-foreground/70 hover:text-foreground"
+                                                aria-label={t('settings.openchamber.visual.field.themeImportInfoAria')}
+                                            >
+                                                <RiInformationLine className="h-3.5 w-3.5" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent sideOffset={8}>
+                                            {t('settings.openchamber.visual.field.themeImportInfoTooltip')}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
+                            </section>
+                        )}
+
+                        {hasLocalizationSettings && (
+                            <section className="px-2 pb-2 pt-0 space-y-2">
+                                <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.localization')}</h4>
+
+                                <div className="grid grid-cols-1 gap-2 py-1.5 md:grid-cols-[14rem_auto] md:gap-x-8 md:gap-y-2">
+                                    <div className="flex min-w-0 flex-col">
+                                        <span className="typography-ui-label text-foreground shrink-0">{t('settings.appearance.language.label')}</span>
+                                        <span className="typography-meta text-muted-foreground">{t('settings.appearance.language.description')}</span>
+                                    </div>
+                                    <Select value={locale} onValueChange={(value) => setLocale(value as Locale)}>
+                                        <SelectTrigger aria-label={t('settings.appearance.language.select')} className="w-fit">
+                                            <SelectValue>{label(locale)}</SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {lightThemes.map((theme) => (
-                                                <SelectItem key={theme.metadata.id} value={theme.metadata.id}>
-                                                    {formatThemeLabel(theme.metadata.name, 'light')}
+                                            {locales.map((availableLocale) => (
+                                                <SelectItem key={availableLocale} value={availableLocale}>
+                                                    {label(availableLocale)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="flex min-w-0 items-center gap-2">
-                                    <span className="typography-ui-label text-foreground shrink-0">{t('settings.appearance.darkTheme')}</span>
-                                    <Select value={selectedDarkTheme?.metadata.id ?? ''} onValueChange={setDarkThemePreference}>
-                                        <SelectTrigger aria-label={t('settings.appearance.selectDarkThemeAria')} className="w-fit">
-                                            <SelectValue placeholder={t('settings.appearance.selectTheme')}>
-                                                {selectedDarkTheme
-                                                    ? formatThemeLabel(selectedDarkTheme.metadata.name, 'dark')
-                                                    : undefined}
-                                            </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {darkThemes.map((theme) => (
-                                                <SelectItem key={theme.metadata.id} value={theme.metadata.id}>
-                                                    {formatThemeLabel(theme.metadata.name, 'dark')}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
 
-                            {(shouldShow('timeFormat') || shouldShow('weekStart')) && (
-                                <div className="mt-1 grid grid-cols-1 gap-2 py-1.5 md:grid-cols-[14rem_auto] md:gap-x-8 md:gap-y-2">
-                                    {shouldShow('timeFormat') && (
-                                        <div className="flex min-w-0 items-center gap-2">
-                                            <span className="typography-ui-label text-foreground shrink-0">{t('settings.appearance.timeFormat')}</span>
-                                            <Select value={timeFormatPreference} onValueChange={(value: 'auto' | '12h' | '24h') => handleTimeFormatPreferenceChange(value)}>
-                                                <SelectTrigger aria-label={t('settings.appearance.timeFormatAria')} className="w-fit">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {TIME_FORMAT_OPTIONS.map((option) => (
-                                                        <SelectItem key={option.id} value={option.id}>{getTimeFormatLabel(option.id)}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    )}
+                                {!isVSCode && (shouldShow('timeFormat') || shouldShow('weekStart')) && (
+                                    <div className="grid grid-cols-1 gap-2 py-1.5 md:grid-cols-[14rem_auto] md:gap-x-8 md:gap-y-2">
+                                        {shouldShow('timeFormat') && (
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <span className="typography-ui-label text-foreground shrink-0">{t('settings.openchamber.visual.field.timeFormat')}</span>
+                                                <Select value={timeFormatPreference} onValueChange={(value: 'auto' | '12h' | '24h') => handleTimeFormatPreferenceChange(value)}>
+                                                    <SelectTrigger aria-label={t('settings.openchamber.visual.field.selectTimeFormatAria')} className="w-fit">
+                                                        <SelectValue>{selectedTimeFormatLabel}</SelectValue>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {TIME_FORMAT_OPTIONS.map((option) => (
+                                                            <SelectItem key={option.id} value={option.id}>{tUnsafe(option.labelKey)}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
 
-                                    {shouldShow('weekStart') && (
-                                        <div className="flex min-w-0 items-center gap-2">
-                                            <span className="typography-ui-label text-foreground shrink-0">{t('settings.appearance.weekStart')}</span>
-                                            <Select value={weekStartPreference} onValueChange={(value: 'auto' | 'monday' | 'sunday') => handleWeekStartPreferenceChange(value)}>
-                                                <SelectTrigger aria-label={t('settings.appearance.weekStartAria')} className="w-fit">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {WEEK_START_OPTIONS.map((option) => (
-                                                        <SelectItem key={option.id} value={option.id}>{getWeekStartLabel(option.id)}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                        {shouldShow('weekStart') && (
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <span className="typography-ui-label text-foreground shrink-0">{t('settings.openchamber.visual.field.weekStartsOn')}</span>
+                                                <Select value={weekStartPreference} onValueChange={(value: 'auto' | 'monday' | 'sunday') => handleWeekStartPreferenceChange(value)}>
+                                                    <SelectTrigger aria-label={t('settings.openchamber.visual.field.selectWeekStartAria')} className="w-fit">
+                                                        <SelectValue>{selectedWeekStartLabel}</SelectValue>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {WEEK_START_OPTIONS.map((option) => (
+                                                            <SelectItem key={option.id} value={option.id}>{tUnsafe(option.labelKey)}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </section>
+                        )}
 
-                            <div className="flex items-center gap-2 py-1.5">
-                                <button
-                                    type="button"
-                                    disabled={customThemesLoading || themesReloading}
-                                    onClick={() => {
-                                        const startedAt = Date.now();
-                                        setThemesReloading(true);
-                                        void reloadCustomThemes().finally(() => {
-                                            const elapsed = Date.now() - startedAt;
-                                            if (elapsed < 500) {
-                                                window.setTimeout(() => {
-                                                    setThemesReloading(false);
-                                                }, 500 - elapsed);
-                                                return;
-                                            }
-                                            setThemesReloading(false);
-                                        });
-                                    }}
-                                    className="inline-flex items-center typography-ui-label font-normal text-foreground underline decoration-[1px] underline-offset-2 hover:text-foreground/80 disabled:cursor-not-allowed disabled:text-muted-foreground/60"
-                                >
-                                    {themesReloading ? t('settings.appearance.reloadingThemes') : t('settings.appearance.reloadThemes')}
-                                </button>
-                                <Tooltip delayDuration={700}>
-                                    <TooltipTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className="flex items-center justify-center rounded-md p-1 text-muted-foreground/70 hover:text-foreground"
-                                            aria-label={t('settings.appearance.themeImportInfo')}
-                                        >
-                                            <RiInformationLine className="h-3.5 w-3.5" />
-                                        </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent sideOffset={8}>
-                                        {t('settings.appearance.themeImportTooltip')}
-                                    </TooltipContent>
-                                </Tooltip>
-                            </div>
+                        {(showPwaInstallNameSetting || showPwaOrientationSetting) && (
+                            <section className="px-2 pb-2 pt-0 space-y-2">
 
                             {showPwaInstallNameSetting && (
                                 <div className="py-1.5 space-y-1.5">
                                     <div className="flex min-w-0 flex-col">
-                                        <span className="typography-ui-label text-foreground">{t('settings.appearance.installAppName')}</span>
-                                        <span className="typography-meta text-muted-foreground">{t('settings.appearance.installAppNameDesc')}</span>
+                                        <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.installAppName')}</span>
+                                        <span className="typography-meta text-muted-foreground">{t('settings.openchamber.visual.field.installAppNameHint')}</span>
                                     </div>
                                     <div className="flex w-full max-w-[28rem] items-center gap-2">
                                         <Input
@@ -635,7 +778,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             }}
                                             className="h-7"
                                             maxLength={64}
-                                            aria-label={t('settings.appearance.installAppNameAria')}
+                                            aria-label={t('settings.openchamber.visual.field.pwaInstallAppNameAria')}
                                         />
                                         <Button size="sm"
                                             type="button"
@@ -645,8 +788,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                 void applyPwaInstallName('');
                                             }}
                                             className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                                            aria-label={t('settings.appearance.resetInstallAppNameAria')}
-                                            title={t('settings.common.reset')}
+                                            aria-label={t('settings.openchamber.visual.actions.resetInstallAppNameAria')}
+                                            title={t('settings.common.actions.reset')}
                                         >
                                             <RiRestartLine className="h-3.5 w-3.5" />
                                         </Button>
@@ -657,8 +800,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                             {showPwaOrientationSetting && (
                                 <div className="py-1.5 space-y-1.5">
                                     <div className="flex min-w-0 flex-col">
-                                        <span className="typography-ui-label text-foreground">{t('settings.appearance.installOrientation')}</span>
-                                        <span className="typography-meta text-muted-foreground">{t('settings.appearance.installOrientationDesc')}</span>
+                                        <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.installOrientation')}</span>
+                                        <span className="typography-meta text-muted-foreground">{t('settings.openchamber.visual.field.installOrientationHint')}</span>
                                     </div>
                                     <div className="flex w-full max-w-[18rem] items-center gap-2">
                                         <Select
@@ -669,13 +812,15 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                 void applyPwaOrientation(orientation);
                                             }}
                                         >
-                                            <SelectTrigger aria-label={t('settings.appearance.installOrientationAria')} className="w-full">
-                                                <SelectValue placeholder={t('settings.appearance.selectOrientation')} />
+                                            <SelectTrigger aria-label={t('settings.openchamber.visual.field.pwaInstallOrientationAria')} className="w-full">
+                                                <SelectValue placeholder={t('settings.openchamber.visual.field.selectOrientationPlaceholder')}>
+                                                    {selectedPwaOrientationLabel}
+                                                </SelectValue>
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {PWA_ORIENTATION_OPTIONS.map((option) => (
                                                     <SelectItem key={option.id} value={option.id}>
-                                                        {getPwaOrientationLabel(option.id)}
+                                                        {tUnsafe(option.labelKey)}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -689,15 +834,16 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             }}
                                             disabled={pwaOrientation === 'system'}
                                             className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                                            aria-label={t('settings.appearance.resetInstallOrientationAria')}
-                                            title={t('settings.common.reset')}
+                                            aria-label={t('settings.openchamber.visual.actions.resetInstallOrientationAria')}
+                                            title={t('settings.common.actions.reset')}
                                         >
                                             <RiRestartLine className="h-3.5 w-3.5" />
                                         </Button>
                                     </div>
                                 </div>
                             )}
-                        </section>
+                            </section>
+                        )}
                     </div>
                 )}
 
@@ -705,32 +851,35 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                 {hasLayoutSettings && (
                     <div className="mb-8 space-y-3">
                         <section className="p-2 space-y-0.5">
-                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.layout.title')}</h4>
+                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.spacingAndLayout')}</h4>
                             <div className="pl-2">
 
                             {shouldShow('fontSize') && !isMobile && (
                                 <div className="flex items-center gap-8 py-1">
                                     <div className="flex min-w-0 flex-col w-56 shrink-0">
-                                        <span className="typography-ui-label text-foreground">{t('settings.layout.interfaceFontSize')}</span>
+                                        <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.interfaceFont')}</span>
                                     </div>
                                     <div className="flex items-center gap-2 w-fit">
-                                        <NumberInput
-                                            value={fontSize}
-                                            onValueChange={setFontSize}
-                                            min={50}
-                                            max={200}
-                                            step={5}
-                                            aria-label={t('settings.layout.fontSizePercentageAria')}
-                                            className="w-16"
-                                        />
+                                        <Select value={uiFont} onValueChange={(value) => setUiFont(value as UiFontOption)}>
+                                            <SelectTrigger aria-label={t('settings.openchamber.visual.field.selectInterfaceFontAria')} className="w-[13rem]">
+                                                <SelectValue>{UI_FONT_OPTIONS.find((option) => option.id === uiFont)?.label}</SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {UI_FONT_OPTIONS.map((option) => (
+                                                    <SelectItem key={option.id} value={option.id}>
+                                                        <span style={{ fontFamily: option.stack }}>{option.label}</span>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <Button size="sm"
                                             type="button"
                                             variant="ghost"
-                                            onClick={() => setFontSize(100)}
-                                            disabled={fontSize === 100}
+                                            onClick={() => setUiFont(DEFAULT_UI_FONT)}
+                                            disabled={uiFont === DEFAULT_UI_FONT}
                                             className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                                            aria-label={t('settings.layout.resetFontSizeAria')}
-                                            title={t('settings.common.reset')}
+                                            aria-label={t('settings.openchamber.visual.actions.resetInterfaceFontAria')}
+                                            title={t('settings.common.actions.reset')}
                                         >
                                             <RiRestartLine className="h-3.5 w-3.5" />
                                         </Button>
@@ -741,7 +890,70 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                             {shouldShow('terminalFontSize') && (
                                 <div className={cn("py-1", isMobile ? "flex flex-col gap-3" : "flex items-center gap-8")}>
                                     <div className={cn("flex min-w-0 flex-col", isMobile ? "w-full" : "w-56 shrink-0")}>
-                                        <span className="typography-ui-label text-foreground">{t('settings.layout.terminalFontSize')}</span>
+                                        <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.codeFont')}</span>
+                                    </div>
+                                    <div className={cn("flex items-center gap-2", isMobile ? "w-full" : "w-fit")}>
+                                        <Select value={monoFont} onValueChange={(value) => setMonoFont(value as MonoFontOption)}>
+                                            <SelectTrigger aria-label={t('settings.openchamber.visual.field.selectCodeFontAria')} className="w-[13rem]">
+                                                <SelectValue>{CODE_FONT_OPTIONS.find((option) => option.id === monoFont)?.label}</SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {CODE_FONT_OPTIONS.map((option) => (
+                                                    <SelectItem key={option.id} value={option.id}>
+                                                        <span style={{ fontFamily: option.stack }}>{option.label}</span>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button size="sm"
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={() => setMonoFont(DEFAULT_MONO_FONT)}
+                                            disabled={monoFont === DEFAULT_MONO_FONT}
+                                            className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
+                                            aria-label={t('settings.openchamber.visual.actions.resetCodeFontAria')}
+                                            title={t('settings.common.actions.reset')}
+                                        >
+                                            <RiRestartLine className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {shouldShow('fontSize') && !isMobile && (
+                                <div className="flex items-center gap-8 py-1">
+                                    <div className="flex min-w-0 flex-col w-56 shrink-0">
+                                        <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.interfaceFontSize')}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 w-fit">
+                                        <NumberInput
+                                            value={fontSize}
+                                            onValueChange={setFontSize}
+                                            min={50}
+                                            max={200}
+                                            step={5}
+                                            aria-label={t('settings.openchamber.visual.field.fontSizePercentageAria')}
+                                            className="w-16"
+                                        />
+                                        <Button size="sm"
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={() => setFontSize(100)}
+                                            disabled={fontSize === 100}
+                                            className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
+                                            aria-label={t('settings.openchamber.visual.actions.resetFontSizeAria')}
+                                            title={t('settings.common.actions.reset')}
+                                        >
+                                            <RiRestartLine className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {shouldShow('terminalFontSize') && (
+                                <div className={cn("py-1", isMobile ? "flex flex-col gap-3" : "flex items-center gap-8")}>
+                                    <div className={cn("flex min-w-0 flex-col", isMobile ? "w-full" : "w-56 shrink-0")}>
+                                        <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.terminalFontSize')}</span>
                                     </div>
                                     <div className={cn("flex items-center gap-2", isMobile ? "w-full" : "w-fit")}>
                                         <NumberInput
@@ -758,8 +970,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             onClick={() => setTerminalFontSize(13)}
                                             disabled={terminalFontSize === 13}
                                             className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                                            aria-label={t('settings.layout.resetTerminalFontSizeAria')}
-                                            title={t('settings.common.reset')}
+                                            aria-label={t('settings.openchamber.visual.actions.resetTerminalFontSizeAria')}
+                                            title={t('settings.common.actions.reset')}
                                         >
                                             <RiRestartLine className="h-3.5 w-3.5" />
                                         </Button>
@@ -770,7 +982,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                             {shouldShow('spacing') && (
                                 <div className={cn("py-1", isMobile ? "flex flex-col gap-3" : "flex items-center gap-8")}>
                                     <div className={cn("flex min-w-0 flex-col", isMobile ? "w-full" : "w-56 shrink-0")}>
-                                        <span className="typography-ui-label text-foreground">{t('settings.layout.spacingDensity')}</span>
+                                        <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.spacingDensity')}</span>
                                     </div>
                                     <div className={cn("flex items-center gap-2", isMobile ? "w-full" : "w-fit")}>
                                         <NumberInput
@@ -787,8 +999,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             onClick={() => setPadding(100)}
                                             disabled={padding === 100}
                                             className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                                            aria-label={t('settings.layout.resetSpacingAria')}
-                                            title={t('settings.common.reset')}
+                                            aria-label={t('settings.openchamber.visual.actions.resetSpacingAria')}
+                                            title={t('settings.common.actions.reset')}
                                         >
                                             <RiRestartLine className="h-3.5 w-3.5" />
                                         </Button>
@@ -800,13 +1012,13 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                 <div className={cn("py-1", isMobile ? "flex flex-col gap-3" : "flex items-center gap-8")}>
                                     <div className={cn("flex min-w-0 flex-col", isMobile ? "w-full" : "w-56 shrink-0")}>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="typography-ui-label text-foreground">{t('settings.layout.inputBarOffset')}</span>
+                                            <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.inputBarOffset')}</span>
                                             <Tooltip delayDuration={1000}>
                                                 <TooltipTrigger asChild>
                                                     <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                                                 </TooltipTrigger>
                                                 <TooltipContent sideOffset={8} className="max-w-xs">
-                                                    {t('settings.layout.inputBarOffsetTooltip')}
+                                                    {t('settings.openchamber.visual.field.inputBarOffsetTooltip')}
                                                 </TooltipContent>
                                             </Tooltip>
                                         </div>
@@ -826,8 +1038,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             onClick={() => setInputBarOffset(0)}
                                             disabled={inputBarOffset === 0}
                                             className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                                            aria-label={t('settings.layout.resetInputBarOffsetAria')}
-                                            title={t('settings.common.reset')}
+                                            aria-label={t('settings.openchamber.visual.actions.resetInputBarOffsetAria')}
+                                            title={t('settings.common.actions.reset')}
                                         >
                                             <RiRestartLine className="h-3.5 w-3.5" />
                                         </Button>
@@ -845,7 +1057,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                 {hasNavigationSettings && (
                     <div className="space-y-3">
                         <section className="px-2 pb-2 pt-0">
-                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.navigation.title')}</h4>
+                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.navigation')}</h4>
                             {shouldShow('terminalQuickKeys') && !isMobile && (
                                 <div
                                     className="group flex cursor-pointer items-center gap-2 py-1.5"
@@ -863,16 +1075,16 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                     <Checkbox
                                         checked={showTerminalQuickKeysOnDesktop}
                                         onChange={setShowTerminalQuickKeysOnDesktop}
-                                        ariaLabel={t('settings.navigation.terminalQuickKeysAria')}
+                                        ariaLabel={t('settings.openchamber.visual.field.terminalQuickKeysAria')}
                                     />
                                     <div className="flex min-w-0 items-center gap-1.5">
-                                        <span className="typography-ui-label text-foreground">{t('settings.navigation.terminalQuickKeys')}</span>
+                                        <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.terminalQuickKeys')}</span>
                                         <Tooltip delayDuration={1000}>
                                             <TooltipTrigger asChild>
                                                 <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                                             </TooltipTrigger>
                                             <TooltipContent sideOffset={8} className="max-w-xs">
-                                                {t('settings.navigation.terminalQuickKeysTooltip')}
+                                                {t('settings.openchamber.visual.field.terminalQuickKeysTooltip')}
                                             </TooltipContent>
                                         </Tooltip>
                                     </div>
@@ -891,8 +1103,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                 <div className="grid grid-cols-1 gap-y-2 md:grid-cols-[minmax(0,16rem)_minmax(0,16rem)] md:justify-start md:gap-x-2">
                                     {shouldShow('chatRenderMode') && (
                                         <section className="p-2 md:col-span-2">
-                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.behavior.chatRenderMode')}</h4>
-                                            <div role="radiogroup" aria-label={t('settings.behavior.chatRenderModeAria')} className="mt-1 grid w-full max-w-[26rem] grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.chatRenderMode')}</h4>
+                                            <div role="radiogroup" aria-label={t('settings.openchamber.visual.section.chatRenderModeAria')} className="mt-1 grid w-full max-w-[26rem] grid-cols-1 gap-3 sm:grid-cols-2">
                                                 {CHAT_RENDER_MODE_OPTIONS.map((option) => {
                                                     const selected = chatRenderMode === option.id;
                                                     const previewPhase = chatRenderPreviewTick % 12;
@@ -910,7 +1122,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                             )}
                                                         >
                                                             <span className={cn('typography-ui-label', selected ? 'text-foreground' : 'text-muted-foreground')}>
-                                                                {getBehaviorOptionLabel('chatRenderMode', option.id)}
+                                                                {tUnsafe(option.labelKey)}
                                                             </span>
                                                             <div className="mt-2 w-full rounded-md border border-border/60 bg-muted/30 p-2">
                                                                 {option.id === 'live' ? (
@@ -975,7 +1187,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('messageTransport') && (
                                         <section className="p-2 md:col-span-2">
-                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.behavior.messageStreamTransport')}</h4>
+                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.messageStreamTransport')}</h4>
                                             <div className="mt-1 flex max-w-[24rem] flex-col gap-2">
                                                 <div className="flex flex-wrap items-center gap-1">
                                                     {MESSAGE_STREAM_TRANSPORT_OPTIONS.map((option) => (
@@ -987,12 +1199,15 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                             className="!font-normal"
                                                             onClick={() => handleMessageStreamTransportChange(option.id)}
                                                         >
-                                                            {getBehaviorOptionLabel('messageTransport', option.id)}
+                                                            {tUnsafe(option.labelKey)}
                                                         </Button>
                                                     ))}
                                                 </div>
                                                 <span className="typography-meta text-muted-foreground">
-                                                    {getBehaviorOptionDescription('messageTransport', messageStreamTransport)}
+                                                    {(() => {
+                                                        const option = MESSAGE_STREAM_TRANSPORT_OPTIONS.find((item) => item.id === messageStreamTransport);
+                                                        return option?.descriptionKey ? tUnsafe(option.descriptionKey) : '';
+                                                    })()}
                                                 </span>
                                             </div>
                                         </section>
@@ -1000,8 +1215,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('activityRenderMode') && chatRenderMode === 'sorted' && (
                                         <section className="p-2 md:col-span-2">
-                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.behavior.activityRenderMode')}</h4>
-                                            <div role="radiogroup" aria-label={t('settings.behavior.activityRenderModeAria')} className="mt-0.5 space-y-0">
+                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.activityDefault')}</h4>
+                                            <div role="radiogroup" aria-label={t('settings.openchamber.visual.section.activityDefaultAria')} className="mt-0.5 space-y-0">
                                                 {ACTIVITY_RENDER_MODE_OPTIONS.map((option) => {
                                                     const selected = activityRenderMode === option.id;
                                                     return (
@@ -1022,10 +1237,10 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                             <Radio
                                                                 checked={selected}
                                                                 onChange={() => handleActivityRenderModeChange(option.id)}
-                                                                ariaLabel={t('settings.behavior.activityRenderModeOptionAria', { label: getBehaviorOptionLabel('activityRenderMode', option.id) })}
+                                                                ariaLabel={t('settings.openchamber.visual.field.activityDefaultModeAria', { option: tUnsafe(option.labelKey) })}
                                                             />
                                                             <span className={cn('typography-ui-label font-normal', selected ? 'text-foreground' : 'text-foreground/50')}>
-                                                                {getBehaviorOptionLabel('activityRenderMode', option.id)}
+                                                                {tUnsafe(option.labelKey)}
                                                             </span>
                                                         </div>
                                                     );
@@ -1036,7 +1251,7 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('expandedTools') && (
                                         <section className="p-2 md:col-span-2 space-y-0.5">
-                                            <div className="typography-ui-header font-medium text-foreground py-1.5">{t('settings.behavior.expandedToolsTitle')}</div>
+                                            <div className="typography-ui-header font-medium text-foreground py-1.5">{t('settings.openchamber.visual.section.showToolsOpenedByDefault')}</div>
 
                                             <div
                                                 className="group flex cursor-pointer items-center gap-2 py-0.5"
@@ -1054,9 +1269,9 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                 <Checkbox
                                                     checked={showExpandedBashTools}
                                                     onChange={handleShowExpandedBashToolsChange}
-                                                    ariaLabel={t('settings.behavior.expandedBashToolsAria')}
+                                                    ariaLabel={t('settings.openchamber.visual.field.showExpandedBashToolsAria')}
                                                 />
-                                                <span className="typography-ui-label text-foreground">{t('settings.behavior.expandedTool.bash')}</span>
+                                                <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.bash')}</span>
                                             </div>
 
                                             <div
@@ -1075,17 +1290,17 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                 <Checkbox
                                                     checked={showExpandedEditTools}
                                                     onChange={handleShowExpandedEditToolsChange}
-                                                    ariaLabel={t('settings.behavior.expandedEditToolsAria')}
+                                                    ariaLabel={t('settings.openchamber.visual.field.showExpandedEditToolsAria')}
                                                 />
-                                                <span className="typography-ui-label text-foreground">{t('settings.behavior.expandedTool.edit')}</span>
+                                                <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.editTools')}</span>
                                             </div>
                                         </section>
                                     )}
 
                                     {shouldShow('userMessageRendering') && (
                                         <section className="p-2">
-                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.behavior.userMessageRendering')}</h4>
-                                            <div role="radiogroup" aria-label={t('settings.behavior.userMessageRenderingAria')} className="mt-0.5 space-y-0">
+                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.userMessageRendering')}</h4>
+                                            <div role="radiogroup" aria-label={t('settings.openchamber.visual.section.userMessageRenderingAria')} className="mt-0.5 space-y-0">
                                                 {USER_MESSAGE_RENDERING_OPTIONS.map((option) => {
                                                     const selected = normalizeUserMessageRenderingMode(userMessageRenderingMode) === option.id;
                                                     return (
@@ -1106,10 +1321,10 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                             <Radio
                                                                 checked={selected}
                                                                 onChange={() => handleUserMessageRenderingModeChange(option.id)}
-                                                                ariaLabel={t('settings.behavior.userMessageRenderingOptionAria', { label: getBehaviorOptionLabel('userMessageRendering', option.id) })}
+                                                                ariaLabel={t('settings.openchamber.visual.field.userMessageRenderingAria', { option: tUnsafe(option.labelKey) })}
                                                             />
                                                             <span className={cn('typography-ui-label font-normal', selected ? 'text-foreground' : 'text-foreground/50')}>
-                                                                {getBehaviorOptionLabel('userMessageRendering', option.id)}
+                                                                {tUnsafe(option.labelKey)}
                                                             </span>
                                                         </div>
                                                     );
@@ -1120,8 +1335,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('mermaidRendering') && (
                                         <section className="p-2">
-                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.behavior.mermaidRendering')}</h4>
-                                            <div role="radiogroup" aria-label={t('settings.behavior.mermaidRenderingAria')} className="mt-0.5 space-y-0">
+                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.mermaidRendering')}</h4>
+                                            <div role="radiogroup" aria-label={t('settings.openchamber.visual.section.mermaidRenderingAria')} className="mt-0.5 space-y-0">
                                                 {MERMAID_RENDERING_OPTIONS.map((option) => {
                                                     const selected = mermaidRenderingMode === option.id;
                                                     return (
@@ -1142,10 +1357,10 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                             <Radio
                                                                 checked={selected}
                                                                 onChange={() => handleMermaidRenderingModeChange(option.id)}
-                                                                ariaLabel={t('settings.behavior.mermaidRenderingOptionAria', { label: getBehaviorOptionLabel('mermaidRendering', option.id) })}
+                                                                ariaLabel={t('settings.openchamber.visual.field.mermaidRenderingAria', { option: tUnsafe(option.labelKey) })}
                                                             />
                                                             <span className={cn('typography-ui-label font-normal', selected ? 'text-foreground' : 'text-foreground/50')}>
-                                                                {getBehaviorOptionLabel('mermaidRendering', option.id)}
+                                                                {tUnsafe(option.labelKey)}
                                                             </span>
                                                         </div>
                                                     );
@@ -1156,8 +1371,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('diffLayout') && !isVSCode && (
                                         <section className="p-2">
-                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.behavior.diffLayout')}</h4>
-                                            <div role="radiogroup" aria-label={t('settings.behavior.diffLayoutAria')} className="mt-0.5 space-y-0">
+                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.diffLayout')}</h4>
+                                            <div role="radiogroup" aria-label={t('settings.openchamber.visual.section.diffLayoutAria')} className="mt-0.5 space-y-0">
                                                 {DIFF_LAYOUT_OPTIONS.map((option) => {
                                                     const selected = diffLayoutPreference === option.id;
                                                     return (
@@ -1178,10 +1393,10 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                             <Radio
                                                                 checked={selected}
                                                                 onChange={() => setDiffLayoutPreference(option.id)}
-                                                                ariaLabel={t('settings.behavior.diffLayoutOptionAria', { label: getBehaviorOptionLabel('diffLayout', option.id) })}
+                                                                ariaLabel={t('settings.openchamber.visual.field.diffLayoutAria', { option: tUnsafe(option.labelKey) })}
                                                             />
                                                             <span className={cn('typography-ui-label font-normal', selected ? 'text-foreground' : 'text-foreground/50')}>
-                                                                {getBehaviorOptionLabel('diffLayout', option.id)}
+                                                                {tUnsafe(option.labelKey)}
                                                             </span>
                                                         </div>
                                                     );
@@ -1192,8 +1407,8 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
 
                                     {shouldShow('diffLayout') && !isVSCode && (
                                         <section className="p-2">
-                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.behavior.diffViewMode')}</h4>
-                                            <div role="radiogroup" aria-label={t('settings.behavior.diffViewModeAria')} className="mt-0.5 space-y-0">
+                                            <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.visual.section.diffViewMode')}</h4>
+                                            <div role="radiogroup" aria-label={t('settings.openchamber.visual.section.diffViewModeAria')} className="mt-0.5 space-y-0">
                                                 {DIFF_VIEW_MODE_OPTIONS.map((option) => {
                                                     const selected = diffViewMode === option.id;
                                                     return (
@@ -1214,10 +1429,10 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                                             <Radio
                                                                 checked={selected}
                                                                 onChange={() => setDiffViewMode(option.id)}
-                                                                ariaLabel={t('settings.behavior.diffViewModeOptionAria', { label: getBehaviorOptionLabel('diffViewMode', option.id) })}
+                                                                ariaLabel={t('settings.openchamber.visual.field.diffViewModeAria', { option: tUnsafe(option.labelKey) })}
                                                             />
                                                             <span className={cn('typography-ui-label font-normal', selected ? 'text-foreground' : 'text-foreground/50')}>
-                                                                {getBehaviorOptionLabel('diffViewMode', option.id)}
+                                                                {tUnsafe(option.labelKey)}
                                                             </span>
                                                         </div>
                                                     );
@@ -1247,9 +1462,9 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             <Checkbox
                                                 checked={showReasoningTraces}
                                                 onChange={setShowReasoningTraces}
-                                                ariaLabel={t('settings.behavior.showReasoningTracesAria')}
+                                                ariaLabel={t('settings.openchamber.visual.field.showReasoningTracesAria')}
                                             />
-                                            <span className="typography-ui-label text-foreground">{t('settings.behavior.showReasoningTraces')}</span>
+                                            <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.showReasoningTraces')}</span>
                                         </div>
                                     )}
 
@@ -1270,9 +1485,9 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             <Checkbox
                                                 checked={stickyUserHeader}
                                                 onChange={handleStickyUserHeaderChange}
-                                                ariaLabel={t('settings.behavior.stickyUserHeaderAria')}
+                                                ariaLabel={t('settings.openchamber.visual.field.stickyUserHeaderAria')}
                                             />
-                                            <span className="typography-ui-label text-foreground">{t('settings.behavior.stickyUserHeader')}</span>
+                                            <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.stickyUserHeader')}</span>
                                         </div>
                                     )}
 
@@ -1293,9 +1508,9 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             <Checkbox
                                                 checked={showToolFileIcons}
                                                 onChange={handleShowToolFileIconsChange}
-                                                ariaLabel={t('settings.behavior.showToolFileIconsAria')}
+                                                ariaLabel={t('settings.openchamber.visual.field.showToolFileIconsAria')}
                                             />
-                                            <span className="typography-ui-label text-foreground">{t('settings.behavior.showToolFileIcons')}</span>
+                                            <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.showToolFileIcons')}</span>
                                         </div>
                                     )}
 
@@ -1316,9 +1531,9 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             <Checkbox
                                                 checked={showMobileSessionStatusBar}
                                                 onChange={setShowMobileSessionStatusBar}
-                                                ariaLabel={t('settings.behavior.mobileStatusBarAria')}
+                                                ariaLabel={t('settings.openchamber.visual.field.showMobileStatusBarAria')}
                                             />
-                                            <span className="typography-ui-label text-foreground">{t('settings.behavior.mobileStatusBar')}</span>
+                                            <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.showMobileStatusBar')}</span>
                                         </div>
                                     )}
 
@@ -1339,9 +1554,9 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             <Checkbox
                                                 checked={directoryShowHidden}
                                                 onChange={setDirectoryShowHidden}
-                                                ariaLabel={t('settings.behavior.dotfilesAria')}
+                                                ariaLabel={t('settings.openchamber.visual.field.showDotfilesAria')}
                                             />
-                                            <span className="typography-ui-label text-foreground">{t('settings.behavior.dotfiles')}</span>
+                                            <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.showDotfiles')}</span>
                                         </div>
                                     )}
 
@@ -1362,16 +1577,16 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             <Checkbox
                                                 checked={queueModeEnabled}
                                                 onChange={setQueueMode}
-                                                ariaLabel="Queue messages by default"
+                                                ariaLabel={t('settings.openchamber.visual.field.queueMessagesByDefaultAria')}
                                             />
                                             <div className="flex min-w-0 items-center gap-1.5">
-                                                <span className="typography-ui-label text-foreground">{t('settings.behavior.queueMessages')}</span>
+                                                <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.queueMessagesByDefault')}</span>
                                                 <Tooltip delayDuration={1000}>
                                                     <TooltipTrigger asChild>
                                                         <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                                                     </TooltipTrigger>
                                                     <TooltipContent sideOffset={8} className="max-w-xs">
-                                                        When enabled, Enter queues messages. Use {getModifierLabel()}+Enter to send.
+                                                        {t('settings.openchamber.visual.field.queueMessagesByDefaultTooltip', { modifier: getModifierLabel() })}
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </div>
@@ -1395,9 +1610,9 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             <Checkbox
                                                 checked={persistChatDraft}
                                                 onChange={setPersistChatDraft}
-                                                ariaLabel="Persist draft messages"
+                                                ariaLabel={t('settings.openchamber.visual.field.persistDraftMessagesAria')}
                                             />
-                                            <span className="typography-ui-label text-foreground">{t('settings.behavior.persistDraftMessages')}</span>
+                                            <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.persistDraftMessages')}</span>
                                         </div>
                                     )}
 
@@ -1418,9 +1633,9 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             <Checkbox
                                                 checked={inputSpellcheckEnabled}
                                                 onChange={handleInputSpellcheckChange}
-                                                ariaLabel="Enable spellcheck in text inputs"
+                                                ariaLabel={t('settings.openchamber.visual.field.enableSpellcheckInTextInputsAria')}
                                             />
-                                            <span className="typography-ui-label text-foreground">{t('settings.behavior.inputSpellcheck')}</span>
+                                            <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.enableSpellcheckInTextInputs')}</span>
                                         </div>
                                     )}
 
@@ -1434,12 +1649,12 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                 {shouldShow('reportUsage') && (
                     <div className="space-y-3">
                         <section className="px-2 pb-2 pt-0">
-                            <h4 className="typography-ui-header font-medium text-foreground mb-2">{t('settings.privacy.title')}</h4>
+                            <h4 className="typography-ui-header font-medium text-foreground mb-2">{t('settings.openchamber.visual.section.privacy')}</h4>
                             <div className="flex items-start gap-2 py-1.5">
                                 <Checkbox
                                     checked={reportUsage}
                                     onChange={handleReportUsageChange}
-                                    ariaLabel={t('settings.privacy.reportUsageAria')}
+                                    ariaLabel={t('settings.openchamber.visual.field.sendAnonymousUsageReportsAria')}
                                 />
                                 <div className="flex min-w-0 flex-col gap-0.5">
                                     <div
@@ -1455,10 +1670,10 @@ export const OpenChamberVisualSettings: React.FC<OpenChamberVisualSettingsProps>
                                             }
                                         }}
                                     >
-                                        <span className="typography-ui-label text-foreground">{t('settings.privacy.reportUsage')}</span>
+                                        <span className="typography-ui-label text-foreground">{t('settings.openchamber.visual.field.sendAnonymousUsageReports')}</span>
                                     </div>
                                     <span className="typography-meta text-muted-foreground pointer-events-none">
-                                        Helps us understand which app versions are actively used so we can prioritize improvements. Only app version, platform, and runtime are collected - no personal data or code.
+                                        {t('settings.openchamber.visual.field.sendAnonymousUsageReportsHint')}
                                     </span>
                                 </div>
                             </div>

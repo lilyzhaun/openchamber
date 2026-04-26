@@ -22,6 +22,7 @@ import { useUIStore } from '@/stores/useUIStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import { useDesktopSshStore } from '@/stores/useDesktopSshStore';
 import { openExternalUrl } from '@/lib/url';
+import { useI18n } from '@/lib/i18n';
 import {
   getProjectActionsState,
   type OpenChamberProjectAction,
@@ -34,7 +35,6 @@ import {
   resolveProjectActionDesktopForwardUrl,
   toProjectActionRunKey,
 } from '@/lib/projectActions';
-import { useI18n } from '@/contexts/useI18n';
 
 type RunningEntry = {
   key: string;
@@ -155,10 +155,10 @@ const extractBestUrl = (value: string): string | null => {
   return normalized[0] ?? null;
 };
 
-const formatActionButtonLabel = (value: string): string => {
+const formatActionButtonLabel = (value: string, fallbackLabel: string): string => {
   const trimmed = value.trim();
   if (!trimmed) {
-    return 'Action';
+    return fallbackLabel;
   }
 
   const words = trimmed.split(/\s+/).filter(Boolean);
@@ -359,7 +359,7 @@ export const ProjectActionsButton = ({
       if (maybeUrl) {
         watch.openedUrl = true;
         void openExternal(maybeUrl);
-        toast.success(t('layout.projectActions.openedUrlFromOutput'));
+        toast.success(t('projectActions.toast.openedUrlFromOutput'));
       }
       urlWatchByRunKeyRef.current[runKey] = watch;
     }
@@ -370,7 +370,7 @@ export const ProjectActionsButton = ({
       }
     }
 
-  }, [actions, openExternal, runningByKey, terminalSessions, t]);
+  }, [actions, openExternal, runningByKey, t, terminalSessions]);
 
   const normalizedDirectory = React.useMemo(() => {
     return normalizeProjectActionDirectory(directory || stableProjectRef?.path || '');
@@ -385,7 +385,7 @@ export const ProjectActionsButton = ({
 
   const getOrCreateActionTab = React.useCallback(async (action: OpenChamberProjectAction) => {
     if (!normalizedDirectory) {
-      throw new Error(t('layout.projectActions.noActiveDirectory'));
+      throw new Error(t('projectActions.error.noActiveDirectory'));
     }
 
     const key = toProjectActionRunKey(normalizedDirectory, action.id);
@@ -433,7 +433,7 @@ export const ProjectActionsButton = ({
     }
 
     if (!normalizedDirectory) {
-      toast.error(t('layout.projectActions.noActiveDirectoryForAction'));
+      toast.error(t('projectActions.error.noActiveDirectoryForAction'));
       return;
     }
 
@@ -461,7 +461,7 @@ export const ProjectActionsButton = ({
       }
 
       if (!activeSessionId) {
-        throw new Error(t('layout.projectActions.failedToCreateTerminalSession'));
+        throw new Error(t('projectActions.error.failedToCreateTerminalSession'));
       }
 
       if (createdSession) {
@@ -491,14 +491,14 @@ export const ProjectActionsButton = ({
 
       if (desktopForwardUrl) {
         void openExternal(desktopForwardUrl);
-        toast.success(t('layout.projectActions.openedForwardedUrl'));
+        toast.success(t('projectActions.toast.openedForwardedUrl'));
       } else if (manualOpenUrl) {
         void openExternal(manualOpenUrl);
-        toast.success(t('layout.projectActions.openedActionUrl'));
+        toast.success(t('projectActions.toast.openedActionUrl'));
       } else if (hasCustomOpenUrl) {
-        toast.error(t('layout.projectActions.invalidCustomUrlFormat'));
+        toast.error(t('projectActions.error.invalidCustomUrlFormat'));
       } else if (hasDesktopForwardSelection) {
-        toast.error(t('layout.projectActions.desktopSshForwardUnavailable'));
+        toast.error(t('projectActions.error.selectedDesktopSshForwardUnavailable'));
       }
 
       urlWatchByRunKeyRef.current[key] = {
@@ -516,7 +516,7 @@ export const ProjectActionsButton = ({
         return next;
       });
       delete urlWatchByRunKeyRef.current[runKey];
-      toast.error(error instanceof Error ? error.message : t('layout.projectActions.failedToRunAction'));
+      toast.error(error instanceof Error ? error.message : t('projectActions.error.failedToRunAction'));
     }
   }, [
     desktopSshInstances,
@@ -649,7 +649,7 @@ export const ProjectActionsButton = ({
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
             className
           )}
-          aria-label="Add action"
+          aria-label={t('projectActions.actions.addActionAria')}
           onClick={openProjectActionsSettings}
         >
           <RiAddLine className="h-5 w-5" />
@@ -670,7 +670,7 @@ export const ProjectActionsButton = ({
         onClick={openProjectActionsSettings}
       >
         <RiAddLine className="h-4 w-4 text-muted-foreground" />
-        <span className="header-open-label whitespace-nowrap">Add action</span>
+        <span className="header-open-label whitespace-nowrap">{t('projectActions.actions.addAction')}</span>
       </button>
     );
   }
@@ -682,7 +682,10 @@ export const ProjectActionsButton = ({
 
   const selectedIconKey = (resolvedSelected.icon || 'play') as keyof typeof PROJECT_ACTION_ICON_MAP;
   const SelectedIcon = PROJECT_ACTION_ICON_MAP[selectedIconKey] || RiPlayLine;
-  const selectedButtonLabel = formatActionButtonLabel(resolvedSelected.name);
+  const selectedButtonLabel = formatActionButtonLabel(
+    resolvedSelected.name,
+    t('projectActions.label.fallbackAction'),
+  );
   const selectedRunKey = toProjectActionRunKey(normalizedDirectory, resolvedSelected.id);
   const selectedRunning = runningByKey[selectedRunKey];
   const isStoppingSelected = selectedRunning?.status === 'stopping';
@@ -701,7 +704,9 @@ export const ProjectActionsButton = ({
               'disabled:cursor-not-allowed',
               className
             )}
-            aria-label={selectedRunning ? `Stop ${resolvedSelected.name}` : `Run ${resolvedSelected.name}`}
+            aria-label={selectedRunning
+              ? t('projectActions.actions.stopNamedAria', { name: resolvedSelected.name })
+              : t('projectActions.actions.runNamedAria', { name: resolvedSelected.name })}
           >
             {isStoppingSelected
               ? <RiLoader4Line className="h-5 w-5 animate-spin text-[var(--status-warning)]" />
@@ -713,7 +718,7 @@ export const ProjectActionsButton = ({
         <DropdownMenuContent align="end" className="w-52 max-h-[70vh] overflow-y-auto">
           <DropdownMenuItem className="flex items-center gap-2" onClick={openProjectActionsSettings}>
             <RiAddLine className="h-4 w-4" />
-            <span className="typography-ui-label text-foreground">Add new action</span>
+            <span className="typography-ui-label text-foreground">{t('projectActions.actions.addNewAction')}</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {actions.map((entry) => {
@@ -766,7 +771,9 @@ export const ProjectActionsButton = ({
           compact ? 'w-9 justify-center px-0' : 'gap-2 px-3',
           'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed'
         )}
-        aria-label={selectedRunning ? `Stop ${resolvedSelected.name}` : `Run ${resolvedSelected.name}`}
+        aria-label={selectedRunning
+          ? t('projectActions.actions.stopNamedAria', { name: resolvedSelected.name })
+          : t('projectActions.actions.runNamedAria', { name: resolvedSelected.name })}
       >
         <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
           {isStoppingSelected
@@ -787,7 +794,7 @@ export const ProjectActionsButton = ({
               'border-l border-[var(--interactive-border)] text-muted-foreground',
               'hover:bg-interactive-hover hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
             )}
-            aria-label="Choose project action"
+            aria-label={t('projectActions.actions.chooseActionAria')}
           >
             <RiArrowDownSLine className="h-4 w-4" />
           </button>
@@ -795,7 +802,7 @@ export const ProjectActionsButton = ({
         <DropdownMenuContent align="center" className="w-52 max-h-[70vh] overflow-y-auto" style={{ translate: '-30px 0' }}>
           <DropdownMenuItem className="flex items-center gap-2" onClick={openProjectActionsSettings}>
             <RiAddLine className="h-4 w-4" />
-            <span className="typography-ui-label text-foreground">Add new action</span>
+            <span className="typography-ui-label text-foreground">{t('projectActions.actions.addNewAction')}</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {actions.map((entry) => {

@@ -26,7 +26,7 @@ import {
   setDirectoryShowHidden,
   useDirectoryShowHidden,
 } from '@/lib/directoryShowHidden';
-import { useI18n } from '@/contexts/useI18n';
+import { useI18n } from '@/lib/i18n';
 
 interface DirectoryExplorerDialogProps {
   open: boolean;
@@ -38,8 +38,11 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
   onOpenChange,
 }) => {
   const { t } = useI18n();
-  const { currentDirectory, homeDirectory, isHomeReady } = useDirectoryStore();
-  const { addProject, getActiveProject } = useProjectsStore();
+  const currentDirectory = useDirectoryStore((s) => s.currentDirectory);
+  const homeDirectory = useDirectoryStore((s) => s.homeDirectory);
+  const isHomeReady = useDirectoryStore((s) => s.isHomeReady);
+  const addProject = useProjectsStore((s) => s.addProject);
+  const getActiveProject = useProjectsStore((s) => s.getActiveProject);
   const [pendingPath, setPendingPath] = React.useState<string | null>(null);
   const [pathInputValue, setPathInputValue] = React.useState('');
   const [hasUserSelection, setHasUserSelection] = React.useState(false);
@@ -99,8 +102,8 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
       if (isDesktop) {
         const accessResult = await requestAccess(targetPath);
         if (!accessResult.success) {
-          toast.error(t('session.directoryExplorer.unableToAccessDirectory'), {
-            description: accessResult.error || t('session.directoryExplorer.desktopAccessDenied'),
+          toast.error(t('directoryExplorerDialog.toast.unableToAccessDirectory'), {
+            description: accessResult.error || t('directoryExplorerDialog.toast.desktopDeniedAccess'),
           });
           return;
         }
@@ -109,8 +112,8 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
 
         const startResult = await startAccessing(resolvedPath);
         if (!startResult.success) {
-          toast.error(t('session.directoryExplorer.failedToOpenDirectory'), {
-            description: startResult.error || t('session.directoryExplorer.desktopCouldNotGrantAccess'),
+          toast.error(t('directoryExplorerDialog.toast.failedToOpenDirectory'), {
+            description: startResult.error || t('directoryExplorerDialog.toast.desktopCouldNotGrantAccess'),
           });
           return;
         }
@@ -118,16 +121,16 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
 
       const added = addProject(resolvedPath, { id: projectId });
       if (!added) {
-        toast.error(t('session.toast.addProjectFailed'), {
-          description: t('session.toast.selectValidDirectory'),
+        toast.error(t('directoryExplorerDialog.toast.failedToAddProject'), {
+          description: t('directoryExplorerDialog.toast.selectValidDirectoryPath'),
         });
         return;
       }
 
       handleClose();
     } catch (error) {
-      toast.error(t('session.toast.selectDirectoryFailed'), {
-        description: error instanceof Error ? error.message : t('session.directoryExplorer.unknownErrorOccurred'),
+      toast.error(t('directoryExplorerDialog.toast.failedToSelectDirectory'), {
+        description: error instanceof Error ? error.message : t('directoryExplorerDialog.toast.unknownError'),
       });
     } finally {
       setIsConfirming(false);
@@ -218,16 +221,16 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
       ) : (
         <RiCheckboxBlankLine className="h-4 w-4" />
       )}
-      {t('session.directoryExplorer.showHidden')}
+      {t('directoryExplorerDialog.toggle.showHidden')}
     </button>
   );
 
   const dialogHeader = (
     <DialogHeader className="flex-shrink-0 px-4 pb-2 pt-[calc(var(--oc-safe-area-top,0px)+0.5rem)] sm:px-0 sm:pb-3 sm:pt-0">
-      <DialogTitle>{t('session.directoryExplorer.addProjectDirectory')}</DialogTitle>
+      <DialogTitle>{t('directoryExplorerDialog.title')}</DialogTitle>
       <div className="hidden sm:flex sm:items-center sm:justify-between sm:gap-4">
         <DialogDescription className="flex-1">
-          {t('session.directoryExplorer.chooseFolderToAddProject')}
+          {t('directoryExplorerDialog.description')}
         </DialogDescription>
         {showHiddenToggle}
       </div>
@@ -240,7 +243,7 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
         value={pathInputValue}
         onChange={handlePathInputChange}
         onKeyDown={handlePathInputKeyDown}
-        placeholder={t('session.directoryExplorer.pathPlaceholder')}
+        placeholder={t('directoryExplorerDialog.pathInput.placeholder')}
         className="font-mono typography-meta"
         spellCheck={false}
         autoComplete="off"
@@ -277,7 +280,7 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
 
   // Mobile: use flex layout where tree takes remaining space
   const mobileContent = (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex-shrink-0">{pathInputSection}</div>
       <div className="flex-shrink-0 flex items-center justify-end">
         {showHiddenToggle}
@@ -314,14 +317,14 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
         disabled={isConfirming}
         className="flex-1 sm:flex-none sm:w-auto"
       >
-        {t('session.common.cancel')}
+        {t('directoryExplorerDialog.actions.cancel')}
       </Button>
       <Button
         onClick={handleConfirm}
         disabled={isConfirming || !hasUserSelection || (!pendingPath && !pathInputValue.trim())}
         className="flex-1 sm:flex-none sm:w-auto sm:min-w-[140px]"
       >
-        {isConfirming ? t('session.directoryExplorer.adding') : t('session.project.addProject')}
+        {isConfirming ? t('directoryExplorerDialog.actions.adding') : t('directoryExplorerDialog.actions.addProject')}
       </Button>
     </>
   );
@@ -331,9 +334,9 @@ export const DirectoryExplorerDialog: React.FC<DirectoryExplorerDialogProps> = (
       <MobileOverlayPanel
         open={open}
         onClose={() => onOpenChange(false)}
-        title={t('session.directoryExplorer.addProjectDirectory')}
-        className="max-w-full"
-        contentMaxHeightClassName="max-h-[min(70vh,520px)] h-[min(70vh,520px)]"
+        title={t('directoryExplorerDialog.title')}
+        className="h-[88dvh] max-h-[720px] max-w-full"
+        contentMaxHeightClassName="flex-1"
         footer={<div className="flex flex-row gap-2">{renderActionButtons()}</div>}
       >
         {mobileContent}

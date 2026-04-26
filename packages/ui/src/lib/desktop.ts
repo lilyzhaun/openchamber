@@ -115,6 +115,7 @@ export type DesktopSettings = {
   autoCreateWorktree?: boolean;
   queueModeEnabled?: boolean;
   gitmojiEnabled?: boolean;
+  defaultFileViewerPreview?: boolean;
   zenModel?: string;
   gitProviderId?: string;
   gitModelId?: string;
@@ -134,6 +135,8 @@ export type DesktopSettings = {
   stickyUserHeader?: boolean;
   fontSize?: number;
   terminalFontSize?: number;
+  uiFont?: string;
+  monoFont?: string;
   padding?: number;
   cornerRadius?: number;
   inputBarOffset?: number;

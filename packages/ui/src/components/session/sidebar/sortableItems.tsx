@@ -21,7 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, getProjectIconImageUrl } from '@/lib/projectMeta';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
-import { useI18n } from '@/contexts/useI18n';
+import { useI18n } from '@/lib/i18n';
 
 export interface SortableProjectItemProps {
   id: string;
@@ -78,8 +78,8 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
   onClose,
   sentinelRef,
   children,
-  showCreateButtons,
-  hideHeader,
+  showCreateButtons = true,
+  hideHeader = false,
   openSidebarMenuKey,
   setOpenSidebarMenuKey,
 }) => {
@@ -233,13 +233,13 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                         'inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 hover:text-foreground transition-opacity',
                           mobileVariant ? 'opacity-100' : 'opacity-0 pointer-events-none group-hover/project:opacity-100 group-hover/project:pointer-events-auto group-focus-within/project:opacity-100 group-focus-within/project:pointer-events-auto',
                         )}
-                        aria-label="New worktree"
+                        aria-label={t('sessions.sidebar.project.actions.newWorktree')}
                       >
                         <RiNodeTree className="h-4 w-4" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={4}>
-                      <p>New worktree...</p>
+                      <p>{t('sessions.sidebar.project.actions.newWorktreeEllipsis')}</p>
                     </TooltipContent>
                   </Tooltip>
                 ) : null}
@@ -259,7 +259,7 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                               ? 'opacity-100'
                               : 'opacity-0 pointer-events-none group-hover/project:opacity-100 group-hover/project:pointer-events-auto group-focus-within/project:opacity-100 group-focus-within/project:pointer-events-auto',
                         )}
-                        aria-label={t('session.projectMenuAria')}
+                        aria-label={t('sessions.sidebar.project.actions.projectMenu')}
                         onPointerDown={handleMenuTriggerPointerDown}
                         onMouseDown={handleMenuTriggerMouseDown}
                         onClick={handleMenuTriggerClick}
@@ -271,19 +271,19 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                       {showCreateButtons && !isRepo && !hideDirectoryControls && onNewSession && (
                       <DropdownMenuItem onClick={onNewSession}>
                         <RiAddLine className="mr-1.5 h-4 w-4" />
-                        {t('session.newSession')}
+                        {t('sessions.sidebar.project.actions.newSession')}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem onClick={onRenameStart}>
                       <RiPencilAiLine className="mr-1.5 h-4 w-4" />
-                      {t('session.rename')}
+                      {t('sessions.sidebar.session.menu.rename')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={onClose}
                       className="text-destructive focus:text-destructive"
                     >
                       <RiCloseLine className="mr-1.5 h-4 w-4" />
-                      {t('session.closeProject')}
+                      {t('sessions.sidebar.project.actions.closeProject')}
                     </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -303,13 +303,17 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                           'inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-opacity',
                           mobileVariant ? 'opacity-100' : 'opacity-0 pointer-events-none group-hover/project:opacity-100 group-hover/project:pointer-events-auto group-focus-within/project:opacity-100 group-focus-within/project:pointer-events-auto',
                         )}
-                        aria-label={isRepo ? t('session.newDraftSessionAria') : t('session.newSessionAria')}
+                        aria-label={isRepo
+                          ? t('sessions.sidebar.project.actions.newDraftSession')
+                          : t('sessions.sidebar.project.actions.newSession')}
                       >
                         <RiAddLine className="h-4 w-4" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={4}>
-                      <p>{isRepo ? t('session.newDraftSession') : t('session.newSession')}</p>
+                      <p>{isRepo
+                        ? t('sessions.sidebar.project.actions.newDraftSession')
+                        : t('sessions.sidebar.project.actions.newSession')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>

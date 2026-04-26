@@ -23,12 +23,14 @@ import {
 import { RiAddLine, RiDeleteBinLine, RiRefreshLine, RiDownloadLine, RiStarLine, RiSearchLine } from '@remixicon/react';
 
 import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
+import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 import type { SkillsCatalogItem } from '@/lib/api/types';
 
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { updateDesktopSettings } from '@/lib/persistence';
 import type { DesktopSettings, SkillCatalogConfig } from '@/lib/desktop';
+import { useI18n } from '@/lib/i18n';
 
 import { AddCatalogDialog } from './AddCatalogDialog';
 import { InstallSkillDialog } from './InstallSkillDialog';
@@ -65,6 +67,7 @@ const loadSettings = async (): Promise<DesktopSettings | null> => {
 };
 
 export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onModeChange, showModeTabs = true }) => {
+  const { t } = useI18n();
   const {
     sources,
     itemsBySource,
@@ -79,7 +82,21 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
     loadedSourceIds,
     clawdhubHasMoreBySource,
     lastCatalogError,
-  } = useSkillsCatalogStore();
+  } = useSkillsCatalogStore(useShallow((s) => ({
+    sources: s.sources,
+    itemsBySource: s.itemsBySource,
+    selectedSourceId: s.selectedSourceId,
+    setSelectedSource: s.setSelectedSource,
+    loadCatalog: s.loadCatalog,
+    loadSource: s.loadSource,
+    loadMoreClawdHub: s.loadMoreClawdHub,
+    isLoadingCatalog: s.isLoadingCatalog,
+    isLoadingSource: s.isLoadingSource,
+    isLoadingMore: s.isLoadingMore,
+    loadedSourceIds: s.loadedSourceIds,
+    clawdhubHasMoreBySource: s.clawdhubHasMoreBySource,
+    lastCatalogError: s.lastCatalogError,
+  })));
 
   const [search, setSearch] = React.useState('');
   const [addCatalogOpen, setAddCatalogOpen] = React.useState(false);
@@ -144,7 +161,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
   };
 
   return (
-    <ScrollableOverlay keyboardAvoid outerClassName="h-full" className="w-full">
+    <ScrollableOverlay outerClassName="h-full" className="w-full">
       <div className="mx-auto w-full max-w-3xl p-3 sm:p-6 sm:pt-8">
 
         {/* Header */}
@@ -154,8 +171,8 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
               <div className="h-10">
                 <SortableTabsStrip
                   items={[
-                     { id: 'manual', label: '手动' },
-                     { id: 'external', label: '外部' },
+                    { id: 'manual', label: t('settings.skills.catalog.page.mode.manual') },
+                    { id: 'external', label: t('settings.skills.catalog.page.mode.external') },
                   ]}
                   activeId={mode}
                   onSelect={(next) => onModeChange(next as 'manual' | 'external')}
@@ -167,13 +184,13 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
               </div>
             </div>
           )}
-          <h2 className="typography-ui-header font-semibold text-foreground px-1">技能目录</h2>
+          <h2 className="typography-ui-header font-semibold text-foreground px-1">{t('settings.skills.catalog.page.title')}</h2>
         </div>
 
         {/* Source & Search */}
         <div className="mb-8">
           <div className="mb-1 px-1">
-            <h3 className="typography-ui-header font-medium text-foreground">来源仓库</h3>
+            <h3 className="typography-ui-header font-medium text-foreground">{t('settings.skills.catalog.page.section.sourceRepository')}</h3>
           </div>
 
           <section className="px-2 pb-2 pt-0 space-y-0">
@@ -183,7 +200,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 onValueChange={(v) => setSelectedSource(v)}
               >
                 <SelectTrigger className="w-fit">
-                  <SelectValue placeholder="选择来源" />
+                  <SelectValue placeholder={t('settings.skills.catalog.page.field.selectSourcePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent align="start">
                   {sources.map((src) => (
@@ -206,7 +223,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                   }
                 }}
                 disabled={isLoadingCatalog || isLoadingSource}
-                title="刷新"
+                title={t('settings.skills.catalog.page.actions.refreshTitle')}
               >
                 <RiRefreshLine className={cn("h-3.5 w-3.5", (isLoadingCatalog || isLoadingSource) && "animate-spin")} />
               </Button>
@@ -218,7 +235,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                   className="!font-normal h-6 w-6 px-0 text-[var(--status-error)] hover:text-[var(--status-error)]"
                   onClick={() => setIsRemoveCatalogDialogOpen(true)}
                   disabled={isRemovingCatalog}
-                  title="移除目录"
+                  title={t('settings.skills.catalog.page.actions.removeCatalogTitle')}
                 >
                   <RiDeleteBinLine className="h-3.5 w-3.5" />
                 </Button>
@@ -229,7 +246,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 className="!font-normal gap-1"
                 onClick={() => setAddCatalogOpen(true)}
               >
-                <RiAddLine className="h-3.5 w-3.5" /> 添加目录
+                <RiAddLine className="h-3.5 w-3.5" /> {t('settings.skills.catalog.page.actions.addCatalog')}
               </Button>
             </div>
 
@@ -239,12 +256,14 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="搜索技能..."
+                  placeholder={t('settings.skills.catalog.shared.field.searchSkillsPlaceholder')}
                   className="h-7 pl-8 w-full sm:w-64"
                 />
               </div>
               <span className="typography-meta text-muted-foreground mt-1 block">
-                {isLoadingCatalog ? '加载中...' : `找到 ${filtered.length} 个技能`}
+                {isLoadingCatalog
+                  ? t('settings.skills.catalog.page.loading.catalog')
+                  : t('settings.skills.catalog.page.foundCount', { count: filtered.length })}
               </span>
             </div>
           </section>
@@ -253,7 +272,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
         {/* Error State */}
         {lastCatalogError && (
           <div className="mb-8 rounded-lg border border-[var(--status-error-border)] bg-[var(--status-error-background)] px-4 py-3">
-            <div className="typography-ui-label font-medium text-[var(--status-error)]">目录错误</div>
+            <div className="typography-ui-label font-medium text-[var(--status-error)]">{t('settings.skills.catalog.page.error.catalogTitle')}</div>
             <div className="typography-meta text-[var(--status-error)]/80 mt-1">{lastCatalogError.message}</div>
           </div>
         )}
@@ -263,13 +282,13 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
           <section className="px-2 pb-2 pt-0">
             {filtered.length === 0 && !isLoadingSource ? (
               <div className="py-8 text-center text-muted-foreground">
-                  <p className="typography-body">未找到技能</p>
-                  <p className="typography-meta mt-1 opacity-75">请尝试其他搜索条件或刷新目录</p>
+                <p className="typography-body">{t('settings.skills.catalog.page.empty.noSkillsTitle')}</p>
+                <p className="typography-meta mt-1 opacity-75">{t('settings.skills.catalog.page.empty.noSkillsDescription')}</p>
               </div>
             ) : isLoadingSource ? (
               <div className="py-8 text-center text-muted-foreground">
                 <RiRefreshLine className="mx-auto mb-3 h-5 w-5 animate-spin opacity-50" />
-                  <p className="typography-meta">正在加载技能...</p>
+                <p className="typography-meta">{t('settings.skills.catalog.page.loading.skills')}</p>
               </div>
             ) : (
               <div className="divide-y divide-[var(--surface-subtle)]">
@@ -285,12 +304,12 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                             <span className="typography-ui-label font-medium text-foreground truncate">{item.skillName}</span>
                             {installed && (
                               <span className="typography-micro text-[var(--status-success)] bg-[var(--status-success)]/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                                已安装（{installedScope === 'project' ? '项目' : installedScope === 'user' ? '用户' : '未知'}）
+                                {t('settings.skills.catalog.page.badge.installed', { scope: installedScope || t('settings.skills.catalog.page.badge.unknown') })}
                               </span>
                             )}
                             {!item.installable && (
                               <span className="typography-micro text-[var(--status-warning)] bg-[var(--status-warning)]/10 px-1.5 py-0.5 rounded flex-shrink-0">
-                                不可安装
+                                {t('settings.skills.catalog.page.badge.notInstallable')}
                               </span>
                             )}
                           </div>
@@ -298,13 +317,13 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                           {item.description ? (
                             <div className="typography-meta text-muted-foreground mt-0.5 line-clamp-2">{item.description}</div>
                           ) : (
-                            <div className="typography-meta text-muted-foreground/50 mt-0.5 italic">未提供描述</div>
+                            <div className="typography-meta text-muted-foreground/50 mt-0.5 italic">{t('settings.skills.catalog.shared.noDescription')}</div>
                           )}
 
                           {item.clawdhub && (
                             <div className="typography-micro text-muted-foreground mt-1.5 flex items-center gap-3">
                               {item.clawdhub.owner && (
-                                <span>作者 <span className="font-medium text-foreground/80">{item.clawdhub.owner}</span></span>
+                                <span>{t('settings.skills.catalog.page.byOwnerPrefix')} <span className="font-medium text-foreground/80">{item.clawdhub.owner}</span></span>
                               )}
                               <span className="flex items-center gap-1">
                                 <RiDownloadLine className="h-3 w-3" />
@@ -337,7 +356,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                             setInstallDialogOpen(true);
                           }}
                         >
-                          安装
+                          {t('settings.skills.catalog.shared.actions.install')}
                         </Button>
                       </div>
                     </div>
@@ -356,7 +375,7 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 onClick={() => void loadMoreClawdHub()}
                 disabled={isLoadingMore}
               >
-                {isLoadingMore ? '加载中...' : '加载更多技能'}
+                {isLoadingMore ? t('settings.skills.catalog.page.loading.more') : t('settings.skills.catalog.page.actions.loadMoreSkills')}
               </Button>
             </div>
           )}
@@ -376,8 +395,8 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
         >
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>移除目录</DialogTitle>
-              <DialogDescription>确定要移除此目录吗？</DialogDescription>
+              <DialogTitle>{t('settings.skills.catalog.page.removeDialog.title')}</DialogTitle>
+              <DialogDescription>{t('settings.skills.catalog.page.removeDialog.description')}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
@@ -386,10 +405,10 @@ export const SkillsCatalogPage: React.FC<SkillsCatalogPageProps> = ({ mode, onMo
                 onClick={() => setIsRemoveCatalogDialogOpen(false)}
                 disabled={isRemovingCatalog}
               >
-                取消
+                {t('settings.common.actions.cancel')}
               </Button>
               <Button size="sm" variant="destructive" onClick={() => void removeSelectedCatalog()} disabled={isRemovingCatalog}>
-                移除目录
+                {t('settings.skills.catalog.page.actions.removeCatalog')}
               </Button>
             </DialogFooter>
           </DialogContent>

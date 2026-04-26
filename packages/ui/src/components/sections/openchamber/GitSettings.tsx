@@ -6,7 +6,7 @@ import { useConfigStore } from '@/stores/useConfigStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
 import { setFilesViewShowGitignored, useFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
-import { useI18n } from '@/contexts/useI18n';
+import { useI18n } from '@/lib/i18n';
 
 export const GitSettings: React.FC = () => {
   const { t } = useI18n();
@@ -17,6 +17,13 @@ export const GitSettings: React.FC = () => {
   const setGitChangesViewMode = useUIStore((state) => state.setGitChangesViewMode);
 
   const [isLoading, setIsLoading] = React.useState(true);
+  const viewOptions = React.useMemo(
+    () => [
+      { id: 'flat' as const, label: t('settings.openchamber.git.option.flatList') },
+      { id: 'tree' as const, label: t('settings.openchamber.git.option.treeView') },
+    ],
+    [t]
+  );
 
   type GitSettingsPayload = {
     gitmojiEnabled?: boolean;
@@ -110,17 +117,14 @@ export const GitSettings: React.FC = () => {
   return (
     <div className="mb-8">
       <div className="mb-1 px-1">
-        <h3 className="typography-ui-header font-medium text-foreground">{t('settings.git.preferencesTitle')}</h3>
+        <h3 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.git.title')}</h3>
       </div>
 
       <section className="px-2 pb-2 pt-0 space-y-0.5">
         <div className="pt-1 pb-1">
-          <h4 className="typography-ui-header font-medium text-foreground">Changes View</h4>
-          <div role="radiogroup" aria-label="Git changes view mode" className="mt-0.5 space-y-0">
-            {[
-              { id: 'flat' as const, label: 'Flat List' },
-              { id: 'tree' as const, label: 'Tree View' },
-            ].map((option) => {
+          <h4 className="typography-ui-header font-medium text-foreground">{t('settings.openchamber.git.changesViewTitle')}</h4>
+          <div role="radiogroup" aria-label={t('settings.openchamber.git.changesViewAria')} className="mt-0.5 space-y-0">
+            {viewOptions.map((option) => {
               const selected = gitChangesViewMode === option.id;
               return (
                 <div
@@ -140,7 +144,7 @@ export const GitSettings: React.FC = () => {
                   <Radio
                     checked={selected}
                     onChange={() => { handleGitChangesViewModeChange(option.id); }}
-                    ariaLabel={`Git changes view mode: ${option.label}`}
+                    ariaLabel={t('settings.openchamber.git.optionAria', { option: option.label })}
                   />
                   <span className={selected ? 'typography-ui-label font-normal text-foreground' : 'typography-ui-label font-normal text-foreground/50'}>
                     {option.label}
@@ -171,9 +175,9 @@ export const GitSettings: React.FC = () => {
             onChange={(checked) => {
               void handleGitmojiChange(checked);
             }}
-            ariaLabel={t('settings.git.enableGitmojiPickerAria')}
+            ariaLabel={t('settings.openchamber.git.enableGitmojiAria')}
           />
-          <span className="typography-ui-label text-foreground">{t('settings.git.enableGitmojiPicker')}</span>
+          <span className="typography-ui-label text-foreground">{t('settings.openchamber.git.enableGitmoji')}</span>
         </div>
 
         <div
@@ -192,9 +196,9 @@ export const GitSettings: React.FC = () => {
           <Checkbox
             checked={showGitignored}
             onChange={setFilesViewShowGitignored}
-            ariaLabel={t('settings.git.showIgnoredFilesAria')}
+            ariaLabel={t('settings.openchamber.git.showGitignoredAria')}
           />
-          <span className="typography-ui-label text-foreground">{t('settings.git.showIgnoredFiles')}</span>
+          <span className="typography-ui-label text-foreground">{t('settings.openchamber.git.showGitignored')}</span>
         </div>
       </section>
     </div>

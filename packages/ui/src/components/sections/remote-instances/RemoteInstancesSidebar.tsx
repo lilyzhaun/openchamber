@@ -5,9 +5,9 @@ import { SettingsSidebarLayout } from '@/components/sections/shared/SettingsSide
 import { SettingsSidebarItem } from '@/components/sections/shared/SettingsSidebarItem';
 import { useDesktopSshStore } from '@/stores/useDesktopSshStore';
 import { useUIStore } from '@/stores/useUIStore';
-import { useI18n } from '@/contexts/useI18n';
 import { toast } from '@/components/ui';
 import type { DesktopSshInstance } from '@/lib/desktopSsh';
+import { useI18n } from '@/lib/i18n';
 
 type RemoteInstancesSidebarProps = {
   onItemSelect?: () => void;
@@ -29,26 +29,26 @@ const isPortInUseError = (error: unknown): boolean => {
   return message.includes('address already in use') || message.includes('eaddrinuse') || message.includes('port already in use');
 };
 
-const phaseLabel = (phase?: string): string => {
+const phaseLabelKey = (phase?: string) => {
   switch (phase) {
     case 'ready':
-      return 'Ready';
+      return 'settings.remoteInstances.sidebar.phase.ready';
     case 'error':
-      return 'Error';
+      return 'settings.remoteInstances.sidebar.phase.error';
     case 'degraded':
-      return 'Reconnect';
+      return 'settings.remoteInstances.sidebar.phase.reconnect';
     case 'installing':
-      return 'Installing';
+      return 'settings.remoteInstances.sidebar.phase.installing';
     case 'updating':
-      return 'Updating';
+      return 'settings.remoteInstances.sidebar.phase.updating';
     case 'forwarding':
-      return 'Forwarding';
+      return 'settings.remoteInstances.sidebar.phase.forwarding';
     case 'server_starting':
-      return 'Starting';
+      return 'settings.remoteInstances.sidebar.phase.starting';
     case 'master_connecting':
-      return 'Connecting';
+      return 'settings.remoteInstances.sidebar.phase.connecting';
     default:
-      return 'Idle';
+      return 'settings.remoteInstances.sidebar.phase.idle';
   }
 };
 
@@ -91,15 +91,15 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
   const handleAdd = React.useCallback(async () => {
     const id = makeId();
     try {
-      await createFromCommand(id, 'ssh user@example.com', 'New SSH Instance');
+      await createFromCommand(id, 'ssh user@example.com', t('settings.remoteInstances.sidebar.newSshInstanceName'));
       setSelectedId(id);
       onItemSelect?.();
     } catch (error) {
-      toast.error(t('settings.remoteInstancesSidebar.failedCreateSshInstance'), {
+      toast.error(t('settings.remoteInstances.sidebar.toast.createFailed'), {
         description: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [createFromCommand, onItemSelect, setSelectedId]);
+  }, [createFromCommand, onItemSelect, setSelectedId, t]);
 
   const connectWithPortRecovery = React.useCallback(async (instance: DesktopSshInstance) => {
     try {
@@ -110,7 +110,7 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
         throw error;
       }
 
-      const allow = window.confirm('Local port is already in use. Pick a random free local port and retry?');
+      const allow = window.confirm(t('settings.remoteInstances.sidebar.confirm.localPortInUseRetry'));
       if (!allow) {
         throw error;
       }
@@ -125,25 +125,25 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
 
       await upsertInstance(nextInstance);
       await connect(nextInstance.id);
-      toast.success(t('settings.remoteInstancesSidebar.retriedWithRandomLocalPort'));
+      toast.success(t('settings.remoteInstances.sidebar.toast.retriedWithRandomPort'));
     }
-  }, [connect, upsertInstance]);
+  }, [connect, t, upsertInstance]);
 
   return (
     <SettingsSidebarLayout
       variant="background"
       header={
         <div className="border-b px-3 pt-4 pb-3">
-          <h2 className="text-base font-semibold text-foreground mb-3">Remote Instances</h2>
+          <h2 className="text-base font-semibold text-foreground mb-3">{t('settings.remoteInstances.sidebar.title')}</h2>
           <div className="flex items-center justify-between gap-2">
-            <span className="typography-meta text-muted-foreground">Total {instances.length}</span>
+            <span className="typography-meta text-muted-foreground">{t('settings.remoteInstances.sidebar.total', { count: instances.length })}</span>
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-7 w-7 -my-1 text-muted-foreground"
               onClick={() => void handleAdd()}
-              aria-label="Add SSH instance"
+              aria-label={t('settings.remoteInstances.sidebar.actions.addSshInstance')}
             >
               <RiAddLine className="size-4" />
             </Button>
@@ -155,7 +155,7 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
         const status = statusesById[instance.id];
         const selected = instance.id === selectedId;
         const title = instance.nickname?.trim() || instance.sshParsed?.destination || instance.id;
-        const metadata = `${phaseLabel(status?.phase)}${status?.localUrl ? ` · ${status.localUrl}` : ''}`;
+        const metadata = `${t(phaseLabelKey(status?.phase))}${status?.localUrl ? ` · ${status.localUrl}` : ''}`;
         const isReady = status?.phase === 'ready';
         const canRetry = status?.phase === 'error' || status?.phase === 'degraded';
 
@@ -171,31 +171,36 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
             }}
             actions={[
               {
-                label: isReady ? 'Disconnect' : 'Connect',
+                label: isReady ? t('settings.remoteInstances.sidebar.actions.disconnect') : t('settings.remoteInstances.sidebar.actions.connect'),
                 icon: isReady ? RiStopLine : RiPlug2Line,
                 onClick: () => {
                   const op = isReady ? disconnect(instance.id) : connectWithPortRecovery(instance);
                   void op.catch((error) => {
-                    toast.error(t('settings.remoteInstancesSidebar.failedInstanceAction', { action: isReady ? t('settings.remoteInstancesSidebar.disconnectAction') : t('settings.remoteInstancesSidebar.connectAction') }), {
+                    toast.error(
+                      isReady
+                        ? t('settings.remoteInstances.sidebar.toast.disconnectFailed')
+                        : t('settings.remoteInstances.sidebar.toast.connectFailed'),
+                      {
                       description: error instanceof Error ? error.message : String(error),
-                    });
+                      }
+                    );
                   });
                 },
               },
               {
-                label: 'Retry',
+                label: t('settings.remoteInstances.sidebar.actions.retry'),
                 icon: RiRefreshLine,
                 onClick: () => {
                   if (!canRetry) return;
                   void retry(instance.id).catch((error) => {
-                    toast.error(t('settings.remoteInstancesSidebar.failedRetryConnection'), {
+                    toast.error(t('settings.remoteInstances.sidebar.toast.retryFailed'), {
                       description: error instanceof Error ? error.message : String(error),
                     });
                   });
                 },
               },
               {
-                label: 'Remove',
+                label: t('settings.remoteInstances.sidebar.actions.remove'),
                 icon: RiDeleteBinLine,
                 destructive: true,
                 onClick: () => {
@@ -205,7 +210,7 @@ export const RemoteInstancesSidebar: React.FC<RemoteInstancesSidebarProps> = ({ 
                       setSelectedId(next?.id || null);
                     }
                   }).catch((error) => {
-                    toast.error(t('settings.remoteInstancesSidebar.failedRemoveInstance'), {
+                    toast.error(t('settings.remoteInstances.sidebar.toast.removeFailed'), {
                       description: error instanceof Error ? error.message : String(error),
                     });
                   });

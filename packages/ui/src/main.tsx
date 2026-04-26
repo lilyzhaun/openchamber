@@ -6,13 +6,13 @@ import App from './App.tsx'
 import { SessionAuthGate } from './components/auth/SessionAuthGate'
 import { ThemeSystemProvider } from './contexts/ThemeSystemContext'
 import { ThemeProvider } from './components/providers/ThemeProvider'
-import { I18nProvider } from './contexts/i18n-provider'
 import './lib/debug'
 import { syncDesktopSettings, initializeAppearancePreferences } from './lib/persistence'
 import { startAppearanceAutoSave } from './lib/appearanceAutoSave'
 import { applyPersistedDirectoryPreferences } from './lib/directoryPersistence'
 import { startTypographyWatcher } from './lib/typographyWatcher'
 import { startModelPrefsAutoSave } from './lib/modelPrefsAutoSave'
+import { initializeLocale, I18nProvider } from './lib/i18n'
 import type { RuntimeAPIs } from './lib/api/types'
 
 declare global {
@@ -25,20 +25,24 @@ const runtimeAPIs = (typeof window !== 'undefined' && window.__OPENCHAMBER_RUNTI
   throw new Error('Runtime APIs not provided for legacy UI entrypoint.');
 })();
 
-// Keep appearance preferences blocking to avoid FOUC (flash of
-// unstyled content) for users with non-default themes. Defer the
-// remaining settings so they don't block first paint.
+initializeLocale();
+
+// Initialize settings asynchronously — the app renders with defaults first
+// and hydrates once persisted preferences are applied. Users with non-default
+// themes may briefly see default appearance on cold start; accepted trade-off
+// for faster time-to-first-paint.
 void initializeAppearancePreferences().then(() => {
   void Promise.all([
     syncDesktopSettings(),
     applyPersistedDirectoryPreferences(),
-  ]).then(() => {
-    startAppearanceAutoSave();
-    startModelPrefsAutoSave();
-    startTypographyWatcher();
-  }).catch((err) => {
+  ]).catch((err) => {
     console.error('[main] settings init failed:', err);
   });
+
+  // Start watchers regardless of whether secondary settings succeed.
+  startAppearanceAutoSave();
+  startModelPrefsAutoSave();
+  startTypographyWatcher();
 }).catch((err) => {
   console.error('[main] appearance init failed:', err);
 });
@@ -51,14 +55,14 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <ThemeSystemProvider>
-      <ThemeProvider>
-        <I18nProvider>
+    <I18nProvider>
+      <ThemeSystemProvider>
+        <ThemeProvider>
           <SessionAuthGate>
             <App apis={runtimeAPIs} />
           </SessionAuthGate>
-        </I18nProvider>
-      </ThemeProvider>
-    </ThemeSystemProvider>
+        </ThemeProvider>
+      </ThemeSystemProvider>
+    </I18nProvider>
   </StrictMode>,
 );

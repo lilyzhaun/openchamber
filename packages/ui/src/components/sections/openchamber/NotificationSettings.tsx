@@ -14,14 +14,33 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { useI18n } from '@/contexts/useI18n';
+import { useI18n } from '@/lib/i18n';
 
 const DEFAULT_NOTIFICATION_TEMPLATES = {
-  completion: { title: '{agent_name} is ready', message: '{model_name} completed the task' },
-  error: { title: 'Tool error', message: '{last_message}' },
-  question: { title: 'Input needed', message: '{last_message}' },
-  subtask: { title: '{agent_name} is ready', message: '{model_name} completed the task' },
+  completion: {
+    titleKey: 'settings.notifications.page.template.defaults.completion.title',
+    messageKey: 'settings.notifications.page.template.defaults.completion.message',
+  },
+  error: {
+    titleKey: 'settings.notifications.page.template.defaults.error.title',
+    messageKey: 'settings.notifications.page.template.defaults.error.message',
+  },
+  question: {
+    titleKey: 'settings.notifications.page.template.defaults.question.title',
+    messageKey: 'settings.notifications.page.template.defaults.question.message',
+  },
+  subtask: {
+    titleKey: 'settings.notifications.page.template.defaults.subtask.title',
+    messageKey: 'settings.notifications.page.template.defaults.subtask.message',
+  },
 } as const;
+type NotificationTemplateEvent = keyof typeof DEFAULT_NOTIFICATION_TEMPLATES;
+const TEMPLATE_EVENT_LABEL_KEYS = {
+  completion: 'settings.notifications.page.template.event.completion',
+  subtask: 'settings.notifications.page.template.event.subtask',
+  error: 'settings.notifications.page.template.event.error',
+  question: 'settings.notifications.page.template.event.question',
+} as const satisfies Record<NotificationTemplateEvent, string>;
 
 const UTILITY_PROVIDER_ID = 'zen';
 const UTILITY_PREFERRED_MODEL_ID = 'big-pickle';
@@ -114,19 +133,19 @@ export const NotificationSettings: React.FC = () => {
           })
           .filter((entry: { id: string; name: string } | null): entry is { id: string; name: string } => entry !== null);
       })
-        .then((models) => {
-          setFetchedZenModels(models);
-        })
-        .catch((error) => {
-          if (error?.name !== 'AbortError') {
-            console.warn(t('settings.notifications.debug.failedLoadZenModels'), error);
-          }
-        });
+      .then((models) => {
+        setFetchedZenModels(models);
+      })
+      .catch((error) => {
+        if (error?.name !== 'AbortError') {
+          console.warn('Failed to load zen utility models:', error);
+        }
+      });
 
     return () => {
       controller.abort();
     };
-  }, [providerZenModels, t]);
+  }, [providerZenModels]);
 
   const utilityModelOptions = React.useMemo(() => {
     return providerZenModels.length > 0 ? providerZenModels : fetchedZenModels;
@@ -153,10 +172,10 @@ export const NotificationSettings: React.FC = () => {
           gitModelId: '',
         });
       } catch (error) {
-        console.warn(t('settings.notifications.debug.failedSaveUtilityModel'), error);
+        console.warn('Failed to save utility model setting:', error);
       }
     },
-    [setSettingsZenModel, t]
+    [setSettingsZenModel]
   );
 
   React.useEffect(() => {
@@ -215,13 +234,13 @@ export const NotificationSettings: React.FC = () => {
         if (permission === 'granted') {
           setNativeNotificationsEnabled(true);
         } else {
-          toast.error(t('settings.notifications.toast.permissionDeniedTitle'), {
-            description: t('settings.notifications.toast.permissionDeniedDesc'),
+          toast.error(t('settings.notifications.page.toast.permissionDenied.title'), {
+            description: t('settings.notifications.page.toast.permissionDenied.description'),
           });
         }
       } catch (error) {
-        console.error(t('settings.notifications.debug.failedRequestPermission'), error);
-        toast.error(t('settings.notifications.toast.requestPermissionFailed'));
+        console.error('Failed to request notification permission:', error);
+        toast.error(t('settings.notifications.page.toast.requestPermissionFailed'));
       }
     } else if (checked && notificationPermission === 'granted') {
       setNativeNotificationsEnabled(true);
@@ -390,37 +409,37 @@ export const NotificationSettings: React.FC = () => {
   const handleTestNotification = async () => {
     const apis = getRegisteredRuntimeAPIs();
     if (!apis?.notifications) {
-      toast.error(t('settings.notifications.toast.apiUnavailable'));
+      toast.error(t('settings.notifications.page.toast.notificationsApiUnavailable'));
       return;
     }
 
     try {
       const success = await apis.notifications.notifyAgentCompletion({
-        title: t('settings.notifications.test.title'),
-        body: t('settings.notifications.test.body'),
+        title: t('settings.notifications.page.testNotification.title'),
+        body: t('settings.notifications.page.testNotification.body'),
         tag: 'openchamber-test',
       });
 
       if (success) {
-        toast.success(t('settings.notifications.toast.testSent'));
+        toast.success(t('settings.notifications.page.toast.testNotificationSent'));
       } else {
-        toast.error(t('settings.notifications.toast.testFailed'));
+        toast.error(t('settings.notifications.page.toast.testNotificationFailed'));
       }
     } catch (error) {
-      console.error(t('settings.notifications.debug.testFailed'), error);
-      toast.error(t('settings.notifications.toast.testFailed'));
+      console.error('Test notification failed:', error);
+      toast.error(t('settings.notifications.page.toast.testNotificationFailed'));
     }
   };
 
   const handleEnableBackgroundNotifications = async () => {
     if (!pushSupported) {
-      toast.error('Push notifications not supported');
+      toast.error(t('settings.notifications.page.toast.pushUnsupported'));
       return;
     }
 
     const apis = getRegisteredRuntimeAPIs();
     if (!apis?.push) {
-      toast.error('Push API not available');
+      toast.error(t('settings.notifications.page.toast.pushApiUnavailable'));
       return;
     }
 
@@ -430,23 +449,23 @@ export const NotificationSettings: React.FC = () => {
         const permission = await Notification.requestPermission();
         setNotificationPermission(permission);
         if (permission !== 'granted') {
-          toast.error('Notification permission denied', {
-            description: 'Enable notifications in your browser settings.',
+          toast.error(t('settings.notifications.page.toast.permissionDenied.title'), {
+            description: t('settings.notifications.page.toast.permissionDenied.enableInBrowser'),
           });
           return;
         }
       }
 
       if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
-        toast.error('Notification permission denied', {
-          description: 'Enable notifications in your browser settings.',
+        toast.error(t('settings.notifications.page.toast.permissionDenied.title'), {
+          description: t('settings.notifications.page.toast.permissionDenied.enableInBrowser'),
         });
         return;
       }
 
       const key = await apis.push.getVapidPublicKey();
       if (!key?.publicKey) {
-        toast.error('Failed to load push key');
+        toast.error(t('settings.notifications.page.toast.pushKeyLoadFailed'));
         return;
       }
 
@@ -488,16 +507,16 @@ export const NotificationSettings: React.FC = () => {
       );
 
       if (!ok?.ok) {
-        toast.error('Failed to enable background notifications');
+        toast.error(t('settings.notifications.page.toast.enableBackgroundFailed'));
         return;
       }
 
       setPushSubscribed(true);
-      toast.success('Background notifications enabled');
+      toast.success(t('settings.notifications.page.toast.backgroundEnabled'));
     } catch (error) {
       console.error('[Push] Enable failed:', error);
       const formatted = formatUnknownError(error);
-      toast.error('Failed to enable background notifications', {
+      toast.error(t('settings.notifications.page.toast.enableBackgroundFailed'), {
         description: formatted.summary,
       });
     } finally {
@@ -513,7 +532,7 @@ export const NotificationSettings: React.FC = () => {
 
     const apis = getRegisteredRuntimeAPIs();
     if (!apis?.push) {
-      toast.error('Push API not available');
+      toast.error(t('settings.notifications.page.toast.pushApiUnavailable'));
       return;
     }
 
@@ -530,7 +549,7 @@ export const NotificationSettings: React.FC = () => {
       await subscription.unsubscribe();
       await apis.push.unsubscribe({ endpoint });
       setPushSubscribed(false);
-      toast.success('Background notifications disabled');
+      toast.success(t('settings.notifications.page.toast.backgroundDisabled'));
     } finally {
       setPushBusy(false);
     }
@@ -543,7 +562,7 @@ export const NotificationSettings: React.FC = () => {
         <div className="mb-8">
           <div className="mb-1 px-1">
               <h3 className="typography-ui-header font-medium text-foreground">
-                Notification Delivery
+                {t('settings.notifications.page.delivery.title')}
               </h3>
           </div>
 
@@ -568,9 +587,9 @@ export const NotificationSettings: React.FC = () => {
                 onChange={(checked) => {
                   void handleToggleChange(checked);
                 }}
-                ariaLabel={t('settings.notifications.enableAria')}
+                ariaLabel={t('settings.notifications.page.delivery.enableAria')}
               />
-              <span className="typography-ui-label text-foreground">{t('settings.notifications.enable')}</span>
+              <span className="typography-ui-label text-foreground">{t('settings.notifications.page.delivery.enableLabel')}</span>
             </div>
 
             {nativeNotificationsEnabled && canShowNotifications && (
@@ -588,13 +607,13 @@ export const NotificationSettings: React.FC = () => {
                     }
                   }}
                 >
-                    <Checkbox
-                      checked={notificationMode === 'always'}
-                      onChange={(checked) => setNotificationMode(checked ? 'always' : 'hidden-only')}
-                      ariaLabel={t('settings.notifications.notifyWhileFocusedAria')}
-                    />
-                    <span className="typography-ui-label text-foreground">{t('settings.notifications.notifyWhileFocused')}</span>
-                  </div>
+                  <Checkbox
+                    checked={notificationMode === 'always'}
+                    onChange={(checked) => setNotificationMode(checked ? 'always' : 'hidden-only')}
+                    ariaLabel={t('settings.notifications.page.delivery.focusedAria')}
+                  />
+                  <span className="typography-ui-label text-foreground">{t('settings.notifications.page.delivery.focusedLabel')}</span>
+                </div>
 
                 <div className="py-2">
                   <Button
@@ -603,7 +622,7 @@ export const NotificationSettings: React.FC = () => {
                     size="sm"
                     onClick={() => void handleTestNotification()}
                   >
-                    {t('settings.notifications.test.send')}
+                    {t('settings.notifications.page.delivery.testAction')}
                   </Button>
                 </div>
               </>
@@ -613,16 +632,16 @@ export const NotificationSettings: React.FC = () => {
           {isBrowser && (
             <div className="mt-1 px-2">
               <p className="typography-meta text-muted-foreground/70">
-                {t('settings.notifications.browserPermissionHint')}
+                {t('settings.notifications.page.delivery.browserPermissionHint')}
               </p>
               {notificationPermission === 'denied' && (
                 <p className="typography-meta text-[var(--status-error)] mt-1">
-                  {t('settings.notifications.permissionDeniedInline')}
+                  {t('settings.notifications.page.delivery.permissionDenied')}
                 </p>
               )}
               {notificationPermission === 'granted' && !nativeNotificationsEnabled && (
                 <p className="typography-meta text-muted-foreground/70 mt-1">
-                  {t('settings.notifications.permissionGrantedButDisabled')}
+                  {t('settings.notifications.page.delivery.permissionGrantedButDisabled')}
                 </p>
               )}
             </div>
@@ -630,7 +649,7 @@ export const NotificationSettings: React.FC = () => {
           {isVSCode && (
             <div className="mt-1 px-2">
               <p className="typography-meta text-muted-foreground/70">
-                {t('settings.notifications.vscodeHint')}
+                {t('settings.notifications.page.delivery.vscodeHint')}
               </p>
             </div>
           )}
@@ -642,7 +661,7 @@ export const NotificationSettings: React.FC = () => {
             <div className="mb-8">
               <div className="mb-1 px-1">
                 <h3 className="typography-ui-header font-medium text-foreground">
-                  {t('settings.notifications.eventsTitle')}
+                  {t('settings.notifications.page.events.title')}
                 </h3>
               </div>
 
@@ -660,8 +679,8 @@ export const NotificationSettings: React.FC = () => {
                     }
                   }}
                 >
-                  <Checkbox checked={notifyOnCompletion} onChange={setNotifyOnCompletion} ariaLabel={t('settings.notifications.events.completionAria')} />
-                  <span className="typography-ui-label text-foreground">{t('settings.notifications.events.completion')}</span>
+                  <Checkbox checked={notifyOnCompletion} onChange={setNotifyOnCompletion} ariaLabel={t('settings.notifications.page.events.completionAria')} />
+                  <span className="typography-ui-label text-foreground">{t('settings.notifications.page.events.completionLabel')}</span>
                 </div>
 
                 <div
@@ -677,8 +696,8 @@ export const NotificationSettings: React.FC = () => {
                     }
                   }}
                 >
-                  <Checkbox checked={notifyOnSubtasks} onChange={setNotifyOnSubtasks} ariaLabel={t('settings.notifications.events.subtaskAria')} />
-                  <span className="typography-ui-label text-foreground">{t('settings.notifications.events.subtask')}</span>
+                  <Checkbox checked={notifyOnSubtasks} onChange={setNotifyOnSubtasks} ariaLabel={t('settings.notifications.page.events.subtaskAria')} />
+                  <span className="typography-ui-label text-foreground">{t('settings.notifications.page.events.subtaskLabel')}</span>
                 </div>
 
                 <div
@@ -694,8 +713,8 @@ export const NotificationSettings: React.FC = () => {
                     }
                   }}
                 >
-                  <Checkbox checked={notifyOnError} onChange={setNotifyOnError} ariaLabel={t('settings.notifications.events.errorAria')} />
-                  <span className="typography-ui-label text-foreground">{t('settings.notifications.events.error')}</span>
+                  <Checkbox checked={notifyOnError} onChange={setNotifyOnError} ariaLabel={t('settings.notifications.page.events.errorAria')} />
+                  <span className="typography-ui-label text-foreground">{t('settings.notifications.page.events.errorLabel')}</span>
                 </div>
 
                 <div
@@ -711,8 +730,8 @@ export const NotificationSettings: React.FC = () => {
                     }
                   }}
                 >
-                  <Checkbox checked={notifyOnQuestion} onChange={setNotifyOnQuestion} ariaLabel={t('settings.notifications.events.questionAria')} />
-                  <span className="typography-ui-label text-foreground">{t('settings.notifications.events.question')}</span>
+                  <Checkbox checked={notifyOnQuestion} onChange={setNotifyOnQuestion} ariaLabel={t('settings.notifications.page.events.questionAria')} />
+                  <span className="typography-ui-label text-foreground">{t('settings.notifications.page.events.questionLabel')}</span>
                 </div>
               </section>
             </div>
@@ -721,36 +740,43 @@ export const NotificationSettings: React.FC = () => {
             <div className="mb-8">
               <div className="mb-1 px-1">
                 <h3 className="typography-ui-header font-medium text-foreground">
-                  {t('settings.notifications.templatesTitle')}
+                  {t('settings.notifications.page.template.title')}
                 </h3>
                 <p className="typography-meta text-muted-foreground mt-0.5">
-                  {t('settings.notifications.templateVariablesLabel')}: <code className="text-[var(--primary-base)]">{'{project_name}'}</code> <code className="text-[var(--primary-base)]">{'{worktree}'}</code> <code className="text-[var(--primary-base)]">{'{branch}'}</code> <code className="text-[var(--primary-base)]">{'{session_name}'}</code> <code className="text-[var(--primary-base)]">{'{agent_name}'}</code> <code className="text-[var(--primary-base)]">{'{model_name}'}</code> <code className="text-[var(--primary-base)]">{'{last_message}'}</code>
+                  {t('settings.notifications.page.template.variablesLabel')}{' '}
+                  <code className="text-[var(--primary-base)]">{'{project_name}'}</code>{' '}
+                  <code className="text-[var(--primary-base)]">{'{worktree}'}</code>{' '}
+                  <code className="text-[var(--primary-base)]">{'{branch}'}</code>{' '}
+                  <code className="text-[var(--primary-base)]">{'{session_name}'}</code>{' '}
+                  <code className="text-[var(--primary-base)]">{'{agent_name}'}</code>{' '}
+                  <code className="text-[var(--primary-base)]">{'{model_name}'}</code>{' '}
+                  <code className="text-[var(--primary-base)]">{'{last_message}'}</code>
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3">
-                {(['completion', 'subtask', 'error', 'question'] as const).map((event) => (
+                {(['completion', 'subtask', 'error', 'question'] as const).map((event: NotificationTemplateEvent) => (
                   <section key={event} className="p-2">
                     <span className="typography-ui-label text-foreground font-normal capitalize block">
-                      {event === 'subtask' ? t('settings.notifications.events.subtask') : (event === 'completion' ? t('settings.notifications.events.completion') : event === 'error' ? t('settings.notifications.events.error') : t('settings.notifications.events.question'))}
+                      {t(TEMPLATE_EVENT_LABEL_KEYS[event])}
                     </span>
                     <div className="mt-1.5 space-y-2">
                       <div>
-                        <label className="typography-micro text-muted-foreground block mb-1">{t('settings.notifications.templateTitleLabel')}</label>
+                        <label className="typography-micro text-muted-foreground block mb-1">{t('settings.notifications.page.template.field.title')}</label>
                         <Input
                           value={notificationTemplates[event].title}
                           onChange={(e) => updateTemplate(event, 'title', e.target.value)}
                           className="h-7"
-                          placeholder={DEFAULT_NOTIFICATION_TEMPLATES[event].title}
+                          placeholder={t(DEFAULT_NOTIFICATION_TEMPLATES[event].titleKey)}
                         />
                       </div>
                       <div>
-                        <label className="typography-micro text-muted-foreground block mb-1">{t('settings.notifications.templateMessageLabel')}</label>
+                        <label className="typography-micro text-muted-foreground block mb-1">{t('settings.notifications.page.template.field.message')}</label>
                         <Input
                           value={notificationTemplates[event].message}
                           onChange={(e) => updateTemplate(event, 'message', e.target.value)}
                           className="h-7"
-                          placeholder={DEFAULT_NOTIFICATION_TEMPLATES[event].message}
+                          placeholder={t(DEFAULT_NOTIFICATION_TEMPLATES[event].messageKey)}
                         />
                       </div>
                     </div>
@@ -763,7 +789,7 @@ export const NotificationSettings: React.FC = () => {
             <div className="mb-8">
               <div className="mb-1 px-1">
                 <h3 className="typography-ui-header font-medium text-foreground">
-                  {t('settings.notifications.summarizationTitle')}
+                  {t('settings.notifications.page.summary.title')}
                 </h3>
               </div>
 
@@ -781,29 +807,31 @@ export const NotificationSettings: React.FC = () => {
                     }
                   }}
                 >
-                    <Checkbox
-                      checked={summarizeLastMessage}
-                      onChange={setSummarizeLastMessage}
-                      ariaLabel={t('settings.notifications.summarizeLastMessageAria')}
-                    />
-                    <span className="typography-ui-label text-foreground">{t('settings.notifications.summarizeLastMessage')}</span>
+                  <Checkbox
+                    checked={summarizeLastMessage}
+                    onChange={setSummarizeLastMessage}
+                    ariaLabel={t('settings.notifications.page.summary.toggleAria')}
+                  />
+                  <span className="typography-ui-label text-foreground">{t('settings.notifications.page.summary.toggleLabel')}</span>
                 </div>
                 <div className="pl-6 pb-1">
                   <span className="typography-meta text-muted-foreground">
-                    Requires <code className="text-[var(--primary-base)]">{'{last_message}'}</code> in the notification template.
+                    {t('settings.notifications.page.summary.requiresTemplateVariable')}
+                    {' '}
+                    <code className="text-[var(--primary-base)]">{'{last_message}'}</code>.
                   </span>
                 </div>
 
                 <div className={cn("flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:gap-8")}>
                   <div className="flex min-w-0 flex-col sm:w-56 shrink-0">
                     <div className="flex items-center gap-2">
-                      <span className="typography-ui-label text-foreground">{t('settings.notifications.summarizationModel')}</span>
+                      <span className="typography-ui-label text-foreground">{t('settings.notifications.page.summary.modelLabel')}</span>
                       <Tooltip delayDuration={1000}>
                         <TooltipTrigger asChild>
                           <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent sideOffset={8} className="max-w-xs">
-                          {t('settings.notifications.summarizationModelTooltip')}
+                          {t('settings.notifications.page.summary.modelTooltip')}
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -814,10 +842,10 @@ export const NotificationSettings: React.FC = () => {
                       onValueChange={handleUtilityModelChange}
                     >
                       <SelectTrigger className="w-fit min-w-[220px]">
-                        <SelectValue placeholder={t('settings.notifications.notSelected')} />
+                        <SelectValue placeholder={t('settings.notifications.page.summary.notSelected')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={UTILITY_NOT_SELECTED_VALUE}>{t('settings.notifications.notSelected')}</SelectItem>
+                        <SelectItem value={UTILITY_NOT_SELECTED_VALUE}>{t('settings.notifications.page.summary.notSelected')}</SelectItem>
                         {utilityModelOptions.map((model) => (
                           <SelectItem key={model.id} value={model.id}>
                             {model.name}
@@ -832,8 +860,8 @@ export const NotificationSettings: React.FC = () => {
                   <>
                     <div className="flex items-center gap-8 py-1.5 mt-1 border-t border-[var(--surface-subtle)]">
                       <div className="flex min-w-0 flex-col w-56 shrink-0">
-                        <span className="typography-ui-label text-foreground">{t('settings.notifications.summaryThreshold')}</span>
-                        <span className="typography-meta text-muted-foreground">{t('settings.notifications.summaryThresholdHint')}</span>
+                        <span className="typography-ui-label text-foreground">{t('settings.notifications.page.summary.thresholdLabel')}</span>
+                        <span className="typography-meta text-muted-foreground">{t('settings.notifications.page.summary.thresholdHint')}</span>
                       </div>
                       <div className="flex items-center gap-2 w-fit">
                         <NumberInput
@@ -850,8 +878,8 @@ export const NotificationSettings: React.FC = () => {
                           onClick={() => setSummaryThreshold(DEFAULT_SUMMARY_THRESHOLD)}
                           disabled={summaryThreshold === DEFAULT_SUMMARY_THRESHOLD}
                           className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                          aria-label={t('settings.notifications.resetSummaryThresholdAria')}
-                          title={t('settings.common.reset')}
+                          aria-label={t('settings.notifications.page.summary.resetThresholdAria')}
+                          title={t('settings.common.actions.reset')}
                         >
                           <RiRestartLine className="h-3.5 w-3.5" />
                         </Button>
@@ -859,8 +887,8 @@ export const NotificationSettings: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-8 py-1.5">
                       <div className="flex min-w-0 flex-col w-56 shrink-0">
-                        <span className="typography-ui-label text-foreground">{t('settings.notifications.summaryLength')}</span>
-                        <span className="typography-meta text-muted-foreground">{t('settings.notifications.summaryLengthHint')}</span>
+                        <span className="typography-ui-label text-foreground">{t('settings.notifications.page.summary.lengthLabel')}</span>
+                        <span className="typography-meta text-muted-foreground">{t('settings.notifications.page.summary.lengthHint')}</span>
                       </div>
                       <div className="flex items-center gap-2 w-fit">
                         <NumberInput
@@ -877,8 +905,8 @@ export const NotificationSettings: React.FC = () => {
                           onClick={() => setSummaryLength(DEFAULT_SUMMARY_LENGTH)}
                           disabled={summaryLength === DEFAULT_SUMMARY_LENGTH}
                           className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                          aria-label={t('settings.notifications.resetSummaryLengthAria')}
-                          title={t('settings.common.reset')}
+                          aria-label={t('settings.notifications.page.summary.resetLengthAria')}
+                          title={t('settings.common.actions.reset')}
                         >
                           <RiRestartLine className="h-3.5 w-3.5" />
                         </Button>
@@ -888,8 +916,8 @@ export const NotificationSettings: React.FC = () => {
                 ) : (
                   <div className={cn("py-1.5 mt-1 border-t border-[var(--surface-subtle)]", isMobile ? "flex flex-col gap-3" : "flex items-center gap-8")}>
                     <div className={cn("flex min-w-0 flex-col", isMobile ? "w-full" : "w-56 shrink-0")}>
-                      <span className="typography-ui-label text-foreground">{t('settings.notifications.maxLastMessageLength')}</span>
-                      <span className="typography-meta text-muted-foreground">{t('settings.notifications.maxLastMessageLengthHint')}</span>
+                      <span className="typography-ui-label text-foreground">{t('settings.notifications.page.summary.maxLengthLabel')}</span>
+                      <span className="typography-meta text-muted-foreground">{t('settings.notifications.page.summary.maxLengthHint')}</span>
                     </div>
                     <div className={cn("flex items-center gap-2", isMobile ? "w-full" : "w-fit")}>
                       <NumberInput
@@ -906,8 +934,8 @@ export const NotificationSettings: React.FC = () => {
                         onClick={() => setMaxLastMessageLength(DEFAULT_MAX_LAST_MESSAGE_LENGTH)}
                         disabled={maxLastMessageLength === DEFAULT_MAX_LAST_MESSAGE_LENGTH}
                         className="h-7 w-7 px-0 text-muted-foreground hover:text-foreground"
-                        aria-label={t('settings.notifications.resetMaxLastMessageLengthAria')}
-                        title={t('settings.common.reset')}
+                        aria-label={t('settings.notifications.page.summary.resetMaxLengthAria')}
+                        title={t('settings.common.actions.reset')}
                       >
                         <RiRestartLine className="h-3.5 w-3.5" />
                       </Button>
@@ -923,9 +951,9 @@ export const NotificationSettings: React.FC = () => {
         {isBrowser && (
           <div className="mb-8">
             <div className="mb-1 px-1">
-                <h3 className="typography-ui-header font-medium text-foreground">
-                  {t('settings.notifications.backgroundPushTitle')}
-                </h3>
+              <h3 className="typography-ui-header font-medium text-foreground">
+                {t('settings.notifications.page.push.title')}
+              </h3>
             </div>
 
             <section className="px-2 pb-2 pt-0">
@@ -940,19 +968,21 @@ export const NotificationSettings: React.FC = () => {
                       void handleDisableBackgroundNotifications();
                     }
                   }}
-                  ariaLabel={t('settings.notifications.enablePushAria')}
+                  ariaLabel={t('settings.notifications.page.push.enableAria')}
                 />
                 <div className="flex min-w-0 flex-col">
-                  <span className={cn("typography-ui-label", !pushSupported ? "text-muted-foreground" : "text-foreground")}>{t('settings.notifications.enablePush')}</span>
+                  <span className={cn("typography-ui-label", !pushSupported ? "text-muted-foreground" : "text-foreground")}>
+                    {t('settings.notifications.page.push.enableLabel')}
+                  </span>
                   <span className="typography-meta text-muted-foreground">
                     {!pushSupported
-                      ? t('settings.notifications.pushUnsupportedHint')
-                      : t('settings.notifications.pushSupportedHint')}
+                      ? t('settings.notifications.page.push.unsupportedHint')
+                      : t('settings.notifications.page.push.supportedHint')}
                   </span>
                 </div>
                 {pushBusy && (
                   <div className="pt-0.5 text-muted-foreground">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-current animate-busy-pulse" aria-label="Loading" />
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-current animate-busy-pulse" aria-label={t('settings.notifications.page.push.loadingAria')} />
                   </div>
                 )}
               </div>

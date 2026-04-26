@@ -20,15 +20,18 @@ import {
 import { RiAddLine, RiTerminalBoxLine, RiMore2Line, RiDeleteBinLine, RiFileCopyLine, RiRestartLine, RiEditLine } from '@remixicon/react';
 import { useCommandsStore, isCommandBuiltIn, type Command } from '@/stores/useCommandsStore';
 import { useSkillsStore } from '@/stores/useSkillsStore';
+import { useShallow } from 'zustand/react/shallow';
 import { ScrollableOverlay } from '@/components/ui/ScrollableOverlay';
 import { cn } from '@/lib/utils';
 import { SettingsProjectSelector } from '@/components/sections/shared/SettingsProjectSelector';
+import { useI18n } from '@/lib/i18n';
 
 interface CommandsSidebarProps {
   onItemSelect?: () => void;
 }
 
 export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }) => {
+  const { t } = useI18n();
   const [renameDialogCommand, setRenameDialogCommand] = React.useState<Command | null>(null);
   const [renameNewName, setRenameNewName] = React.useState('');
   const [confirmActionCommand, setConfirmActionCommand] = React.useState<Command | null>(null);
@@ -44,8 +47,17 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
     createCommand,
     deleteCommand,
     loadCommands,
-  } = useCommandsStore();
-  const { skills, loadSkills } = useSkillsStore();
+  } = useCommandsStore(useShallow((s) => ({
+    selectedCommandName: s.selectedCommandName,
+    commands: s.commands,
+    setSelectedCommand: s.setSelectedCommand,
+    setCommandDraft: s.setCommandDraft,
+    createCommand: s.createCommand,
+    deleteCommand: s.deleteCommand,
+    loadCommands: s.loadCommands,
+  })));
+  const skills = useSkillsStore((s) => s.skills);
+  const loadSkills = useSkillsStore((s) => s.loadSkills);
 
   React.useEffect(() => {
     loadCommands();
@@ -90,7 +102,7 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
 
   const handleDeleteCommand = async (command: Command) => {
     if (isCommandBuiltIn(command)) {
-      toast.error('内置命令不能删除');
+      toast.error(t('settings.commands.sidebar.toast.builtInCannotDelete'));
       return;
     }
 
@@ -122,15 +134,15 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
 
     if (success) {
       if (confirmActionType === 'delete') {
-        toast.success(`命令“${confirmActionCommand.name}”已删除`);
+        toast.success(t('settings.commands.sidebar.toast.commandDeleted', { name: confirmActionCommand.name }));
       } else {
-        toast.success(`命令“${confirmActionCommand.name}”已重置为默认配置`);
+        toast.success(t('settings.commands.sidebar.toast.commandReset', { name: confirmActionCommand.name }));
       }
       closeConfirmActionDialog();
     } else if (confirmActionType === 'delete') {
-      toast.error('删除命令失败');
+      toast.error(t('settings.commands.sidebar.toast.deleteFailed'));
     } else {
-      toast.error('重置命令失败');
+      toast.error(t('settings.commands.sidebar.toast.resetFailed'));
     }
 
     setIsConfirmActionPending(false);
@@ -171,7 +183,7 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
     const sanitizedName = renameNewName.trim().replace(/\s+/g, '-');
 
     if (!sanitizedName) {
-      toast.error('命令名称不能为空');
+      toast.error(t('settings.commands.sidebar.toast.commandNameRequired'));
       return;
     }
 
@@ -181,7 +193,7 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
     }
 
     if (commands.some((cmd) => cmd.name === sanitizedName)) {
-      toast.error('已存在同名命令');
+      toast.error(t('settings.commands.sidebar.toast.commandExists'));
       return;
     }
 
@@ -198,13 +210,13 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
       // Delete old command
       const deleteSuccess = await deleteCommand(renameDialogCommand.name);
       if (deleteSuccess) {
-        toast.success(`命令已重命名为“${sanitizedName}”`);
+        toast.success(`Command renamed to "${sanitizedName}"`);
         setSelectedCommand(sanitizedName);
       } else {
-        toast.error('重命名后删除旧命令失败');
+        toast.error(t('settings.commands.sidebar.toast.removeOldAfterRenameFailed'));
       }
     } else {
-      toast.error('重命名命令失败');
+      toast.error(t('settings.commands.sidebar.toast.renameFailed'));
     }
 
     setRenameDialogCommand(null);
@@ -216,10 +228,10 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
   return (
     <div className={cn('flex h-full flex-col', bgClass)}>
       <div className="border-b px-3 pt-4 pb-3">
-        <h2 className="text-base font-semibold text-foreground mb-3">命令</h2>
+        <h2 className="text-base font-semibold text-foreground mb-3">{t('settings.commands.sidebar.title')}</h2>
         <SettingsProjectSelector className="mb-3" />
         <div className="flex items-center justify-between gap-2">
-          <span className="typography-meta text-muted-foreground">共 {commandOnlyItems.length} 个</span>
+          <span className="typography-meta text-muted-foreground">{t('settings.commands.sidebar.total', { count: commandOnlyItems.length })}</span>
           <Button size="sm"
             variant="ghost"
             className="h-7 w-7 px-0 -my-1 text-muted-foreground"
@@ -234,15 +246,15 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
         {commandOnlyItems.length === 0 ? (
           <div className="py-12 px-4 text-center text-muted-foreground">
             <RiTerminalBoxLine className="mx-auto mb-3 h-10 w-10 opacity-50" />
-            <p className="typography-ui-label font-medium">尚未配置命令</p>
-            <p className="typography-meta mt-1 opacity-75">使用上方的 + 按钮创建一个</p>
+            <p className="typography-ui-label font-medium">{t('settings.commands.sidebar.empty.title')}</p>
+            <p className="typography-meta mt-1 opacity-75">{t('settings.commands.sidebar.empty.description')}</p>
           </div>
         ) : (
           <>
             {builtInCommands.length > 0 && (
               <>
                 <div className="px-2 pb-1.5 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                   内置命令
+                  {t('settings.commands.sidebar.section.builtIn')}
                 </div>
                 {[...builtInCommands].sort((a, b) => a.name.localeCompare(b.name)).map((command) => (
                   <CommandListItem
@@ -266,7 +278,7 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
             {customCommands.length > 0 && (
               <>
                 <div className="px-2 pb-1.5 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                   自定义命令
+                  {t('settings.commands.sidebar.section.custom')}
                 </div>
                 {[...customCommands].sort((a, b) => a.name.localeCompare(b.name)).map((command) => (
                   <CommandListItem
@@ -301,11 +313,11 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{confirmActionType === 'delete' ? '删除命令' : '重置命令'}</DialogTitle>
+            <DialogTitle>{confirmActionType === 'delete' ? t('settings.commands.sidebar.dialog.deleteTitle') : t('settings.commands.sidebar.dialog.resetTitle')}</DialogTitle>
             <DialogDescription>
               {confirmActionType === 'delete'
-                 ? `确定要删除命令“${confirmActionCommand?.name}”吗？`
-                 : `确定要将命令“${confirmActionCommand?.name}”重置为默认配置吗？`}
+                ? t('settings.commands.sidebar.dialog.deleteDescription', { name: confirmActionCommand?.name ?? '' })
+                : t('settings.commands.sidebar.dialog.resetDescription', { name: confirmActionCommand?.name ?? '' })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -315,10 +327,10 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
               onClick={closeConfirmActionDialog}
               disabled={isConfirmActionPending}
             >
-              取消
+              {t('settings.common.actions.cancel')}
             </Button>
             <Button size="sm" onClick={handleConfirmAction} disabled={isConfirmActionPending}>
-              {confirmActionType === 'delete' ? '删除' : '重置'}
+              {confirmActionType === 'delete' ? t('settings.common.actions.delete') : t('settings.common.actions.reset')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -328,15 +340,15 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
       <Dialog open={renameDialogCommand !== null} onOpenChange={(open) => !open && setRenameDialogCommand(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>重命名命令</DialogTitle>
+            <DialogTitle>{t('settings.commands.sidebar.renameDialog.title')}</DialogTitle>
             <DialogDescription>
-              为命令“/{renameDialogCommand?.name}”输入一个新名称
+              {t('settings.commands.sidebar.renameDialog.description', { name: renameDialogCommand?.name ?? '' })}
             </DialogDescription>
           </DialogHeader>
           <Input
             value={renameNewName}
             onChange={(e) => setRenameNewName(e.target.value)}
-            placeholder="新命令名称..."
+            placeholder={t('settings.commands.sidebar.renameDialog.placeholder')}
             className="text-foreground placeholder:text-muted-foreground"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -350,10 +362,10 @@ export const CommandsSidebar: React.FC<CommandsSidebarProps> = ({ onItemSelect }
               variant="ghost"
               onClick={() => setRenameDialogCommand(null)}
             >
-              取消
+              {t('settings.common.actions.cancel')}
             </Button>
             <Button size="sm" onClick={handleRenameCommand}>
-              重命名
+              {t('settings.common.actions.rename')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -385,6 +397,7 @@ const CommandListItem: React.FC<CommandListItemProps> = ({
   isMenuOpen,
   onMenuOpenChange,
 }) => {
+  const { t } = useI18n();
   const isMobile = isMobileDeviceViaCSS();
   return (
     <div
@@ -409,7 +422,7 @@ const CommandListItem: React.FC<CommandListItemProps> = ({
             </span>
             {(command.scope || isCommandBuiltIn(command)) && (
               <span className="typography-micro text-muted-foreground bg-muted px-1 rounded flex-shrink-0 leading-none pb-px border border-border/50">
-                 {isCommandBuiltIn(command) ? '系统' : command.scope === 'project' ? '项目' : '用户'}
+                {isCommandBuiltIn(command) ? t('settings.agents.sidebar.badge.system') : command.scope}
               </span>
             )}
           </div>
@@ -439,7 +452,7 @@ const CommandListItem: React.FC<CommandListItemProps> = ({
                 }}
               >
                 <RiEditLine className="h-4 w-4 mr-px" />
-                重命名
+                {t('settings.common.actions.rename')}
               </DropdownMenuItem>
             )}
 
@@ -450,7 +463,7 @@ const CommandListItem: React.FC<CommandListItemProps> = ({
               }}
             >
               <RiFileCopyLine className="h-4 w-4 mr-px" />
-               复制
+              {t('settings.common.actions.duplicate')}
             </DropdownMenuItem>
 
             {onReset && (
@@ -461,7 +474,7 @@ const CommandListItem: React.FC<CommandListItemProps> = ({
                 }}
               >
                 <RiRestartLine className="h-4 w-4 mr-px" />
-                 重置
+                {t('settings.common.actions.reset')}
               </DropdownMenuItem>
             )}
 
@@ -474,7 +487,7 @@ const CommandListItem: React.FC<CommandListItemProps> = ({
                 className="text-destructive focus:text-destructive"
               >
                 <RiDeleteBinLine className="h-4 w-4 mr-px" />
-                 删除
+                {t('settings.common.actions.delete')}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
