@@ -16,7 +16,6 @@ import { useSessionStatusBootstrap } from '@/hooks/useSessionStatusBootstrap';
 import { useSessionAutoCleanup } from '@/hooks/useSessionAutoCleanup';
 import { useQueuedMessageAutoSend } from '@/hooks/useQueuedMessageAutoSend';
 import { useRouter } from '@/hooks/useRouter';
-import { useBrowserNotificationStream } from '@/hooks/useBrowserNotificationStream';
 import { usePushVisibilityBeacon } from '@/hooks/usePushVisibilityBeacon';
 import { usePwaManifestSync } from '@/hooks/usePwaManifestSync';
 import { usePwaInstallPrompt } from '@/hooks/usePwaInstallPrompt';
@@ -631,7 +630,6 @@ function App({ apis }: AppProps) {
   // Session attention now handled by notification-store via SSE events (session.idle/session.error)
 
   usePushVisibilityBeacon({ enabled: embeddedBackgroundWorkEnabled });
-  useBrowserNotificationStream({ enabled: embeddedBackgroundWorkEnabled });
   usePwaInstallPrompt();
 
   useWindowTitle();
