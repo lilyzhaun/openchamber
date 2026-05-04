@@ -295,6 +295,7 @@ interface FileRowProps {
   isExpanded: boolean;
   isActive: boolean;
   isMobile: boolean;
+  alwaysShowActions: boolean;
   status?: FileStatus | null;
   badge?: { modified: number; added: number } | null;
   permissions: {
@@ -319,6 +320,7 @@ const FileRow: React.FC<FileRowProps> = ({
   isExpanded,
   isActive,
   isMobile,
+  alwaysShowActions,
   status,
   badge,
   permissions,
@@ -395,8 +397,7 @@ const FileRow: React.FC<FileRowProps> = ({
       {(canRename || canCreateFile || canCreateFolder || canDelete || canReveal) && (
         <div className={cn(
           "absolute right-1 top-1/2 -translate-y-1/2",
-          !isMobile && "opacity-0 focus-within:opacity-100 group-hover:opacity-100",
-          isMobile && "opacity-100"
+          alwaysShowActions ? "opacity-100" : "opacity-0 focus-within:opacity-100 group-hover:opacity-100"
         )}>
           <DropdownMenu
             open={contextMenuPath === node.path}
@@ -498,7 +499,8 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
   const { t } = useI18n();
   const { files, runtime } = useRuntimeAPIs();
   const { currentTheme, availableThemes, lightThemeId, darkThemeId } = useThemeSystem();
-  const { isMobile, screenWidth } = useDeviceInfo();
+  const { isMobile, isTablet, screenWidth } = useDeviceInfo();
+  const alwaysShowActions = isMobile || isTablet;
   const showHidden = useDirectoryShowHidden();
   const showGitignored = useFilesViewShowGitignored();
 
@@ -1223,7 +1225,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
     };
   }, [currentDirectory, debouncedSearchQuery, searchFiles, showHidden, showGitignored]);
 
-  const readFile = React.useCallback(async (path: string, options?: { allowOutsideWorkspace?: boolean }): Promise<string> => {
+  const readFile = React.useCallback(async (path: string, options?: { allowOutsideWorkspace?: boolean; optional?: boolean }): Promise<string> => {
     if (files.readFile) {
       const result = await files.readFile(path, options);
       return result.content ?? '';
@@ -1233,7 +1235,13 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
     if (options?.allowOutsideWorkspace) {
       params.set('allowOutsideWorkspace', 'true');
     }
-    const response = await fetch(`/api/fs/read?${params.toString()}`);
+    if (options?.optional) {
+      params.set('optional', 'true');
+    }
+    const response = await fetch(`/api/fs/read?${params.toString()}`, {
+      // Avoid conditional requests (304 + empty body).
+      cache: options?.optional ? 'no-store' : 'default',
+    });
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: response.statusText }));
       throw new Error((error as { error?: string }).error || t('filesView.error.readFileFailed'));
@@ -1809,6 +1817,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
             isExpanded={isExpanded}
             isActive={isActive}
             isMobile={isMobile}
+            alwaysShowActions={alwaysShowActions}
             status={!isDir ? getFileStatus(node.path) : undefined}
             badge={isDir ? getFolderBadge(node.path) : undefined}
             permissions={fileRowPermissions}
@@ -2880,7 +2889,7 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full' }) => {
                           }}
                           className={cn(
                             'rounded-sm p-0.5 text-[var(--surface-muted-foreground)] hover:text-[var(--surface-foreground)]',
-                            !isActive && 'opacity-0 group-hover:opacity-100'
+                            !isActive && !alwaysShowActions && 'opacity-0 group-hover:opacity-100'
                           )}
                           aria-label={t('filesView.editor.closeFileAria', { name: file.name })}
                         >
