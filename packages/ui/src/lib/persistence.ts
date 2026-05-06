@@ -7,6 +7,7 @@ import { setDirectoryShowHidden } from '@/lib/directoryShowHidden';
 import { setFilesViewShowGitignored } from '@/lib/filesViewShowGitignored';
 import { loadAppearancePreferences, applyAppearancePreferences } from '@/lib/appearancePersistence';
 import { getRegisteredRuntimeAPIs } from '@/contexts/runtimeAPIRegistry';
+import { normalizeMobileKeyboardMode, setStoredMobileKeyboardMode } from '@/lib/mobileKeyboardMode';
 
 const persistToLocalStorage = (settings: DesktopSettings) => {
   if (typeof window === 'undefined') {
@@ -91,6 +92,9 @@ const persistToLocalStorage = (settings: DesktopSettings) => {
     } else {
       localStorage.removeItem('openchamber.pwaName');
     }
+  }
+  if (typeof settings.mobileKeyboardMode === 'string') {
+    setStoredMobileKeyboardMode(settings.mobileKeyboardMode);
   }
 };
 
@@ -467,6 +471,12 @@ const applyDesktopUiPreferences = (settings: DesktopSettings) => {
   if (typeof settings.appLanguage === 'string' && (settings.appLanguage === 'en' || settings.appLanguage === 'zh-CN')) {
     if (settings.appLanguage !== store.appLanguage) {
       store.setAppLanguage(settings.appLanguage);
+    }
+  }
+  if (typeof settings.mobileKeyboardMode === 'string') {
+    const mode = normalizeMobileKeyboardMode(settings.mobileKeyboardMode, store.mobileKeyboardMode);
+    if (mode !== store.mobileKeyboardMode) {
+      store.setMobileKeyboardMode(mode);
     }
   }
 
@@ -896,6 +906,12 @@ const sanitizeWebSettings = (payload: unknown): DesktopSettings | null => {
   }
   if (candidate.appLanguage === 'en' || candidate.appLanguage === 'zh-CN') {
     result.appLanguage = candidate.appLanguage;
+  }
+  if (typeof candidate.mobileKeyboardMode === 'string') {
+    const mode = normalizeMobileKeyboardMode(candidate.mobileKeyboardMode, undefined);
+    if (mode) {
+      result.mobileKeyboardMode = mode;
+    }
   }
 
   const favoriteModels = sanitizeModelRefs(candidate.favoriteModels, 64);
