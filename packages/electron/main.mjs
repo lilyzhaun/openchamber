@@ -111,10 +111,10 @@ const MINI_CHAT_MIN_WINDOW_HEIGHT = 480;
 const MAX_CAPTURE_PAGE_RECT_AREA = 4_000_000;
 const LOCAL_HOST_ID = 'local';
 const ENV_OVERRIDE_HOST_ID = '__env';
-const CHANGELOG_URL = 'https://raw.githubusercontent.com/btriapitsyn/openchamber/main/CHANGELOG.md';
-const UPDATE_METADATA_URL = 'https://github.com/btriapitsyn/openchamber/releases/latest/download/latest.json';
-const GITHUB_BUG_REPORT_URL = 'https://github.com/btriapitsyn/openchamber/issues/new?template=bug_report.yml';
-const GITHUB_FEATURE_REQUEST_URL = 'https://github.com/btriapitsyn/openchamber/issues/new?template=feature_request.yml';
+const CHANGELOG_URL = 'https://raw.githubusercontent.com/openchamber/openchamber/main/CHANGELOG.md';
+const UPDATE_METADATA_URL = 'https://github.com/openchamber/openchamber/releases/latest/download/latest.json';
+const GITHUB_BUG_REPORT_URL = 'https://github.com/openchamber/openchamber/issues/new?template=bug_report.yml';
+const GITHUB_FEATURE_REQUEST_URL = 'https://github.com/openchamber/openchamber/issues/new?template=feature_request.yml';
 const DISCORD_INVITE_URL = 'https://discord.gg/ZYRSdnwwKA';
 const INSTALLED_APPS_CACHE_TTL_SECS = 60 * 60 * 24;
 const INSTALLED_APPS_CACHE_FILE = 'discovered-apps.json';
@@ -1118,6 +1118,20 @@ const dispatchCheckForUpdates = () => {
   }
 };
 
+const reloadMenuTargetWindow = () => {
+  const target = getMenuTargetWindow();
+  if (!target || target.isDestroyed()) return;
+  target.webContents.reload();
+};
+
+const relaunchFromMenu = () => {
+  prepareForQuit();
+  setImmediate(() => {
+    app.relaunch();
+    app.exit(0);
+  });
+};
+
 const nextWindowLabel = () => {
   const value = state.windowCounter++;
   return value === 1 ? 'main' : `main-${value}`;
@@ -1558,7 +1572,7 @@ const compareSemver = (left, right) => {
 };
 
 const parseGithubRepo = () => {
-  return { owner: 'btriapitsyn', repo: 'openchamber' };
+  return { owner: 'openchamber', repo: 'openchamber' };
 };
 
 const setupAutoUpdater = () => {
@@ -2388,6 +2402,8 @@ const buildMacMenu = () => {
         },
         { type: 'separator' },
         { label: 'Settings', accelerator: 'Cmd+,', click: () => dispatchAction('settings') },
+        { label: 'Reload Webview', click: () => reloadMenuTargetWindow() },
+        { label: 'Restart', click: () => relaunchFromMenu() },
         { label: 'Command Palette', accelerator: 'Cmd+P', click: () => dispatchAction('command-palette') },
         { type: 'separator' },
         { role: 'services' },

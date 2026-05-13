@@ -13,8 +13,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { NumberInput } from '@/components/ui/number-input';
-import { RiPlayLine, RiStopLine, RiCloseLine, RiAppleLine, RiInformationLine } from '@remixicon/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Icon } from "@/components/icon/Icon";
 import { browserVoiceService } from '@/lib/voice/browserVoiceService';
 import { audioStreamService } from '@/lib/voice/audioStreamService';
 import { cn } from '@/lib/utils';
@@ -92,6 +92,8 @@ export const VoiceSettings: React.FC = () => {
     const setSttSilenceThresholdDb = useConfigStore((state) => state.setSttSilenceThresholdDb);
     const sttSilenceHoldMs = useConfigStore((state) => state.sttSilenceHoldMs);
     const setSttSilenceHoldMs = useConfigStore((state) => state.setSttSilenceHoldMs);
+    const sttTranscribeOnStop = useConfigStore((state) => state.sttTranscribeOnStop);
+    const setSttTranscribeOnStop = useConfigStore((state) => state.setSttTranscribeOnStop);
     const setShowMessageTTSButtons = useConfigStore((state) => state.setShowMessageTTSButtons);
     const voiceModeEnabled = useConfigStore((state) => state.voiceModeEnabled);
     const setVoiceModeEnabled = useConfigStore((state) => state.setVoiceModeEnabled);
@@ -445,7 +447,7 @@ export const VoiceSettings: React.FC = () => {
                                         <span className="typography-ui-label text-foreground">{t('settings.voice.page.field.provider')}</span>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
+                                                <Icon name="information" className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                                             </TooltipTrigger>
                                             <TooltipContent sideOffset={8} className="max-w-xs">
                                                 <ul className="space-y-1">
@@ -493,7 +495,7 @@ export const VoiceSettings: React.FC = () => {
                                                 onClick={() => setVoiceProvider('say')}
                                                 className="!font-normal"
                                             >
-                                                <RiAppleLine className="w-3.5 h-3.5 mr-0.5" />
+                                                <Icon name="apple" className="w-3.5 h-3.5 mr-0.5" />
                                                 {t('settings.voice.page.provider.say')}
                                             </Button>
                                         )}
@@ -528,7 +530,7 @@ export const VoiceSettings: React.FC = () => {
                                                 onClick={() => setOpenaiApiKey('')}
                                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                             >
-                                                <RiCloseLine className="w-3.5 h-3.5" />
+                                                <Icon name="close" className="w-3.5 h-3.5" />
                                             </button>
                                         )}
                                     </div>
@@ -559,7 +561,7 @@ export const VoiceSettings: React.FC = () => {
                                                     onClick={() => setOpenaiCompatibleUrl('')}
                                                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                                 >
-                                                    <RiCloseLine className="w-3.5 h-3.5" />
+                                                    <Icon name="close" className="w-3.5 h-3.5" />
                                                 </button>
                                             )}
                                         </div>
@@ -592,7 +594,7 @@ export const VoiceSettings: React.FC = () => {
                                                 />
                                             </div>
                                             <Button size="xs" variant="ghost" onClick={previewCompatibleVoice} title={t('settings.voice.page.actions.preview')} disabled={!openaiCompatibleUrl.trim()}>
-                                                {isCompatiblePreviewPlaying ? <RiStopLine className="w-3.5 h-3.5" /> : <RiPlayLine className="w-3.5 h-3.5" />}
+                                                {isCompatiblePreviewPlaying ? <Icon name="stop" className="w-3.5 h-3.5" /> : <Icon name="play" className="w-3.5 h-3.5" />}
                                             </Button>
                                         </div>
                                     </div>
@@ -616,7 +618,7 @@ export const VoiceSettings: React.FC = () => {
                                                 </SelectContent>
                                             </Select>
                                             <Button size="xs" variant="ghost" onClick={previewOpenAIVoice} title={t('settings.voice.page.actions.preview')}>
-                                                {isOpenAIPreviewPlaying ? <RiStopLine className="w-3.5 h-3.5" /> : <RiPlayLine className="w-3.5 h-3.5" />}
+                                                {isOpenAIPreviewPlaying ? <Icon name="stop" className="w-3.5 h-3.5" /> : <Icon name="play" className="w-3.5 h-3.5" />}
                                             </Button>
                                         </>
                                     )}
@@ -638,7 +640,7 @@ export const VoiceSettings: React.FC = () => {
                                                 </SelectContent>
                                             </Select>
                                             <Button size="xs" variant="ghost" onClick={previewVoice} title={t('settings.voice.page.actions.preview')}>
-                                                {isPreviewPlaying ? <RiStopLine className="w-3.5 h-3.5" /> : <RiPlayLine className="w-3.5 h-3.5" />}
+                                                {isPreviewPlaying ? <Icon name="stop" className="w-3.5 h-3.5" /> : <Icon name="play" className="w-3.5 h-3.5" />}
                                             </Button>
                                         </>
                                     )}
@@ -657,7 +659,7 @@ export const VoiceSettings: React.FC = () => {
                                                 </SelectContent>
                                             </Select>
                                             <Button size="xs" variant="ghost" onClick={previewBrowserVoice} title={t('settings.voice.page.actions.preview')}>
-                                                {isBrowserPreviewPlaying ? <RiStopLine className="w-3.5 h-3.5" /> : <RiPlayLine className="w-3.5 h-3.5" />}
+                                                {isBrowserPreviewPlaying ? <Icon name="stop" className="w-3.5 h-3.5" /> : <Icon name="play" className="w-3.5 h-3.5" />}
                                             </Button>
                                         </>
                                     )}
@@ -734,7 +736,7 @@ export const VoiceSettings: React.FC = () => {
                                     <span className="typography-ui-label text-foreground">{t('settings.voice.page.field.provider')}</span>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <RiInformationLine className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
+                                            <Icon name="information" className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
                                         </TooltipTrigger>
                                         <TooltipContent sideOffset={8} className="max-w-xs">
                                             <ul className="space-y-1">
@@ -769,6 +771,18 @@ export const VoiceSettings: React.FC = () => {
 
                         {sttProvider === 'server' && (
                             <div className="py-1.5 space-y-2">
+                                <div
+                                    className="group flex cursor-pointer items-center gap-2 py-1.5"
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-pressed={sttTranscribeOnStop}
+                                    onClick={() => setSttTranscribeOnStop(!sttTranscribeOnStop)}
+                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setSttTranscribeOnStop(!sttTranscribeOnStop); } }}
+                                >
+                                    <Checkbox checked={sttTranscribeOnStop} onChange={setSttTranscribeOnStop} ariaLabel={t('settings.voice.page.field.transcribeOnStopAria')} />
+                                    <span className="typography-ui-label text-foreground">{t('settings.voice.page.field.transcribeOnStop')}</span>
+                                </div>
+
                                 {!audioStreamService.isSupported() && (
                                     <p className="typography-meta text-[var(--status-error)]">
                                         {t('settings.voice.page.field.sttBrowserSupportError')}
@@ -795,7 +809,7 @@ export const VoiceSettings: React.FC = () => {
                                                 onClick={() => setSttServerUrl('')}
                                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                             >
-                                                <RiCloseLine className="w-3.5 h-3.5" />
+                                                <Icon name="close" className="w-3.5 h-3.5" />
                                             </button>
                                         )}
                                     </div>
