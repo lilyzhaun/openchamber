@@ -17,7 +17,7 @@ import {
 import { SortableTabsStrip, type SortableTabsStripItem } from '@/components/ui/sortable-tabs-strip';
 
 import { DiffIcon } from '@/components/icons/DiffIcon';
-import { useUIStore, type MainTab } from '@/stores/useUIStore';
+import { useUIStore, type ContextPanelMode, type MainTab } from '@/stores/useUIStore';
 import { useConfigStore } from '@/stores/useConfigStore';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionWorktreeStore } from '@/sync/session-worktree-store';
@@ -38,7 +38,7 @@ import { cn, hasModifier } from '@/lib/utils';
 import { McpDropdownContent } from '@/components/mcp/McpDropdown';
 import { McpIcon } from '@/components/icons/McpIcon';
 import { ProviderLogo } from '@/components/ui/ProviderLogo';
-import { formatQuotaValueLabel, formatWindowLabel, QUOTA_PROVIDERS, calculatePace, calculateExpectedUsagePercent } from '@/lib/quota';
+import { formatQuotaValueLabel, formatQuotaResetLabel, formatWindowLabel, QUOTA_PROVIDERS, calculatePace, calculateExpectedUsagePercent } from '@/lib/quota';
 import { UsageProgressBar } from '@/components/sections/usage/UsageProgressBar';
 import { PaceIndicator } from '@/components/sections/usage/PaceIndicator';
 import { updateDesktopSettings } from '@/lib/persistence';
@@ -447,14 +447,15 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
                                 : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
                             : null;
                           const metricLabel = formatQuotaValueLabel(window.valueLabel, displayPercent);
+                          const resetLabel = formatQuotaResetLabel(window.resetAt, window.resetAfterFormatted ?? window.resetAtFormatted);
                           return (
                             <div key={`${group.providerId}-${label}`} className="flex flex-col gap-1.5">
                               <div className="flex min-w-0 items-center justify-between gap-3">
                                 <div className="min-w-0 flex items-center gap-2">
                                   <span className="truncate typography-ui-label text-foreground">{formatWindowLabel(label)}</span>
-                                  {window.resetAfterFormatted ?? window.resetAtFormatted ? (
+                                  {resetLabel ? (
                                     <span className="truncate typography-micro text-muted-foreground">
-                                      {window.resetAfterFormatted ?? window.resetAtFormatted}
+                                      {resetLabel}
                                     </span>
                                   ) : null}
                                 </div>
@@ -609,8 +610,8 @@ const normalize = (value: string): string => {
 const getActiveContextMode = (panelState: {
   isOpen: boolean;
   activeTabId: string | null;
-  tabs: Array<{ id: string; mode: 'diff' | 'file' | 'context' | 'plan' | 'chat' | 'preview' }>;
-} | undefined): 'diff' | 'file' | 'context' | 'plan' | 'chat' | 'preview' | null => {
+  tabs: Array<{ id: string; mode: ContextPanelMode }>;
+} | undefined): ContextPanelMode | null => {
   if (!panelState?.isOpen || !Array.isArray(panelState.tabs) || panelState.tabs.length === 0) {
     return null;
   }
@@ -663,6 +664,7 @@ export const Header: React.FC<HeaderProps> = ({
   const toggleRightSidebar = useUIStore((state) => state.toggleRightSidebar);
   const openContextOverview = useUIStore((state) => state.openContextOverview);
   const openContextPlan = useUIStore((state) => state.openContextPlan);
+  const openContextBrowser = useUIStore((state) => state.openContextBrowser);
   const closeContextPanel = useUIStore((state) => state.closeContextPanel);
   const contextPanelByDirectory = useUIStore((state) => state.contextPanelByDirectory);
   const activeMainTab = useUIStore((state) => state.activeMainTab);
@@ -1343,6 +1345,14 @@ export const Header: React.FC<HeaderProps> = ({
     openContextPlan(directory);
   }, [closeContextPanel, contextPanelByDirectory, openContextPlan, openDirectory]);
 
+  const handleOpenContextBrowser = React.useCallback(() => {
+    const directory = normalize(openDirectory || '');
+    if (!directory) {
+      return;
+    }
+    openContextBrowser(directory);
+  }, [openContextBrowser, openDirectory]);
+
   const isContextPlanActive = React.useMemo(() => {
     const directory = normalize(openDirectory || '');
     if (!directory) {
@@ -1770,7 +1780,7 @@ export const Header: React.FC<HeaderProps> = ({
           <TooltipContent>
             <p>{t('header.actions.planWithShortcut', { shortcut: shortcutLabel('toggle_context_plan') })}</p>
           </TooltipContent>
-        </Tooltip>
+          </Tooltip>
       )}
       <OpenInAppButton directory={actionDirectory} className="mr-1" />
       <DesktopServicesMenu
@@ -1807,6 +1817,14 @@ export const Header: React.FC<HeaderProps> = ({
         onClick={toggleBottomTerminal}
         Icon={'terminal-box'}
       />
+      {hasElectronDesktopIPC ? (
+        <HeaderIconActionButton
+          title={t('contextPanel.browser.open')}
+          ariaLabel={t('contextPanel.browser.open')}
+          onClick={handleOpenContextBrowser}
+          Icon={'global'}
+        />
+      ) : null}
       <HeaderIconActionButton
         title={t('header.actions.rightSidebarWithShortcut', { shortcut: shortcutLabel('toggle_right_sidebar') })}
         ariaLabel={t('header.actions.toggleRightSidebarAria')}
@@ -2231,14 +2249,15 @@ export const Header: React.FC<HeaderProps> = ({
                                         : calculateExpectedUsagePercent(paceInfo.elapsedRatio))
                                     : null;
                                   const metricLabel = formatQuotaValueLabel(window.valueLabel, displayPercent);
+                                  const resetLabel = formatQuotaResetLabel(window.resetAt, window.resetAfterFormatted ?? window.resetAtFormatted);
                                   return (
                                     <div key={`${group.providerId}-${label}`} className="flex flex-col gap-1.5">
                                       <div className="flex min-w-0 items-center justify-between gap-3">
                                         <div className="min-w-0 flex items-center gap-2">
                                           <span className="truncate typography-ui-label text-foreground">{formatWindowLabel(label)}</span>
-                                          {(window.resetAfterFormatted ?? window.resetAtFormatted) ? (
+                                          {resetLabel ? (
                                             <span className="truncate typography-micro text-muted-foreground">
-                                              {window.resetAfterFormatted ?? window.resetAtFormatted}
+                                              {resetLabel}
                                             </span>
                                           ) : null}
                                         </div>
