@@ -322,7 +322,6 @@ const OverlayScrollbarComponent: React.FC<OverlayScrollbarProps> = ({
       {showVertical && (
         <div
           className="overlay-scrollbar__thumb overlay-scrollbar__thumb--vertical"
-          data-overlay-scrollbar-thumb="vertical"
           style={{
             height: `${vertical.length}px`,
             top: `${trackInset + vertical.offset}px`,
@@ -339,7 +338,6 @@ const OverlayScrollbarComponent: React.FC<OverlayScrollbarProps> = ({
       {showHorizontal && (
         <div
           className="overlay-scrollbar__thumb overlay-scrollbar__thumb--horizontal"
-          data-overlay-scrollbar-thumb="horizontal"
           style={{
             width: `${horizontal.length}px`,
             left: `${trackInset + horizontal.offset}px`,

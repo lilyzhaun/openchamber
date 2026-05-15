@@ -213,18 +213,6 @@ async function materializeSessionFromServer(
 // Used to determine if user is currently viewing the session when a notification arrives.
 let _activeDirectory = ""
 let _activeSession = ""
-const externallyViewedSessions = new Map<string, number>()
-const EXTERNAL_VIEW_TTL_MS = 15_000
-
-const viewedSessionKey = (directory: string, sessionId: string) => `${directory}\n${sessionId}`
-
-function pruneExternallyViewedSessions(now = Date.now()) {
-  for (const [key, expiresAt] of externallyViewedSessions.entries()) {
-    if (expiresAt <= now) {
-      externallyViewedSessions.delete(key)
-    }
-  }
-}
 const pendingQuestionToastIds = new Set<string>()
 const pendingPermissionToastIds = new Set<string>()
 
@@ -251,21 +239,10 @@ export function setActiveSession(directory: string, sessionId: string) {
   _activeSession = sessionId
 }
 
-export function setExternallyViewedSession(directory: string, sessionId: string, viewed: boolean) {
-  if (!directory || !sessionId) return
-  const key = viewedSessionKey(directory, sessionId)
-  if (!viewed) {
-    externallyViewedSessions.delete(key)
-    return
-  }
-  externallyViewedSessions.set(key, Date.now() + EXTERNAL_VIEW_TTL_MS)
-}
-
 function isViewedInCurrentSession(directory: string, sessionId?: string): boolean {
-  if (!sessionId) return false
-  if (_activeDirectory && _activeSession && directory === _activeDirectory && sessionId === _activeSession) return true
-  pruneExternallyViewedSessions()
-  return externallyViewedSessions.has(viewedSessionKey(directory, sessionId))
+  if (!_activeDirectory || !_activeSession || !sessionId) return false
+  if (directory !== _activeDirectory) return false
+  return sessionId === _activeSession
 }
 
 function isRecentBoot() {
@@ -1669,7 +1646,7 @@ export function useSidebarSessions(directory?: string): Session[] {
       const wasStreaming = cached?.streamingById.get(session.id) ?? false
       const stableUpdatedAt = isStreaming
         ? (wasStreaming ? cachedUpdatedAt : Math.max(rawUpdatedAt, cachedUpdatedAt, Date.now()))
-        : Math.max(rawUpdatedAt, cachedUpdatedAt)
+        : cachedUpdatedAt
       const signature = getSidebarSessionSignature(session, stableUpdatedAt)
       signatures.set(session.id, signature)
       stableUpdatedAtById.set(session.id, stableUpdatedAt)

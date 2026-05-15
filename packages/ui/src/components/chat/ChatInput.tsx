@@ -1,5 +1,20 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
+import {
+    RiAddCircleLine,
+    RiAiAgentLine,
+    RiAttachment2,
+    RiCloseLine,
+    RiCommandLine,
+    RiExternalLinkLine,
+    RiFolderLine,
+    RiFullscreenLine,
+    RiGitPullRequestLine,
+    RiShieldCheckLine,
+    RiShieldUserLine,
+    RiGithubLine,
+    RiSendPlane2Line,
+} from '@remixicon/react';
 import { BrowserVoiceButton } from '@/components/voice';
 // sessionStore removed — currentSessionId comes from useSessionUIStore
 import { useConfigStore } from '@/stores/useConfigStore';
@@ -24,7 +39,6 @@ import { ModelControls } from './ModelControls';
 import { parseAgentMentions } from '@/lib/messages/agentMentions';
 import { StatusRow } from './StatusRow';
 import { PendingChangesBar } from './PendingChangesBar';
-import { useChatSurfaceMode } from './useChatSurfaceMode';
 import { MobileAgentButton } from './MobileAgentButton';
 import { MobileModelButton } from './MobileModelButton';
 import { MobileSessionStatusBar } from './MobileSessionStatusBar';
@@ -46,7 +60,6 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSepa
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { GitHubIssuePickerDialog } from '@/components/session/GitHubIssuePickerDialog';
 import { GitHubPrPickerDialog } from '@/components/session/GitHubPrPickerDialog';
-import { Icon } from "@/components/icon/Icon";
 import { useChatSearchDirectory } from '@/hooks/useChatSearchDirectory';
 import { opencodeClient } from '@/lib/opencode/client';
 import { useProjectsStore } from '@/stores/useProjectsStore';
@@ -277,7 +290,7 @@ const ComposerAttachmentControls = React.memo(function ComposerAttachmentControl
                     title={t('chat.chatInput.actions.commands')}
                     aria-label={t('chat.chatInput.actions.commands')}
                 >
-                    <Icon name="command" className={cn(iconSizeClass)} />
+                    <RiCommandLine className={cn(iconSizeClass)} />
                 </button>
             ) : null}
             <input
@@ -298,7 +311,7 @@ const ComposerAttachmentControls = React.memo(function ComposerAttachmentControl
                         title={t('chat.chatInput.actions.attachFiles')}
                         aria-label={t('chat.chatInput.actions.attachFiles')}
                     >
-                        <Icon name="attachment-2" className={cn(iconSizeClass, 'text-current')} />
+                        <RiAttachment2 className={cn(iconSizeClass, 'text-current')} />
                     </button>
                 ) : (
                     <DropdownMenu>
@@ -309,7 +322,7 @@ const ComposerAttachmentControls = React.memo(function ComposerAttachmentControl
                                 title={t('chat.chatInput.actions.addAttachment')}
                                 aria-label={t('chat.chatInput.actions.addAttachment')}
                             >
-                                <Icon name="add-circle" className={cn(iconSizeClass, 'text-current')} />
+                                <RiAddCircleLine className={cn(iconSizeClass, 'text-current')} />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
@@ -318,7 +331,7 @@ const ComposerAttachmentControls = React.memo(function ComposerAttachmentControl
                                     requestAnimationFrame(handlePickLocalFiles);
                                 }}
                             >
-                                <Icon name="attachment-2"/>
+                                <RiAttachment2 />
                                 {t('chat.chatInput.actions.attachFiles')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -326,7 +339,7 @@ const ComposerAttachmentControls = React.memo(function ComposerAttachmentControl
                                     requestAnimationFrame(openIssuePicker);
                                 }}
                             >
-                                <Icon name="github"/>
+                                <RiGithubLine />
                                 {t('chat.chatInput.actions.linkGithubIssue')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -334,7 +347,7 @@ const ComposerAttachmentControls = React.memo(function ComposerAttachmentControl
                                     requestAnimationFrame(openPrPicker);
                                 }}
                             >
-                                <Icon name="git-pull-request"/>
+                                <RiGitPullRequestLine />
                                 {t('chat.chatInput.actions.linkGithubPr')}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -350,7 +363,7 @@ const ComposerAttachmentControls = React.memo(function ComposerAttachmentControl
                     title={t('chat.chatInput.actions.modelAgentSettings')}
                     aria-label={t('chat.chatInput.actions.modelAgentSettings')}
                 >
-                    <Icon name="ai-agent" className={cn(iconSizeClass, 'text-current')} />
+                    <RiAiAgentLine className={cn(iconSizeClass, 'text-current')} />
                 </button>
             ) : null}
         </div>
@@ -413,9 +426,9 @@ const PermissionAutoAcceptButton = React.memo(function PermissionAutoAcceptButto
             title={ariaLabel}
         >
             {permissionAutoAcceptEnabled ? (
-                <Icon name="shield-check" className={cn(iconSizeClass)} style={{ color: 'var(--status-info)' }} />
+                <RiShieldCheckLine className={cn(iconSizeClass)} style={{ color: 'var(--status-info)' }} />
             ) : (
-                <Icon name="shield-user" className={cn(iconSizeClass)} />
+                <RiShieldUserLine className={cn(iconSizeClass)} />
             )}
         </button>
     );
@@ -466,7 +479,7 @@ const FocusModeButton = React.memo(function FocusModeButton(props: FocusModeButt
                     aria-label={t('chat.chatInput.focusMode.toggleAria')}
                     aria-pressed={isExpandedInput}
                 >
-                    <Icon name="fullscreen" className={cn(iconSizeClass)} />
+                    <RiFullscreenLine className={cn(iconSizeClass)} />
                 </button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={8}>
@@ -533,7 +546,7 @@ const ComposerActionButtons = React.memo(function ComposerActionButtons(props: C
             )}
             aria-label={t('chat.chatInput.actions.sendMessageAria')}
         >
-            <Icon name="send-plane-2" className={cn(sendIconSizeClass)} />
+            <RiSendPlane2Line className={cn(sendIconSizeClass)} />
         </button>
     );
 
@@ -560,7 +573,7 @@ const ComposerActionButtons = React.memo(function ComposerActionButtons(props: C
                     )}
                     aria-label={t('chat.chatInput.actions.queueMessageAria')}
                 >
-                    <Icon name="send-plane-2" className={cn(sendIconSizeClass, '-rotate-90')} />
+                    <RiSendPlane2Line className={cn(sendIconSizeClass, '-rotate-90')} />
                 </button>
             ) : null}
             <button
@@ -586,9 +599,6 @@ const ComposerActionButtons = React.memo(function ComposerActionButtons(props: C
     && prev.hasContent === next.hasContent
     && prev.currentSessionId === next.currentSessionId
     && prev.newSessionDraftOpen === next.newSessionDraftOpen
-    && prev.onPrimaryAction === next.onPrimaryAction
-    && prev.onQueueMessage === next.onQueueMessage
-    && prev.onAbort === next.onAbort
 ));
 
 const appendWithLineBreaks = (base: string, next: string): string => {
@@ -623,7 +633,7 @@ const appendInlineText = (base: string, next: string): string => {
 
 interface ChatInputProps {
     onOpenSettings?: () => void;
-    scrollToBottom?: () => void;
+    scrollToBottom?: (options?: { instant?: boolean; force?: boolean }) => void;
 }
 
 type AutocompleteOverlayPosition = {
@@ -1478,12 +1488,12 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
 
             if (commandName === 'undo' && currentSessionId) {
                 await useSessionUIStore.getState().handleSlashUndo(currentSessionId);
-                scrollToBottom?.();
+                scrollToBottom?.({ instant: true, force: true });
                 return;
             }
             else if (commandName === 'redo' && currentSessionId) {
                 await useSessionUIStore.getState().handleSlashRedo(currentSessionId);
-                scrollToBottom?.();
+                scrollToBottom?.({ instant: true, force: true });
                 return;
             }
             else if (commandName === 'timeline' && currentSessionId) {
@@ -1529,7 +1539,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                         currentVariant,
                         inputMode,
                     );
-                    scrollToBottom?.();
+                    scrollToBottom?.({ instant: true, force: true });
                 } catch (error) {
                     toast.error(error instanceof Error ? error.message : t('chat.chatInput.toast.summaryFailed'));
                 }
@@ -1551,7 +1561,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                         currentVariant,
                         inputMode,
                     );
-                    scrollToBottom?.();
+                    scrollToBottom?.({ instant: true, force: true });
                 } catch (error) {
                     toast.error(error instanceof Error ? error.message : t('chat.chatInput.toast.reviewFailed'));
                 }
@@ -1592,10 +1602,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         );
 
         if (typeof window === 'undefined') {
-            scrollToBottom?.();
+            scrollToBottom?.({ instant: true, force: true });
         } else {
             window.requestAnimationFrame(() => {
-                scrollToBottom?.();
+                scrollToBottom?.({ instant: true, force: true });
             });
         }
 
@@ -1632,21 +1642,21 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             if (normalized.includes('payload too large') || normalized.includes('413') || normalized.includes('entity too large')) {
                 toast.error(t('chat.chatInput.toast.attachmentsTooLarge'));
                 if (allAttachments.length > 0) {
-                    useInputStore.getState().setAttachedFiles(allAttachments);
+                    useInputStore.setState({ attachedFiles: allAttachments });
                 }
                 return;
             }
 
             if (isSoftNetworkError) {
                 if (allAttachments.length > 0) {
-                    useInputStore.getState().setAttachedFiles(allAttachments);
+                    useInputStore.setState({ attachedFiles: allAttachments });
                     toast.error(t('chat.chatInput.toast.sendAttachmentsFailed'));
                 }
                 return;
             }
 
             if (allAttachments.length > 0) {
-                useInputStore.getState().setAttachedFiles(allAttachments);
+                useInputStore.setState({ attachedFiles: allAttachments });
             }
             toast.error(rawMessage || t('chat.chatInput.toast.messageSendFailed'));
         });
@@ -1762,7 +1772,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
             return;
         }
 
-        if (e.key === 'Tab' && !showCommandAutocomplete && !showSkillAutocomplete && !showFileMention) {
+        if (e.key === 'Tab' && !showCommandAutocomplete && !showFileMention) {
             e.preventDefault();
             handleCycleAgent();
             return;
@@ -3132,18 +3142,12 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
         return draftBranchItems.find((item) => item.value === selectedValue)?.label ?? formatDirectoryName(selectedValue);
     }, [draftBranchItems, selectedDraftDirectory]);
 
-    const chatSurfaceMode = useChatSurfaceMode();
-    const isMiniChatSurface = chatSurfaceMode === 'mini-chat';
-
     const hasPendingChanges = React.useMemo(() => {
-        if (isMiniChatSurface) {
-            return false;
-        }
         if (isGitRepo !== true || !currentGitStatus || currentGitStatus.isClean) {
             return false;
         }
         return extractGitChangedFiles(currentGitStatus.files, currentGitStatus.diffStats, currentDirectory).length > 0;
-    }, [currentDirectory, currentGitStatus, isGitRepo, isMiniChatSurface]);
+    }, [currentDirectory, currentGitStatus, isGitRepo]);
 
     const selectedDraftBranchIsKnown = React.useMemo(() => {
         if (!selectedDraftDirectory) {
@@ -3223,7 +3227,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                 iconColor: currentTheme.colors.surface.foreground,
             },
         );
-        const projectIconName = project.icon ? PROJECT_ICON_MAP[project.icon] : null;
+        const ProjectIcon = project.icon ? PROJECT_ICON_MAP[project.icon] : null;
         const iconColor = getProjectIconColor(project.color);
 
         return (
@@ -3235,10 +3239,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                     >
                         <img src={imageUrl} alt="" className="h-full w-full object-contain" draggable={false} />
                     </span>
-                ) : projectIconName ? (
-                    <Icon name={projectIconName} className="h-3.5 w-3.5 shrink-0" style={iconColor ? { color: iconColor } : undefined} />
+                ) : ProjectIcon ? (
+                    <ProjectIcon className="h-3.5 w-3.5 shrink-0" style={iconColor ? { color: iconColor } : undefined} />
                 ) : (
-                    <Icon name="folder" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/80"  style={iconColor ? { color: iconColor } : undefined}/>
+                    <RiFolderLine className="h-3.5 w-3.5 shrink-0 text-muted-foreground/80" style={iconColor ? { color: iconColor } : undefined} />
                 )}
                 <span className="truncate">{getProjectDisplayLabel(project)}</span>
             </span>
@@ -3363,7 +3367,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                                     aria-label={t('chat.chatInput.devServerLogsRemove')}
                                     title={t('chat.chatInput.devServerLogsRemove')}
                                 >
-                                    <Icon name="close" className="h-3 w-3" />
+                                    <RiCloseLine className="h-3 w-3" />
                                 </button>
                             </div>
                         ) : null}
@@ -3384,7 +3388,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                                     aria-label={t('chat.chatInput.previewContextRemove')}
                                     title={t('chat.chatInput.previewContextRemove')}
                                 >
-                                    <Icon name="close" className="h-3 w-3" />
+                                    <RiCloseLine className="h-3 w-3" />
                                 </button>
                             </div>
                         ) : null}
@@ -3394,105 +3398,101 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                 {/* Linked Issue row */}
                 {linkedIssue && !isVSCode && (
                     <div className="pb-2 w-full px-1">
-                        <div className="flex w-full items-center gap-1.5 text-sm h-5 px-1">
-                            <button
-                                type="button"
-                                onClick={() => setIssuePickerOpen(true)}
-                                className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:opacity-80 transition-opacity"
-                            >
-                                {linkedIssue.author?.avatarUrl && (
-                                    <img
-                                        src={linkedIssue.author.avatarUrl}
-                                        alt={linkedIssue.author.login}
-                                        className="h-5 w-5 rounded-full flex-shrink-0"
-                                    />
+                        <button
+                            type="button"
+                            onClick={() => setIssuePickerOpen(true)}
+                            className="flex w-full items-center gap-1.5 text-sm hover:opacity-80 transition-opacity text-left h-5 px-1"
+                        >
+                            {linkedIssue.author?.avatarUrl && (
+                                <img
+                                    src={linkedIssue.author.avatarUrl}
+                                    alt={linkedIssue.author.login}
+                                    className="h-5 w-5 rounded-full flex-shrink-0"
+                                />
+                            )}
+                            <span className="text-muted-foreground flex-shrink-0">
+                                #{linkedIssue.number}
+                                {linkedIssue.author && (
+                                    <span className="ml-1">{t('chat.chatInput.linked.byAuthor', { author: linkedIssue.author.login })}</span>
                                 )}
-                                <span className="text-muted-foreground flex-shrink-0">
-                                    #{linkedIssue.number}
-                                    {linkedIssue.author && (
-                                        <span className="ml-1">{t('chat.chatInput.linked.byAuthor', { author: linkedIssue.author.login })}</span>
-                                    )}
-                                </span>
-                                <span className="text-foreground truncate">
-                                    {linkedIssue.title}
-                                </span>
-                            </button>
+                            </span>
+                            <span className="text-foreground truncate">
+                                {linkedIssue.title}
+                            </span>
                             <span className="flex items-center gap-0.5 flex-shrink-0">
                                 <a
                                     href={linkedIssue.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
                                     className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
                                     aria-label={t('chat.chatInput.linked.issue.openInBrowserAria')}
                                 >
-                                    <Icon name="external-link" className="h-4 w-4 text-muted-foreground" />
+                                    <RiExternalLinkLine className="h-4 w-4 text-muted-foreground" />
                                 </a>
-                                <button
-                                    type="button"
-                                    onClick={() => {
+                                <span
+                                    onClick={(e) => {
+                                        e.stopPropagation();
                                         setLinkedIssue(null);
                                     }}
-                                    className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
+                                    className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors cursor-pointer"
                                     aria-label={t('chat.chatInput.linked.issue.removeAria')}
-                                    title={t('chat.chatInput.linked.issue.removeAria')}
                                 >
-                                    <Icon name="close" className="h-4 w-4 text-muted-foreground" />
-                                </button>
+                                    <RiCloseLine className="h-4 w-4 text-muted-foreground" />
+                                </span>
                             </span>
-                        </div>
+                        </button>
                     </div>
                 )}
                 {linkedPr && !isVSCode && (
                     <div className="pb-2 w-full px-1">
-                        <div className="flex w-full items-center gap-1.5 text-sm h-5 px-1">
-                            <button
-                                type="button"
-                                onClick={() => setPrPickerOpen(true)}
-                                className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:opacity-80 transition-opacity"
-                            >
-                                {linkedPr.author?.avatarUrl && (
-                                    <img
-                                        src={linkedPr.author.avatarUrl}
-                                        alt={linkedPr.author.login}
-                                        className="h-5 w-5 rounded-full flex-shrink-0"
-                                    />
+                        <button
+                            type="button"
+                            onClick={() => setPrPickerOpen(true)}
+                            className="flex w-full items-center gap-1.5 text-sm hover:opacity-80 transition-opacity text-left h-5 px-1"
+                        >
+                            {linkedPr.author?.avatarUrl && (
+                                <img
+                                    src={linkedPr.author.avatarUrl}
+                                    alt={linkedPr.author.login}
+                                    className="h-5 w-5 rounded-full flex-shrink-0"
+                                />
+                            )}
+                            <span className="text-muted-foreground flex-shrink-0">
+                                {t('chat.chatInput.linked.pr.number', { number: linkedPr.number })}
+                                {linkedPr.author && (
+                                    <span className="ml-1">{t('chat.chatInput.linked.byAuthor', { author: linkedPr.author.login })}</span>
                                 )}
-                                <span className="text-muted-foreground flex-shrink-0">
-                                    {t('chat.chatInput.linked.pr.number', { number: linkedPr.number })}
-                                    {linkedPr.author && (
-                                        <span className="ml-1">{t('chat.chatInput.linked.byAuthor', { author: linkedPr.author.login })}</span>
-                                    )}
-                                </span>
-                                <span className="text-foreground truncate">
-                                    {linkedPr.title}
-                                </span>
-                                <span className="text-muted-foreground flex-shrink-0 typography-meta">
-                                    {linkedPr.head} → {linkedPr.base}
-                                </span>
-                            </button>
+                            </span>
+                            <span className="text-foreground truncate">
+                                {linkedPr.title}
+                            </span>
+                            <span className="text-muted-foreground flex-shrink-0 typography-meta">
+                                {linkedPr.head} → {linkedPr.base}
+                            </span>
                             <span className="flex items-center gap-0.5 flex-shrink-0">
                                 <a
                                     href={linkedPr.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
                                     className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
                                     aria-label={t('chat.chatInput.linked.pr.openInBrowserAria')}
                                 >
-                                    <Icon name="external-link" className="h-4 w-4 text-muted-foreground" />
+                                    <RiExternalLinkLine className="h-4 w-4 text-muted-foreground" />
                                 </a>
-                                <button
-                                    type="button"
-                                    onClick={() => {
+                                <span
+                                    onClick={(e) => {
+                                        e.stopPropagation();
                                         setLinkedPr(null);
                                     }}
-                                    className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors"
+                                    className="flex items-center justify-center h-6 w-6 hover:bg-[var(--interactive-hover)] rounded-full transition-colors cursor-pointer"
                                     aria-label={t('chat.chatInput.linked.pr.removeAria')}
-                                    title={t('chat.chatInput.linked.pr.removeAria')}
                                 >
-                                    <Icon name="close" className="h-4 w-4 text-muted-foreground" />
-                                </button>
+                                    <RiCloseLine className="h-4 w-4 text-muted-foreground" />
+                                </span>
                             </span>
-                        </div>
+                        </button>
                     </div>
                 )}
                 <MemoStatusRow
@@ -3609,7 +3609,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({ onOpenSettings, scrollTo
                                         title={t('chat.chatInput.actions.attachFiles')}
                                         aria-label={t('chat.chatInput.actions.attachFiles')}
                                     >
-                                        <Icon name="attachment-2" className={cn(iconSizeClass, 'text-current')} />
+                                        <RiAttachment2 className={cn(iconSizeClass, 'text-current')} />
                                     </button>
                                 </div>
                                 <p className="mt-2 typography-ui-label text-muted-foreground">

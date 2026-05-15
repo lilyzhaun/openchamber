@@ -15,19 +15,11 @@ function waitForReconnectDelay(ms, signal) {
   }
 
   return new Promise((resolve) => {
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      signal?.removeEventListener('abort', onAbort);
-      resolve();
-    };
-    const timeout = setTimeout(finish, Math.max(0, ms));
-    const onAbort = () => {
+    const timeout = setTimeout(resolve, Math.max(0, ms));
+    signal?.addEventListener('abort', () => {
       clearTimeout(timeout);
-      finish();
-    };
-    signal?.addEventListener('abort', onAbort, { once: true });
+      resolve();
+    }, { once: true });
   });
 }
 
@@ -37,12 +29,6 @@ function normalizeHeaders(headers) {
   }
 
   return { ...headers };
-}
-
-async function cancelResponseBody(response) {
-  if (response?.body && typeof response.body.cancel === 'function') {
-    await response.body.cancel().catch(() => {});
-  }
 }
 
 export function createUpstreamSseReader({
@@ -130,7 +116,6 @@ export function createUpstreamSseReader({
               status: response?.status ?? 0,
               response,
             });
-            await cancelResponseBody(response);
             await waitForReconnectDelay(reconnectDelayMs, signal);
             continue;
           }

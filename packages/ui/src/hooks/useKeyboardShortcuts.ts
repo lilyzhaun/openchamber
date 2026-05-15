@@ -7,11 +7,9 @@ import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useAssistantStatus } from '@/hooks/useAssistantStatus';
 import { createWorktreeSession } from '@/lib/worktreeSessionCreator';
 import { useConfigStore } from '@/stores/useConfigStore';
-import { canUseElectronDesktopIPC, invokeDesktop, isVSCodeRuntime } from '@/lib/desktop';
+import { isVSCodeRuntime } from '@/lib/desktop';
 import { showOpenCodeStatus } from '@/lib/openCodeStatus';
 import { eventMatchesShortcut, getEffectiveShortcutCombo } from '@/lib/shortcuts';
-import { useDirectoryStore } from '@/stores/useDirectoryStore';
-import { useProjectsStore } from '@/stores/useProjectsStore';
 
 export const useKeyboardShortcuts = () => {
   const openNewSessionDraft = useSessionUIStore((s) => s.openNewSessionDraft);
@@ -35,8 +33,6 @@ export const useKeyboardShortcuts = () => {
   const setTimelineDialogOpen = useUIStore((s) => s.setTimelineDialogOpen);
   const toggleExpandedInput = useUIStore((s) => s.toggleExpandedInput);
   const shortcutOverrides = useUIStore((s) => s.shortcutOverrides);
-  const currentDirectory = useDirectoryStore((s) => s.currentDirectory);
-  const activeProject = useProjectsStore((s) => s.getActiveProject());
   const { themeMode, setThemeMode } = useThemeSystem();
   const { working } = useAssistantStatus();
   const abortPrimedUntilRef = React.useRef<number | null>(null);
@@ -122,17 +118,6 @@ export const useKeyboardShortcuts = () => {
       if (eventMatchesShortcut(e, combo('open_help'))) {
         e.preventDefault();
         toggleHelpDialog();
-        return;
-      }
-
-      if (canUseElectronDesktopIPC() && eventMatchesShortcut(e, combo('new_mini_chat'))) {
-        e.preventDefault();
-        void invokeDesktop('desktop_open_draft_mini_chat_window', {
-          directory: currentDirectory || activeProject?.path || '',
-          projectId: activeProject?.id ?? null,
-        }).catch((error) => {
-          console.warn('[keyboard-shortcuts] failed to open draft mini chat window', error);
-        });
         return;
       }
 
@@ -403,6 +388,11 @@ export const useKeyboardShortcuts = () => {
           target?.getAttribute('data-terminal-hidden-input') === 'true'
         );
 
+        if (isInsideDialog || isSettingsMounted || isInsideTerminal) {
+          resetAbortPriming();
+          return;
+        }
+
         const {
           isSettingsDialogOpen,
           isCommandPaletteOpen,
@@ -414,20 +404,10 @@ export const useKeyboardShortcuts = () => {
           activeMainTab,
         } = useUIStore.getState();
 
-        if (isInsideDialog || isInsideTerminal) {
-          resetAbortPriming();
-          return;
-        }
-
         // If settings is open, close it
         if (isSettingsDialogOpen) {
           e.preventDefault();
           setSettingsDialogOpen(false);
-          resetAbortPriming();
-          return;
-        }
-
-        if (isSettingsMounted) {
           resetAbortPriming();
           return;
         }
@@ -507,9 +487,6 @@ export const useKeyboardShortcuts = () => {
     armAbortPrompt,
     resetAbortPriming,
     currentSessionId,
-    currentDirectory,
-    activeProject?.id,
-    activeProject?.path,
     shortcutOverrides,
   ]);
 

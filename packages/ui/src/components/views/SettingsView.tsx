@@ -7,6 +7,31 @@ import { useCommandsStore } from '@/stores/useCommandsStore';
 import { useMcpConfigStore } from '@/stores/useMcpConfigStore';
 import { useSkillsStore } from '@/stores/useSkillsStore';
 import { useSkillsCatalogStore } from '@/stores/useSkillsCatalogStore';
+import {
+  RiAiAgentLine,
+  RiAiGenerate2,
+  RiArrowLeftSLine,
+  RiBarChart2Line,
+  RiBookLine,
+  RiBookOpenLine,
+  RiChatAi3Line,
+  RiChatHistoryLine,
+  RiCloseLine,
+  RiCommandLine,
+  RiCloudLine,
+  RiFoldersLine,
+  RiGitBranchLine,
+  RiGlobalLine,
+  RiMicLine,
+  RiListUnordered,
+  RiNotification3Line,
+  RiPaletteLine,
+  RiRobot2Line,
+  RiRestartLine,
+  RiServerLine,
+  RiSlashCommands2,
+  RiBrainLine,
+} from '@remixicon/react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { AgentsSidebar } from '@/components/sections/agents/AgentsSidebar';
@@ -31,11 +56,10 @@ import { MagicPromptsPage } from '@/components/sections/magic-prompts/MagicPromp
 import { GitPage } from '@/components/sections/git-identities/GitPage';
 import type { OpenChamberSection } from '@/components/sections/openchamber/types';
 import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPage';
+import { McpIcon } from '@/components/icons/McpIcon';
 import { useDeviceInfo } from '@/lib/device';
 import { isDesktopShell, isVSCodeRuntime, isWebRuntime } from '@/lib/desktop';
 import { useI18n } from '@/lib/i18n';
-import { Icon } from "@/components/icon/Icon";
-import type { IconName } from "@/components/icon/icons";
 import { reloadOpenCodeConfiguration } from '@/stores/useAgentsStore';
 import {
   SETTINGS_PAGE_METADATA,
@@ -49,11 +73,6 @@ import {
 // Same constraints as main sidebar
 const SETTINGS_NAV_MIN_WIDTH = 176;
 const SETTINGS_NAV_MAX_WIDTH = 280;
-const SETTINGS_NAV_RESIZE_STEP = 8;
-
-function clampSettingsNavWidth(width: number): number {
-  return Math.min(SETTINGS_NAV_MAX_WIDTH, Math.max(SETTINGS_NAV_MIN_WIDTH, width));
-}
 
 type MobileStage = 'nav' | 'page-sidebar' | 'page-content';
 
@@ -101,54 +120,54 @@ function isPageAvailable(page: SettingsPageMeta, ctx: SettingsRuntimeContext): b
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
+export function getSettingsNavIcon(slug: SettingsPageSlug): React.ComponentType<{ className?: string }> | null {
   switch (slug) {
     case 'projects':
-      return 'folders';
+      return RiFoldersLine;
     case 'remote-instances':
-      return 'server';
+      return RiServerLine;
     case 'appearance':
-      return 'palette';
+      return RiPaletteLine;
     case 'chat':
-      return 'chat-ai-3';
+      return RiChatAi3Line;
     case 'magic-prompts':
-      return 'ai-generate-2';
+      return RiAiGenerate2;
     case 'notifications':
-      return 'notification-3';
+      return RiNotification3Line;
     case 'shortcuts':
-      return 'command';
+      return RiCommandLine;
     case 'sessions':
-      return 'chat-history';
+      return RiChatHistoryLine;
 
     case 'providers':
-      return 'cloud';
+      return RiCloudLine;
     case 'agents':
-      return 'ai-agent';
+      return RiAiAgentLine;
     case 'behavior':
-      return 'brain';
+      return RiBrainLine;
     case 'commands':
-      return 'slash-commands-2';
+      return RiSlashCommands2;
     case 'mcp':
-      return 'plug-2';
+      return McpIcon;
 
     case 'skills.installed':
-      return 'book-open';
+      return RiBookOpenLine;
     case 'skills.catalog':
-      return 'book';
+      return RiBookLine;
 
     case 'git':
-      return 'git-branch';
+      return RiGitBranchLine;
 
     case 'usage':
-      return 'bar-chart-2';
+      return RiBarChart2Line;
     case 'voice':
-      return 'mic';
+      return RiMicLine;
     case 'tunnel':
-      return 'global';
+      return RiGlobalLine;
     case 'home':
       return null;
     default:
-      return 'robot-2';
+      return RiRobot2Line;
   }
 }
 
@@ -277,7 +296,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     if (typeof window === 'undefined') return;
     const handleResize = () => {
       if (!hasManuallyResized) {
-        const proportionalWidth = clampSettingsNavWidth(Math.floor(window.innerWidth * 0.12));
+        const proportionalWidth = Math.min(
+          SETTINGS_NAV_MAX_WIDTH,
+          Math.max(SETTINGS_NAV_MIN_WIDTH, Math.floor(window.innerWidth * 0.12))
+        );
         setNavWidth(proportionalWidth);
       }
     };
@@ -289,7 +311,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     if (!isResizing) return;
     const handlePointerMove = (event: PointerEvent) => {
       const delta = event.clientX - startXRef.current;
-      const nextWidth = clampSettingsNavWidth(startWidthRef.current + delta);
+      const nextWidth = Math.min(
+        SETTINGS_NAV_MAX_WIDTH,
+        Math.max(SETTINGS_NAV_MIN_WIDTH, startWidthRef.current + delta)
+      );
       setNavWidth(nextWidth);
       setHasManuallyResized(true);
     };
@@ -307,32 +332,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     startXRef.current = event.clientX;
     startWidthRef.current = navWidth;
     event.preventDefault();
-  };
-
-  const handleResizeKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = event.shiftKey ? SETTINGS_NAV_RESIZE_STEP * 4 : SETTINGS_NAV_RESIZE_STEP;
-    let nextWidth: number;
-
-    switch (event.key) {
-      case 'ArrowLeft':
-        nextWidth = navWidth - step;
-        break;
-      case 'ArrowRight':
-        nextWidth = navWidth + step;
-        break;
-      case 'Home':
-        nextWidth = SETTINGS_NAV_MIN_WIDTH;
-        break;
-      case 'End':
-        nextWidth = SETTINGS_NAV_MAX_WIDTH;
-        break;
-      default:
-        return;
-    }
-
-    event.preventDefault();
-    setNavWidth(clampSettingsNavWidth(nextWidth));
-    setHasManuallyResized(true);
   };
 
   // Load stores when project changes or when a page becomes active.
@@ -560,8 +559,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
           <div className="flex flex-col gap-0.5 pt-4 pb-2 px-2">
             {sortedFilteredPages.map((page) => {
               const selected = settingsSlug === page.slug;
-              const iconName = getSettingsNavIcon(page.slug);
-              if (!iconName) return null;
+              const Icon = getSettingsNavIcon(page.slug);
+              if (!Icon) return null;
 
               return (
                 <Tooltip key={page.slug}>
@@ -569,7 +568,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                     <button
                       type="button"
                       onClick={() => openPage(page.slug)}
-                      aria-current={selected ? 'page' : undefined}
                       className={cn(
                         'flex h-8 items-center gap-2 rounded-md px-2 overflow-hidden',
                         selected
@@ -577,7 +575,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                           : 'text-foreground hover:bg-interactive-hover'
                       )}
                     >
-                      <Icon name={iconName} className="h-4 w-4 shrink-0" />
+                      <Icon className="h-4 w-4 shrink-0" />
                       <span className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden transition-opacity duration-150 opacity-100">
                         <span className="typography-ui-label font-normal truncate">{getPageTitle(page.slug)}</span>
                         {(page.slug === 'voice' || page.slug === 'tunnel') && (
@@ -609,7 +607,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                     )}
                     onClick={() => void reloadOpenCodeConfiguration({ message: 'Restarting OpenCode…', mode: 'projects', scopes: ['all'] })}
                   >
-                    <Icon name="restart" className="h-4 w-4 shrink-0" />
+                    <RiRestartLine className="h-4 w-4 shrink-0" />
                     <span>{t('settings.view.actions.reloadOpenCode')}</span>
                   </button>
                 </TooltipTrigger>
@@ -710,7 +708,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
             aria-label={showBackButton ? t('settings.view.actions.backToSettings') : t('settings.view.actions.closeSettings')}
             className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <Icon name="arrow-left-s" className="h-5 w-5" />
+            <RiArrowLeftSLine className="h-5 w-5" />
           </button>
 
           <div className="min-w-0 flex-1 typography-ui-label font-medium text-foreground truncate">
@@ -726,7 +724,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
               aria-label={t('settings.view.actions.openSectionList')}
               className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <Icon name="list-unordered" className="h-5 w-5" />
+              <RiListUnordered className="h-5 w-5" />
             </button>
           )}
 
@@ -738,7 +736,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
               title={t('settings.view.actions.closeSettingsWithShortcut', { shortcut: shortcutKey })}
               className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <Icon name="close" className="h-5 w-5" />
+              <RiCloseLine className="h-5 w-5" />
             </button>
           )}
         </div>
@@ -752,7 +750,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                 aria-label={t('settings.view.actions.back')}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <Icon name="arrow-left-s" className="h-5 w-5" />
+                <RiArrowLeftSLine className="h-5 w-5" />
               </button>
             </div>
           )}
@@ -766,7 +764,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
             title={t('settings.view.actions.closeSettingsWithShortcut', { shortcut: shortcutKey })}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md p-0.5 text-muted-foreground hover:text-foreground hover:bg-interactive-hover/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
-            <Icon name="close" className="h-5 w-5" />
+            <RiCloseLine className="h-5 w-5" />
           </button>
         </div>
       )}
@@ -797,17 +795,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
               <div
                 className={cn(
                   'absolute right-0 top-0 z-20 h-full w-[6px] -mr-[3px] cursor-col-resize',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--interactive-focus-ring)]',
                   isResizing ? 'bg-primary/30' : 'bg-transparent hover:bg-primary/20'
                 )}
-                tabIndex={0}
                 onPointerDown={handlePointerDown}
-                onKeyDown={handleResizeKeyDown}
                 role="separator"
                 aria-orientation="vertical"
-                aria-valuemin={SETTINGS_NAV_MIN_WIDTH}
-                aria-valuemax={SETTINGS_NAV_MAX_WIDTH}
-                aria-valuenow={navWidth}
                 aria-label={t('settings.view.actions.resizeNavigation')}
               />
               <ErrorBoundary>

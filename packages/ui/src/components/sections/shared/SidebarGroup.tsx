@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { RiArrowDownSLine } from '@remixicon/react';
 import { cn } from '@/lib/utils';
-import { Icon } from "@/components/icon/Icon";
 
 interface SidebarGroupProps {
   /** Group display label (e.g. "business", "automation-ai") */
@@ -30,7 +30,6 @@ export const SidebarGroup: React.FC<SidebarGroupProps> = ({
   children,
 }) => {
   const key = getStorageKey(storageKey, label);
-  const contentId = React.useId();
 
   const [expanded, setExpanded] = useState<boolean>(() => {
     try {
@@ -55,8 +54,6 @@ export const SidebarGroup: React.FC<SidebarGroupProps> = ({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-        aria-controls={contentId}
         className={cn(
           'flex w-full items-center gap-1 rounded-md px-2 py-1 text-left',
           'text-xs font-semibold uppercase tracking-wide text-muted-foreground',
@@ -64,7 +61,7 @@ export const SidebarGroup: React.FC<SidebarGroupProps> = ({
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         )}
       >
-        <Icon name="arrow-down-s"
+        <RiArrowDownSLine
           className={cn(
             'h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200',
             !expanded && '-rotate-90',
@@ -74,13 +71,11 @@ export const SidebarGroup: React.FC<SidebarGroupProps> = ({
         <span className="ml-1 tabular-nums opacity-60">{count}</span>
       </button>
 
-      <div
-        id={contentId}
-        hidden={!expanded}
-        className="mt-0.5 space-y-0.5 ml-2 pl-3 border-l-2 border-[var(--interactive-border)]"
-      >
-        {children}
-      </div>
+      {expanded && (
+        <div className="mt-0.5 space-y-0.5 ml-2 pl-3 border-l-2 border-[var(--interactive-border)]">
+          {children}
+        </div>
+      )}
     </div>
   );
 };

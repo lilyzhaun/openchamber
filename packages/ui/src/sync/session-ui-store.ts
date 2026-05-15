@@ -19,7 +19,6 @@ import type { WorktreeMetadata } from "@/types/worktree"
 import { opencodeClient } from "@/lib/opencode/client"
 import { useConfigStore } from "@/stores/useConfigStore"
 import { useProjectsStore } from "@/stores/useProjectsStore"
-import { useGlobalSessionsStore, resolveGlobalSessionDirectory } from "@/stores/useGlobalSessionsStore"
 import { useDirectoryStore } from "@/stores/useDirectoryStore"
 import { useSessionFoldersStore } from "@/stores/useSessionFoldersStore"
 import { useCommandsStore } from "@/stores/useCommandsStore"
@@ -47,7 +46,6 @@ import {
   shareSession as shareSessionAction,
   unshareSession as unshareSessionAction,
   optimisticSend,
-  refetchSessionMessages,
 } from "./session-actions"
 import { useInputStore, type SyntheticContextPart } from "./input-store"
 import { useSelectionStore } from "./selection-store"
@@ -969,7 +967,8 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     const revertToId = currentSession?.revert?.messageID
     let targetMessage: typeof messages[number] | undefined
     if (revertToId) {
-      targetMessage = [...userMessages].reverse().find((m) => m.id < revertToId)
+      const revertIndex = userMessages.findIndex((m) => m.id === revertToId)
+      targetMessage = userMessages[revertIndex + 1]
     } else {
       targetMessage = userMessages[userMessages.length - 1]
     }
@@ -997,11 +996,10 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     const revertToId = currentSession?.revert?.messageID
     if (!revertToId) return
 
-    await refetchSessionMessages(sessionId)
-
     const messages = getSyncMessages(sessionId)
     const userMessages = messages.filter((m) => m.role === "user")
-    const targetMessage = userMessages.find((m) => m.id > revertToId)
+    const revertIndex = userMessages.findIndex((m) => m.id === revertToId)
+    const targetMessage = userMessages[revertIndex - 1]
 
     if (targetMessage) {
       const targetParts = getSyncParts(targetMessage.id)
@@ -1112,12 +1110,8 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     if (attachmentDirectory) return attachmentDirectory
     const sessions = getAllSyncSessions()
     const session = sessions.find((s) => s.id === sessionId)
-    if (session) return resolveDirectoryKey(session)
-    const globalStore = useGlobalSessionsStore.getState()
-    const globalSession = [...globalStore.activeSessions, ...globalStore.archivedSessions]
-      .find((s) => s.id === sessionId)
-    if (globalSession) return resolveGlobalSessionDirectory(globalSession)
-    return null
+    if (!session) return null
+    return resolveDirectoryKey(session)
   },
 
   getLastUserChoice: (sessionId) => {

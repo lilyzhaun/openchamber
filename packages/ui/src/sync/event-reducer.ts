@@ -90,18 +90,6 @@ function shouldPreserveExistingPart(previous: Part, next: Part): boolean {
   return false
 }
 
-function areSessionStatusesEqual(left: SessionStatus | undefined, right: SessionStatus): boolean {
-  if (left === right) return true
-  if (!left || left.type !== right.type) return false
-  if (left.type === "retry") {
-    return right.type === "retry"
-      && left.attempt === right.attempt
-      && left.message === right.message
-      && left.next === right.next
-  }
-  return true
-}
-
 // ---------------------------------------------------------------------------
 // Global events
 // ---------------------------------------------------------------------------
@@ -231,30 +219,19 @@ export function applyDirectoryEvent(
 
     case "session.status": {
       const props = event.properties as { sessionID: string; status: SessionStatus }
-      if (areSessionStatusesEqual(draft.session_status[props.sessionID], props.status)) {
-        return false
-      }
       draft.session_status[props.sessionID] = props.status
       return true
     }
 
     case "session.idle": {
       const props = event.properties as { sessionID: string }
-      const status = { type: "idle" } as const
-      if (areSessionStatusesEqual(draft.session_status[props.sessionID], status)) {
-        return false
-      }
-      draft.session_status[props.sessionID] = status
+      draft.session_status[props.sessionID] = { type: "idle" }
       return true
     }
 
     case "session.error": {
       const props = event.properties as { sessionID: string }
-      const status = { type: "idle" } as const
-      if (areSessionStatusesEqual(draft.session_status[props.sessionID], status)) {
-        return false
-      }
-      draft.session_status[props.sessionID] = status
+      draft.session_status[props.sessionID] = { type: "idle" }
       return true
     }
 
@@ -423,14 +400,13 @@ export function applyDirectoryEvent(
     case "permission.asked": {
       const permission = event.properties as PermissionRequest
       const permissions = draft.permission[permission.sessionID] ?? []
-      const next = [...permissions]
-      const result = Binary.search(next, permission.id, (p) => p.id)
+      draft.permission[permission.sessionID] = permissions
+      const result = Binary.search(permissions, permission.id, (p) => p.id)
       if (result.found) {
-        next[result.index] = permission
+        permissions[result.index] = permission
       } else {
-        next.splice(result.index, 0, permission)
+        permissions.splice(result.index, 0, permission)
       }
-      draft.permission[permission.sessionID] = next
       return true
     }
 
@@ -440,9 +416,7 @@ export function applyDirectoryEvent(
       if (!permissions) return false
       const result = Binary.search(permissions, props.requestID, (p) => p.id)
       if (result.found) {
-        const next = [...permissions]
-        next.splice(result.index, 1)
-        draft.permission[props.sessionID] = next
+        permissions.splice(result.index, 1)
         return true
       }
       return false
@@ -451,14 +425,13 @@ export function applyDirectoryEvent(
     case "question.asked": {
       const question = event.properties as QuestionRequest
       const questions = draft.question[question.sessionID] ?? []
-      const next = [...questions]
-      const result = Binary.search(next, question.id, (q) => q.id)
+      draft.question[question.sessionID] = questions
+      const result = Binary.search(questions, question.id, (q) => q.id)
       if (result.found) {
-        next[result.index] = question
+        questions[result.index] = question
       } else {
-        next.splice(result.index, 0, question)
+        questions.splice(result.index, 0, question)
       }
-      draft.question[question.sessionID] = next
       return true
     }
 
@@ -469,9 +442,7 @@ export function applyDirectoryEvent(
       if (!questions) return false
       const result = Binary.search(questions, props.requestID, (q) => q.id)
       if (result.found) {
-        const next = [...questions]
-        next.splice(result.index, 1)
-        draft.question[props.sessionID] = next
+        questions.splice(result.index, 1)
         return true
       }
       return false
