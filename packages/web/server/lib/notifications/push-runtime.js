@@ -207,6 +207,7 @@ export const createPushRuntime = (deps) => {
 
   const sendPushToAllUiSessions = async (payload, options = {}) => {
     const requireNoSse = options.requireNoSse === true;
+    const bypassVisibilityCheck = options.bypassVisibilityCheck === true;
     const store = await readPushSubscriptionsFromDisk();
     const sessions = store.subscriptionsBySession || {};
     const subscriptionsByEndpoint = new Map();
@@ -222,11 +223,18 @@ export const createPushRuntime = (deps) => {
       }
     }
 
+    // When bypassing the server-side visibility gate, also tell the SW to
+    // show the notification even if a client window is currently visible.
+    // Otherwise the SW would still silently swallow it (sw.ts).
+    const effectivePayload = bypassVisibilityCheck
+      ? { ...payload, showWhenVisible: true }
+      : payload;
+
     await Promise.all(Array.from(subscriptionsByEndpoint.values()).map(async (sub) => {
-      if (requireNoSse && isAnyUiVisible()) {
+      if (requireNoSse && !bypassVisibilityCheck && isAnyUiVisible()) {
         return;
       }
-      await sendPushToSubscription(sub, payload);
+      await sendPushToSubscription(sub, effectivePayload);
     }));
   };
 

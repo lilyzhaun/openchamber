@@ -287,7 +287,7 @@ export const createNotificationTriggerRuntime = (deps) => {
               type: 'ready',
             },
           },
-          { requireNoSse: true },
+          { requireNoSse: true, bypassVisibilityCheck: settings.notificationMode === 'always' },
         );
       }
 
@@ -350,7 +350,7 @@ export const createNotificationTriggerRuntime = (deps) => {
               type: 'error',
             },
           },
-          { requireNoSse: true },
+          { requireNoSse: true, bypassVisibilityCheck: settings.notificationMode === 'always' },
         );
       }
 
@@ -432,7 +432,7 @@ export const createNotificationTriggerRuntime = (deps) => {
               type: 'question',
             },
           },
-          { requireNoSse: true },
+          { requireNoSse: true, bypassVisibilityCheck: settings.notificationMode === 'always' },
         );
       }, PUSH_QUESTION_DEBOUNCE_MS);
 
@@ -556,7 +556,7 @@ export const createNotificationTriggerRuntime = (deps) => {
               type: 'permission',
             },
           },
-          { requireNoSse: true },
+          { requireNoSse: true, bypassVisibilityCheck: settings.notificationMode === 'always' },
         );
       }, PUSH_PERMISSION_DEBOUNCE_MS);
 

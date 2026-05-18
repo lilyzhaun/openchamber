@@ -20,9 +20,11 @@ type PushPayload = {
     url?: string;
     sessionId?: string;
     type?: string;
+    showWhenVisible?: boolean;
   };
   icon?: string;
   badge?: string;
+  showWhenVisible?: boolean;
 };
 
 self.addEventListener('install', (event) => {
@@ -40,10 +42,13 @@ self.addEventListener('push', (event) => {
       return;
     }
 
-    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const hasVisibleClient = clients.some((client) => client.visibilityState === 'visible' || client.focused);
-    if (hasVisibleClient) {
-      return;
+    const showWhenVisible = payload.showWhenVisible === true || payload.data?.showWhenVisible === true;
+    if (!showWhenVisible) {
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const hasVisibleClient = clients.some((client) => client.visibilityState === 'visible' || client.focused);
+      if (hasVisibleClient) {
+        return;
+      }
     }
 
     const title = payload.title || 'OpenChamber';
