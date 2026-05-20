@@ -194,14 +194,16 @@ export const createPushRuntime = (deps) => {
     };
 
     try {
-      await webPush.sendNotification(pushSubscription, body);
+      const result = await webPush.sendNotification(pushSubscription, body);
+      console.log('[Push][debug] webPush ok', { endpoint: sub.endpoint.slice(-12), statusCode: result?.statusCode });
     } catch (error) {
       const statusCode = typeof error?.statusCode === 'number' ? error.statusCode : null;
       if (statusCode === 410 || statusCode === 404) {
+        console.log('[Push][debug] subscription gone, removing', { endpoint: sub.endpoint.slice(-12), statusCode });
         await removePushSubscriptionFromAllSessions(sub.endpoint);
         return;
       }
-      console.warn('[Push] Failed to send notification:', error);
+      console.warn('[Push] Failed to send notification:', { endpoint: sub.endpoint.slice(-12), statusCode, message: error?.message, body: error?.body });
     }
   };
 
@@ -230,10 +232,20 @@ export const createPushRuntime = (deps) => {
       ? { ...payload, showWhenVisible: true }
       : payload;
 
+    console.log('[Push][debug] sendPushToAllUiSessions', {
+      tag: payload?.tag,
+      requireNoSse,
+      bypassVisibilityCheck,
+      anyUiVisible: isAnyUiVisible(),
+      subscriptions: subscriptionsByEndpoint.size,
+    });
+
     await Promise.all(Array.from(subscriptionsByEndpoint.values()).map(async (sub) => {
       if (requireNoSse && !bypassVisibilityCheck && isAnyUiVisible()) {
+        console.log('[Push][debug] suppressed by visibility gate', { tag: payload?.tag, endpoint: sub.endpoint.slice(-12) });
         return;
       }
+      console.log('[Push][debug] dispatching', { tag: payload?.tag, endpoint: sub.endpoint.slice(-12) });
       await sendPushToSubscription(sub, effectivePayload);
     }));
   };
