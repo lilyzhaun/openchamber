@@ -59,6 +59,7 @@ packages/intellij/
 Thumbs.db
 
 # Local runtime state (docker/dev)
+.omo/
 data/
 workspaces/
 *.pid
