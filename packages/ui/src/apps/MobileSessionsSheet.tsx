@@ -663,11 +663,13 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
       const directory = getSessionDirectory(session);
       if (!directory) continue;
       const node = nodes.find((entry) => {
-        if (pathBelongsToRoot(directory, entry.project.path)) return true;
-        return entry.project.worktrees.some((worktree) => pathBelongsToRoot(directory, worktree.path));
+        const normalizedDir = normalizePath(directory);
+        const normalizedProjectPath = normalizePath(entry.project.path);
+        if (normalizedDir === normalizedProjectPath) return true;
+        return entry.project.worktrees.some((worktree) => normalizePath(worktree.path) === normalizedDir);
       });
       if (!node) continue;
-      const matchedWorktree = node.project.worktrees.find((entry) => pathBelongsToRoot(directory, entry.path));
+      const matchedWorktree = node.project.worktrees.find((entry) => normalizePath(entry.path) === normalizePath(directory));
       const bucket = matchedWorktree
         ? ensureBucket(node, matchedWorktree.path, matchedWorktree)
         : ensureBucket(node, node.project.path, null);
@@ -677,7 +679,7 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
     for (const node of nodes) {
       for (const bucket of node.buckets) {
         bucket.sessions.sort((a, b) => getSessionTimestamp(b) - getSessionTimestamp(a));
-        node.totalSessions += bucket.sessions.length;
+        node.totalSessions += bucket.sessions.filter((s) => !getParentId(s)).length;
       }
     }
 
