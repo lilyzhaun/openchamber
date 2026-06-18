@@ -14,6 +14,7 @@ export type QuotaProviderId =
   | 'minimax-coding-plan'
   | 'minimax-cn-coding-plan'
   | 'ollama-cloud'
+  | 'xiaomi-token-plan'
   | 'wafer';
 
 export interface UsageWindow {
