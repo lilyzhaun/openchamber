@@ -110,6 +110,18 @@ type WaferPayload = {
   plan_tier?: string;
 };
 
+type XiaomiTokenUsageItem = {
+  name?: string;
+  used?: number | string;
+  limit?: number | string;
+  percent?: number | string;
+};
+
+type XiaomiTokenPlanPayload = {
+  code?: number;
+  data?: Record<string, unknown>;
+};
+
 export type ProviderResult = {
   providerId: string;
   providerName: string;
@@ -124,6 +136,8 @@ const OPENCODE_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode');
 const OPENCODE_DATA_DIR = path.join(os.homedir(), '.local', 'share', 'opencode');
 const AUTH_FILE = path.join(OPENCODE_DATA_DIR, 'auth.json');
 const OLLAMA_CLOUD_COOKIE_PATH = path.join(os.homedir(), '.config', 'ollama-quota', 'cookie');
+const XIAOMI_TOKEN_PLAN_COOKIE_PATH = path.join(os.homedir(), '.config', 'xiaomi-token-plan', 'cookie');
+const XIAOMI_TOKEN_PLAN_API_BASE = 'https://platform.xiaomimimo.com/api/v1';
 
 
 const ANTIGRAVITY_ACCOUNTS_PATHS = [
@@ -446,6 +460,10 @@ export const listConfiguredQuotaProviders = () => {
 
   if (readTextFile(OLLAMA_CLOUD_COOKIE_PATH)) {
     configured.add('ollama-cloud');
+  }
+
+  if (readTextFile(XIAOMI_TOKEN_PLAN_COOKIE_PATH)) {
+    configured.add('xiaomi-token-plan');
   }
 
   const waferAuth = normalizeAuthEntry(getAuthEntry(auth, ['wafer', 'wafer-ai', 'wafer_ai', 'wafer.ai']));
@@ -1414,6 +1432,150 @@ export const fetchOllamaCloudQuota = async (): Promise<ProviderResult> => {
   }
 };
 
+const isXiaomiSuccessPayload = (payload: XiaomiTokenPlanPayload) => (
+  payload.code === 0 && Boolean(payload.data)
+);
+
+const ratioToPercent = (value: unknown) => {
+  const ratio = toNumber(value);
+  if (ratio === null) return null;
+  return Math.max(0, Math.min(100, ratio * 100));
+};
+
+const formatTokenCount = (value: unknown) => {
+  const number = toNumber(value);
+  return number === null ? '0' : new Intl.NumberFormat('en-US').format(number);
+};
+
+const findXiaomiUsageItem = (items: unknown, name: string): XiaomiTokenUsageItem | null => {
+  if (!Array.isArray(items)) return null;
+  return items.find((item): item is XiaomiTokenUsageItem => (
+    Boolean(item) && typeof item === 'object' && (item as XiaomiTokenUsageItem).name === name
+  )) ?? null;
+};
+
+const formatXiaomiTokenValueLabel = (item: XiaomiTokenUsageItem, prefix: string | null = null) => {
+  const label = `${formatTokenCount(item.used)} / ${formatTokenCount(item.limit)} tokens`;
+  return prefix ? `${prefix} · ${label}` : label;
+};
+
+const parseXiaomiWindowFromItem = (data: {
+  item: XiaomiTokenUsageItem | null;
+  fallbackPercent: unknown;
+  resetAt?: number | null;
+  valuePrefix?: string | null;
+}) => {
+  if (!data.item) return null;
+  return toUsageWindow({
+    usedPercent: ratioToPercent(data.item.percent ?? data.fallbackPercent),
+    windowSeconds: null,
+    resetAt: data.resetAt ?? null,
+    valueLabel: formatXiaomiTokenValueLabel(data.item, data.valuePrefix ?? null),
+  });
+};
+
+export const parseXiaomiTokenPlanUsage = (data: {
+  usagePayload: XiaomiTokenPlanPayload;
+  detailPayload: XiaomiTokenPlanPayload;
+  balancePayload: XiaomiTokenPlanPayload;
+}) => {
+  const windows: Record<string, UsageWindow> = {};
+  const usageData = isXiaomiSuccessPayload(data.usagePayload) ? data.usagePayload.data : null;
+  const detailData = isXiaomiSuccessPayload(data.detailPayload) ? data.detailPayload.data : null;
+  const balanceData = isXiaomiSuccessPayload(data.balancePayload) ? data.balancePayload.data : null;
+  const monthUsage = asObject(usageData?.monthUsage);
+  const planUsage = asObject(usageData?.usage);
+  const resetAt = toTimestamp(detailData?.currentPeriodEnd);
+  const planName = asNonEmptyString(detailData?.planName);
+
+  const monthlyWindow = parseXiaomiWindowFromItem({
+    item: findXiaomiUsageItem(monthUsage?.items, 'month_total_token'),
+    fallbackPercent: monthUsage?.percent,
+    resetAt,
+  });
+  if (monthlyWindow) {
+    windows.monthly = monthlyWindow;
+  }
+
+  const planWindow = parseXiaomiWindowFromItem({
+    item: findXiaomiUsageItem(planUsage?.items, 'plan_total_token'),
+    fallbackPercent: planUsage?.percent,
+    resetAt,
+    valuePrefix: planName,
+  });
+  if (planWindow) {
+    windows.plan_limit = planWindow;
+  }
+
+  const balance = toNumber(balanceData?.balance);
+  const currency = asNonEmptyString(balanceData?.currency) ?? 'USD';
+  if (balance !== null) {
+    windows.credits_balance = toUsageWindow({
+      usedPercent: null,
+      windowSeconds: null,
+      resetAt: null,
+      valueLabel: `$${balance.toFixed(2)} ${currency}`,
+    });
+  }
+
+  return windows;
+};
+
+const fetchXiaomiTokenPlanJson = async (pathName: string, cookie: string) => {
+  const response = await fetch(`${XIAOMI_TOKEN_PLAN_API_BASE}${pathName}`, {
+    method: 'GET',
+    headers: {
+      Cookie: cookie,
+      Accept: 'application/json, text/plain, */*',
+      Referer: 'https://platform.xiaomimimo.com/',
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36',
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  return response.json() as Promise<XiaomiTokenPlanPayload>;
+};
+
+export const fetchXiaomiTokenPlanQuota = async (): Promise<ProviderResult> => {
+  const cookie = readTextFile(XIAOMI_TOKEN_PLAN_COOKIE_PATH);
+
+  if (!cookie) {
+    return buildResult({
+      providerId: 'xiaomi-token-plan',
+      providerName: 'Xiaomi Token Plan',
+      ok: false,
+      configured: false,
+      error: 'Not configured',
+    });
+  }
+
+  try {
+    const [usagePayload, detailPayload, balancePayload] = await Promise.all([
+      fetchXiaomiTokenPlanJson('/tokenPlan/usage', cookie),
+      fetchXiaomiTokenPlanJson('/tokenPlan/detail', cookie),
+      fetchXiaomiTokenPlanJson('/balance', cookie),
+    ]);
+    return buildResult({
+      providerId: 'xiaomi-token-plan',
+      providerName: 'Xiaomi Token Plan',
+      ok: true,
+      configured: true,
+      usage: {
+        windows: parseXiaomiTokenPlanUsage({ usagePayload, detailPayload, balancePayload }),
+      },
+    });
+  } catch (error) {
+    return buildResult({
+      providerId: 'xiaomi-token-plan',
+      providerName: 'Xiaomi Token Plan',
+      ok: false,
+      configured: true,
+      error: error instanceof Error ? error.message : 'Request failed',
+    });
+  }
+};
+
 export const fetchOpenRouterQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['openrouter'])) as Record<string, unknown> | null;
@@ -1905,6 +2067,8 @@ export const fetchQuotaForProvider = async (providerId: string): Promise<Provide
       return fetchMiniMaxCnCodingPlanQuota();
     case 'ollama-cloud':
       return fetchOllamaCloudQuota();
+    case 'xiaomi-token-plan':
+      return fetchXiaomiTokenPlanQuota();
     case 'openrouter':
       return fetchOpenRouterQuota();
     case 'zai-coding-plan':
