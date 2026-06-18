@@ -22,6 +22,7 @@ import * as minimaxCodingPlan from './minimax-coding-plan.js';
 import * as minimaxCnCodingPlan from './minimax-cn-coding-plan.js';
 import * as ollamaCloud from './ollama-cloud.js';
 import * as wafer from './wafer.js';
+import * as xiaomiTokenPlan from './xiaomi-token-plan.js';
 
 const registry = {
   claude: {
@@ -108,6 +109,12 @@ const registry = {
     isConfigured: ollamaCloud.isConfigured,
     fetchQuota: ollamaCloud.fetchQuota
   },
+  'xiaomi-token-plan': {
+    providerId: xiaomiTokenPlan.providerId,
+    providerName: xiaomiTokenPlan.providerName,
+    isConfigured: xiaomiTokenPlan.isConfigured,
+    fetchQuota: xiaomiTokenPlan.fetchQuota
+  },
   wafer: {
     providerId: wafer.providerId,
     providerName: wafer.providerName,
@@ -173,5 +180,6 @@ export const fetchNanoGptQuota = nanogpt.fetchQuota;
 export const fetchMinimaxCodingPlanQuota = minimaxCodingPlan.fetchQuota;
 export const fetchMinimaxCnCodingPlanQuota = minimaxCnCodingPlan.fetchQuota;
 export const fetchOllamaCloudQuota = ollamaCloud.fetchQuota;
+export const fetchXiaomiTokenPlanQuota = xiaomiTokenPlan.fetchQuota;
 export const fetchWaferQuota = wafer.fetchQuota;
 export const fetchZhipuaiQuota = zhipuaiCodingPlan.fetchQuota;
