@@ -20,25 +20,46 @@ const readCookieFile = () => {
   }
 };
 
-const parseOllamaSettingsHtml = (html) => {
+const normalizeSettingsText = (html) => html
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const parseUsageSection = (text, label) => {
+  const sectionMatch = text.match(new RegExp(`${label}\\s+usage([\\s\\S]*?)(?=(?:Session|Weekly|Extra)\\s+usage|Balance\\s+remaining|Notify\\s+me|$)`, 'i'));
+  if (!sectionMatch) return null;
+  const section = sectionMatch[1] ?? '';
+  const percentMatch = section.match(/([0-9.]+)%\s*used/i);
+  if (!percentMatch) return null;
+  const resetMatch = section.match(/Resets\s+(in\s+[^.]+)/i);
+  return {
+    usedPercent: toNumber(percentMatch[1]),
+    resetAfterFormatted: resetMatch?.[1]?.trim() ?? null
+  };
+};
+
+export const parseOllamaSettingsHtml = (html) => {
+  const text = normalizeSettingsText(html);
   const windows = {};
-  const sessionMatch = html.match(/Session\s+usage[^0-9]*([0-9.]+)%/i);
-  if (sessionMatch) {
+  const sessionUsage = parseUsageSection(text, 'Session');
+  if (sessionUsage) {
     windows.session = toUsageWindow({
-      usedPercent: toNumber(sessionMatch[1]),
+      usedPercent: sessionUsage.usedPercent,
       windowSeconds: null,
-      resetAt: null
+      resetAt: null,
+      resetAfterFormatted: sessionUsage.resetAfterFormatted
     });
   }
-  const weeklyMatch = html.match(/Weekly\s+usage[^0-9]*([0-9.]+)%/i);
-  if (weeklyMatch) {
+  const weeklyUsage = parseUsageSection(text, 'Weekly');
+  if (weeklyUsage) {
     windows.weekly = toUsageWindow({
-      usedPercent: toNumber(weeklyMatch[1]),
+      usedPercent: weeklyUsage.usedPercent,
       windowSeconds: null,
-      resetAt: null
+      resetAt: null,
+      resetAfterFormatted: weeklyUsage.resetAfterFormatted
     });
   }
-  const premiumMatch = html.match(/Premium[^0-9]*([0-9]+)\s*\/\s*([0-9]+)/i);
+  const premiumMatch = text.match(/Premium[^0-9]*([0-9]+)\s*\/\s*([0-9]+)/i);
   if (premiumMatch) {
     const used = toNumber(premiumMatch[1]);
     const total = toNumber(premiumMatch[2]);
