@@ -24,6 +24,7 @@ const LOGO_ALIAS = new Map<string, string>([
     ['evroc-ai', 'evroc'],
     ['evrocai', 'evroc'],
     ['ollama-cloud', 'ollama'],
+    ['xiaomi-token-plan', 'xiaomi'],
     ['wafer-ai', 'wafer.ai'],
     ['wafer', 'wafer.ai'],
 ]);
@@ -102,7 +103,7 @@ export function useProviderLogo(providerId: string | null | undefined): UseProvi
 
     useEffect(() => {
         setSource(hasLocalLogo ? 'local' : 'remote');
-    }, [hasLocalLogo, localResolvedId, remoteResolvedId]);
+    }, [hasLocalLogo]);
 
     const handleError = useCallback(() => {
         setSource((current) => (current === 'local' && hasLocalLogo ? 'remote' : 'none'));

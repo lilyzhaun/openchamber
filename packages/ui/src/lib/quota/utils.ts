@@ -272,10 +272,10 @@ export const formatRemainingTime = (seconds: number): string => {
   const minutes = totalMinutes % 60;
 
   if (days > 0) {
-    return `${days}d ${hours}h`;
+    return `${days}d ${hours}h ${minutes}m`;
   }
   if (totalHours > 0) {
-    return `${totalHours}h`;
+    return `${totalHours}h ${minutes}m`;
   }
   if (totalMinutes === 0) {
     return '<1m';
