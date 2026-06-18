@@ -13,6 +13,12 @@ export const providerId = 'minimax-cn-coding-plan';
 export const providerName = 'MiniMax Coding Plan (minimaxi.com)';
 export const aliases = ['minimax-cn-coding-plan'];
 
+export const remainingPercentToUsedPercent = (value) => {
+  const remainingPercent = toNumber(value);
+  if (remainingPercent === null) return null;
+  return Math.max(0, Math.min(100, 100 - remainingPercent));
+};
+
 export const isConfigured = () => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, aliases));
@@ -79,30 +85,17 @@ export const fetchQuota = async () => {
       });
     }
 
-    const intervalTotal = toNumber(firstModel.current_interval_total_count);
-    const intervalUsage = toNumber(firstModel.current_interval_usage_count);
     const intervalStartAt = toTimestamp(firstModel.start_time);
     const intervalResetAt = toTimestamp(firstModel.end_time);
-    const weeklyTotal = toNumber(firstModel.current_weekly_total_count);
-    const weeklyUsage = toNumber(firstModel.current_weekly_usage_count);
     const weeklyStartAt = toTimestamp(firstModel.weekly_start_time);
     const weeklyResetAt = toTimestamp(firstModel.weekly_end_time);
 
-    const intervalUsed = intervalTotal - intervalUsage;
-    const weeklyUsed = weeklyTotal - weeklyUsage;
-
-    const intervalUsedPercent =
-      intervalTotal > 0 && intervalUsed != null
-        ? Math.max(0, Math.min(100, (intervalUsed / intervalTotal) * 100))
-        : null;
+    const intervalUsedPercent = remainingPercentToUsedPercent(firstModel.current_interval_remaining_percent);
     const intervalWindowSeconds =
       intervalStartAt && intervalResetAt && intervalResetAt > intervalStartAt
         ? Math.floor((intervalResetAt - intervalStartAt) / 1000)
         : null;
-    const weeklyUsedPercent =
-      weeklyTotal > 0 && weeklyUsed != null
-        ? Math.max(0, Math.min(100, (weeklyUsed / weeklyTotal) * 100))
-        : null;
+    const weeklyUsedPercent = remainingPercentToUsedPercent(firstModel.current_weekly_remaining_percent);
     const weeklyWindowSeconds =
       weeklyStartAt && weeklyResetAt && weeklyResetAt > weeklyStartAt
         ? Math.floor((weeklyResetAt - weeklyStartAt) / 1000)
