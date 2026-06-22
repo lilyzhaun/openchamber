@@ -50,6 +50,14 @@ const usageBrief = (usage) => {
   return parts.length > 0 ? parts.join(' · ') : null;
 };
 
+const usageBriefWithPercent = (usedPercent, usage) => {
+  const percentLabel = typeof usedPercent === 'number' && Number.isFinite(usedPercent)
+    ? `${Math.round(usedPercent)}%`
+    : null;
+  const parts = [percentLabel, usageBrief(usage)].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : null;
+};
+
 const MONTH_WINDOW_SECONDS = 30 * 24 * 60 * 60;
 
 const kwhLabel = (value) => {
@@ -85,12 +93,12 @@ export const parseNeuralwattQuota = (payload) => {
   const currentMonthUsage = usage?.current_month && typeof usage.current_month === 'object' ? usage.current_month : null;
 
   if (kwhUsed !== null || kwhIncluded !== null) {
-    const brief = currentMonthUsage ? usageBrief(currentMonthUsage) : null;
+    const usedPercent = percentUsed(kwhUsed, kwhIncluded);
     windows.billing_cycle = toUsageWindow({
-      usedPercent: percentUsed(kwhUsed, kwhIncluded),
+      usedPercent,
       windowSeconds: kwhIncluded !== null ? MONTH_WINDOW_SECONDS : null,
       resetAt,
-      valueLabel: brief,
+      valueLabel: currentMonthUsage ? usageBriefWithPercent(usedPercent, currentMonthUsage) : null,
     });
   }
 

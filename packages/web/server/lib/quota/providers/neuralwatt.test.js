@@ -37,6 +37,6 @@ describe('parseNeuralwattQuota', () => {
     expect(windows.monthly.valueLabel).toBe('$0.19 USD · 37.1 Wh');
     expect(windows.billing_cycle.usedPercent).toBeCloseTo(0.6183, 4);
     expect(windows.billing_cycle.windowSeconds).toBe(30 * 24 * 60 * 60);
-    expect(windows.billing_cycle.valueLabel).toBe('12# · 0.69M');
+    expect(windows.billing_cycle.valueLabel).toBe('1% · 12# · 0.69M');
   });
 });
