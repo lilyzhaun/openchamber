@@ -14,6 +14,7 @@ import * as cursor from './cursor.js';
 import * as google from './google/index.js';
 import * as kimi from './kimi.js';
 import * as nanogpt from './nanogpt.js';
+import * as neuralwatt from './neuralwatt.js';
 import * as openai from './openai.js';
 import * as openrouter from './openrouter.js';
 import * as zai from './zai.js';
@@ -78,6 +79,12 @@ const registry = {
     providerName: nanogpt.providerName,
     isConfigured: nanogpt.isConfigured,
     fetchQuota: nanogpt.fetchQuota
+  },
+  neuralwatt: {
+    providerId: neuralwatt.providerId,
+    providerName: neuralwatt.providerName,
+    isConfigured: neuralwatt.isConfigured,
+    fetchQuota: neuralwatt.fetchQuota
   },
   'github-copilot': {
     providerId: copilot.providerId,
@@ -177,6 +184,7 @@ export const fetchOpenRouterQuota = openrouter.fetchQuota;
 export const fetchZaiQuota = zai.fetchQuota;
 export const fetchZhipuaiCodingPlanQuota = zhipuaiCodingPlan.fetchQuota;
 export const fetchNanoGptQuota = nanogpt.fetchQuota;
+export const fetchNeuralwattQuota = neuralwatt.fetchQuota;
 export const fetchMinimaxCodingPlanQuota = minimaxCodingPlan.fetchQuota;
 export const fetchMinimaxCnCodingPlanQuota = minimaxCnCodingPlan.fetchQuota;
 export const fetchOllamaCloudQuota = ollamaCloud.fetchQuota;

@@ -19,6 +19,7 @@ export {
   fetchOpenRouterQuota,
   fetchZaiQuota,
   fetchNanoGptQuota,
+  fetchNeuralwattQuota,
   fetchMinimaxCodingPlanQuota,
   fetchMinimaxCnCodingPlanQuota,
   fetchOllamaCloudQuota,
