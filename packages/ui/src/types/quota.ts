@@ -8,6 +8,7 @@ export type QuotaProviderId =
   | 'google'
   | 'kimi-for-coding'
   | 'nano-gpt'
+  | 'neuralwatt'
   | 'openrouter'
   | 'zai-coding-plan'
   | 'zhipuai-coding-plan'
