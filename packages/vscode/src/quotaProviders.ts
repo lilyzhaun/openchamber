@@ -452,6 +452,11 @@ export const listConfiguredQuotaProviders = () => {
     configured.add('nano-gpt');
   }
 
+  const neuralwattAuth = normalizeAuthEntry(getAuthEntry(auth, ['neuralwatt', 'neural-watt', 'neural_watt']));
+  if (neuralwattAuth && ((neuralwattAuth as Record<string, unknown>).key || (neuralwattAuth as Record<string, unknown>).token)) {
+    configured.add('neuralwatt');
+  }
+
   const copilotAuth = normalizeAuthEntry(getAuthEntry(auth, ['github-copilot', 'copilot']));
   if (copilotAuth && ((copilotAuth as Record<string, unknown>).access || (copilotAuth as Record<string, unknown>).token)) {
     configured.add('github-copilot');
@@ -1652,6 +1657,173 @@ export const fetchOpenRouterQuota = async (): Promise<ProviderResult> => {
   }
 };
 
+const formatUsd = (value: unknown) => {
+  const number = toNumber(value);
+  return number === null ? null : `$${formatMoney(number)} USD`;
+};
+
+const formatUsdShort = (value: unknown) => {
+  const number = toNumber(value);
+  return number === null ? null : `$${formatMoney(number)}`;
+};
+
+const formatCount = (value: unknown) => {
+  const number = toNumber(value);
+  return number === null ? '0' : new Intl.NumberFormat('en-US').format(number);
+};
+
+const neuralwattUsageSummary = (usage: Record<string, unknown> | null) => {
+  const cost = formatUsd(usage?.cost_usd) ?? '$0.00 USD';
+  const requests = formatCount(usage?.requests);
+  const tokens = formatCount(usage?.tokens);
+  const energy = toNumber(usage?.energy_kwh);
+  const energyLabel = energy === null ? '0 kWh' : `${energy.toFixed(4)} kWh`;
+  return `${cost} · ${requests} requests · ${tokens} tokens · ${energyLabel}`;
+};
+
+const neuralwattFormatCompactTokens = (value: unknown) => {
+  const number = toNumber(value);
+  if (number === null) return null;
+  if (number >= 1_000_000_000) return `${(number / 1_000_000_000).toFixed(2)}B`;
+  if (number >= 100_000) return `${(number / 1_000_000).toFixed(2)}M`;
+  return new Intl.NumberFormat('en-US').format(number);
+};
+
+const neuralwattFormatCompactRequests = (value: unknown) => {
+  const number = toNumber(value);
+  if (number === null) return null;
+  return `${new Intl.NumberFormat('en-US').format(number)}#`;
+};
+
+const neuralwattUsageBrief = (usage: Record<string, unknown> | null) => {
+  const parts = [
+    neuralwattFormatCompactRequests(usage?.requests),
+    neuralwattFormatCompactTokens(usage?.tokens),
+  ].filter((value): value is string => value !== null);
+  return parts.length > 0 ? parts.join(' · ') : null;
+};
+
+const NEURALWATT_MONTH_WINDOW_SECONDS = 30 * 24 * 60 * 60;
+
+const neuralwattKwhLabel = (value: unknown) => {
+  const number = toNumber(value);
+  if (number === null) return null;
+  if (number < 1) return `${(number * 1000).toFixed(1)} Wh`;
+  return `${number.toFixed(4)} kWh`;
+};
+
+const neuralwattMonthlyLabel = (usage: Record<string, unknown> | null) => {
+  const cost = formatUsd(usage?.cost_usd);
+  const energy = neuralwattKwhLabel(usage?.energy_kwh);
+  const parts = [cost, energy].filter((value): value is string => value !== null);
+  return parts.length > 0 ? parts.join(' · ') : null;
+};
+
+const percentUsed = (used: unknown, total: unknown) => {
+  const usedNumber = toNumber(used);
+  const totalNumber = toNumber(total);
+  if (usedNumber === null || totalNumber === null || totalNumber <= 0) return null;
+  return Math.max(0, Math.min(100, (usedNumber / totalNumber) * 100));
+};
+
+export const parseNeuralwattQuota = (payload: Record<string, unknown>): Record<string, UsageWindow> => {
+  const balance = asObject(payload.balance);
+  const usage = asObject(payload.usage);
+  const currentMonth = asObject(usage?.current_month);
+  const subscription = asObject(payload.subscription);
+  const windows: Record<string, UsageWindow> = {};
+
+  const kwhUsed = toNumber(subscription?.kwh_used);
+  const kwhIncluded = toNumber(subscription?.kwh_included);
+  const resetAt = toTimestamp(subscription?.kwh_reset_date ?? subscription?.current_period_end);
+
+  if (kwhUsed !== null || kwhIncluded !== null) {
+    const brief = currentMonth ? neuralwattUsageBrief(currentMonth) : null;
+    windows.billing_cycle = toUsageWindow({
+      usedPercent: percentUsed(kwhUsed, kwhIncluded),
+      windowSeconds: kwhIncluded !== null ? NEURALWATT_MONTH_WINDOW_SECONDS : null,
+      resetAt,
+      valueLabel: brief,
+    });
+  }
+
+  if (currentMonth) {
+    windows.monthly = toUsageWindow({
+      usedPercent: percentUsed(kwhUsed ?? currentMonth.energy_kwh, kwhIncluded),
+      windowSeconds: kwhIncluded !== null ? NEURALWATT_MONTH_WINDOW_SECONDS : null,
+      resetAt: null,
+      valueLabel: neuralwattMonthlyLabel(currentMonth) ?? neuralwattUsageSummary(currentMonth),
+    });
+  }
+
+  const balanceShort = formatUsdShort(balance?.credits_remaining_usd);
+  if (balanceShort) {
+    windows.credits_balance = toUsageWindow({
+      usedPercent: percentUsed(balance?.credits_used_usd, balance?.total_credits_usd),
+      windowSeconds: null,
+      resetAt: null,
+      valueLabel: balanceShort,
+    });
+  }
+
+  return windows;
+};
+
+export const fetchNeuralwattQuota = async (): Promise<ProviderResult> => {
+  const auth = readAuthFile();
+  const entry = normalizeAuthEntry(getAuthEntry(auth, ['neuralwatt', 'neural-watt', 'neural_watt'])) as Record<string, unknown> | null;
+  const apiKey = (entry?.key as string | undefined) ?? (entry?.token as string | undefined);
+
+  if (!apiKey) {
+    return buildResult({
+      providerId: 'neuralwatt',
+      providerName: 'Neuralwatt',
+      ok: false,
+      configured: false,
+      error: 'Not configured',
+    });
+  }
+
+  try {
+    const response = await fetch('https://api.neuralwatt.com/v1/quota', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      return buildResult({
+        providerId: 'neuralwatt',
+        providerName: 'Neuralwatt',
+        ok: false,
+        configured: true,
+        error: `API error: ${response.status}`,
+      });
+    }
+
+    const payload = await response.json() as Record<string, unknown>;
+    const windows = parseNeuralwattQuota(payload);
+
+    return buildResult({
+      providerId: 'neuralwatt',
+      providerName: 'Neuralwatt',
+      ok: true,
+      configured: true,
+      usage: { windows },
+    });
+  } catch (error) {
+    return buildResult({
+      providerId: 'neuralwatt',
+      providerName: 'Neuralwatt',
+      ok: false,
+      configured: true,
+      error: error instanceof Error ? error.message : 'Request failed',
+    });
+  }
+};
+
 
 const normalizeTimestamp = (value: unknown) => {
   if (typeof value !== 'number') return null;
@@ -2064,6 +2236,8 @@ export const fetchQuotaForProvider = async (providerId: string): Promise<Provide
       return fetchKimiQuota();
     case 'nano-gpt':
       return fetchNanoGptQuota();
+    case 'neuralwatt':
+      return fetchNeuralwattQuota();
     case 'minimax-coding-plan':
       return fetchMiniMaxCodingPlanQuota();
     case 'minimax-cn-coding-plan':
