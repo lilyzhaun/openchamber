@@ -1703,6 +1703,14 @@ const neuralwattUsageBrief = (usage: Record<string, unknown> | null) => {
   return parts.length > 0 ? parts.join(' · ') : null;
 };
 
+const neuralwattUsageBriefWithPercent = (usedPercent: number | null, usage: Record<string, unknown> | null) => {
+  const percentLabel = typeof usedPercent === 'number' && Number.isFinite(usedPercent)
+    ? `${Math.round(usedPercent)}%`
+    : null;
+  const parts = [percentLabel, neuralwattUsageBrief(usage)].filter((value): value is string => value !== null);
+  return parts.length > 0 ? parts.join(' · ') : null;
+};
+
 const NEURALWATT_MONTH_WINDOW_SECONDS = 30 * 24 * 60 * 60;
 
 const neuralwattKwhLabel = (value: unknown) => {
@@ -1738,12 +1746,12 @@ export const parseNeuralwattQuota = (payload: Record<string, unknown>): Record<s
   const resetAt = toTimestamp(subscription?.kwh_reset_date ?? subscription?.current_period_end);
 
   if (kwhUsed !== null || kwhIncluded !== null) {
-    const brief = currentMonth ? neuralwattUsageBrief(currentMonth) : null;
+    const usedPercent = percentUsed(kwhUsed, kwhIncluded);
     windows.billing_cycle = toUsageWindow({
-      usedPercent: percentUsed(kwhUsed, kwhIncluded),
+      usedPercent,
       windowSeconds: kwhIncluded !== null ? NEURALWATT_MONTH_WINDOW_SECONDS : null,
       resetAt,
-      valueLabel: brief,
+      valueLabel: currentMonth ? neuralwattUsageBriefWithPercent(usedPercent, currentMonth) : null,
     });
   }
 

@@ -38,6 +38,6 @@ describe('parseNeuralwattQuota', () => {
     assert.equal(windows.monthly.valueLabel, '$0.19 USD · 37.1 Wh');
     assert.equal(Math.round((windows.billing_cycle.usedPercent ?? 0) * 10000) / 10000, 0.6183);
     assert.equal(windows.billing_cycle.windowSeconds, 30 * 24 * 60 * 60);
-    assert.equal(windows.billing_cycle.valueLabel, '12# · 0.69M');
+    assert.equal(windows.billing_cycle.valueLabel, '1% · 12# · 0.69M');
   });
 });
