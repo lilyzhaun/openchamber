@@ -24,6 +24,7 @@ import { useGlobalSessionsStore, resolveGlobalSessionDirectory } from "@/stores/
 import { useDirectoryStore } from "@/stores/useDirectoryStore"
 import { useSessionFoldersStore } from "@/stores/useSessionFoldersStore"
 import { useCommandsStore } from "@/stores/useCommandsStore"
+import { useSkillsStore } from "@/stores/useSkillsStore"
 import { getSafeStorage } from "@/stores/utils/safeStorage"
 import { markPendingUserSendAnimation } from "@/lib/userSendAnimation"
 import { flattenAssistantTextParts } from "@/lib/messages/messageText"
@@ -101,8 +102,14 @@ export function routeMessage(params: {
     const syncCommands = dirState?.command ?? []
     const storeCommands = useCommandsStore.getState().commands
 
+    // OpenCode registers every skill as a command (source: "skill"), but the
+    // commands store filters skills out and the synced command list is only
+    // hydrated at bootstrap. Consult the live skills store so a skill selected
+    // from the slash menu is invoked via session.command (injecting its
+    // content) instead of being sent as a literal "/name" message (#1605).
     const isCommand = syncCommands.find((c) => c.name === cmdName)
       || storeCommands.find((c) => c.name === cmdName)
+      || useSkillsStore.getState().skills.some((s) => s.name === cmdName)
 
     if (isCommand) {
       return optimisticSend({
@@ -619,6 +626,7 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       if (explicitProject || explicitDirectory !== null) {
         return explicitProject ?? inferredProjectFromDir ?? fallbackProject
       }
+      if (activeProject) return activeProject
       if (currentDirectory) return currentDirProject ?? fallbackProject
       return persistedProjectByDir ?? persistedProjectById ?? fallbackProject
     })()
@@ -626,6 +634,8 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     const directory = (() => {
       if (explicitDirectory !== null) return explicitDirectory
       if (explicitProject) return normalizePath(explicitProject.path ?? null)
+      const selectedProjectPath = normalizePath(selectedProject?.path ?? null)
+      if (selectedProjectPath && selectedProjectPath !== currentDirectory) return selectedProjectPath
       if (currentDirectory) return currentDirectory
       if (persistedTarget?.directory) return persistedTarget.directory
       return normalizePath(selectedProject?.path ?? null)
