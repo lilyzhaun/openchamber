@@ -23,10 +23,3 @@ export const QUOTA_PROVIDERS: QuotaProviderMeta[] = [
   { id: 'xiaomi-token-plan', name: 'Xiaomi Token Plan' },
   { id: 'wafer', name: 'Wafer.ai' },
 ];
-
-export const QUOTA_PROVIDER_MAP = QUOTA_PROVIDERS.reduce<
-  Record<string, QuotaProviderMeta>
->((acc, provider) => {
-  acc[provider.id] = provider;
-  return acc;
-}, {});

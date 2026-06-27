@@ -110,18 +110,6 @@ type WaferPayload = {
   plan_tier?: string;
 };
 
-type XiaomiTokenUsageItem = {
-  name?: string;
-  used?: number | string;
-  limit?: number | string;
-  percent?: number | string;
-};
-
-type XiaomiTokenPlanPayload = {
-  code?: number;
-  data?: Record<string, unknown>;
-};
-
 export type ProviderResult = {
   providerId: string;
   providerName: string;
@@ -136,8 +124,6 @@ const OPENCODE_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode');
 const OPENCODE_DATA_DIR = path.join(os.homedir(), '.local', 'share', 'opencode');
 const AUTH_FILE = path.join(OPENCODE_DATA_DIR, 'auth.json');
 const OLLAMA_CLOUD_COOKIE_PATH = path.join(os.homedir(), '.config', 'ollama-quota', 'cookie');
-const XIAOMI_TOKEN_PLAN_COOKIE_PATH = path.join(os.homedir(), '.config', 'xiaomi-token-plan', 'cookie');
-const XIAOMI_TOKEN_PLAN_API_BASE = 'https://platform.xiaomimimo.com/api/v1';
 
 
 const ANTIGRAVITY_ACCOUNTS_PATHS = [
@@ -346,7 +332,7 @@ const calculateResetAfterSeconds = (resetAt: number | null) => {
   return delta < 0 ? 0 : delta;
 };
 
-const toUsageWindow = (data: { usedPercent: number | null; windowSeconds: number | null; resetAt: number | null; valueLabel?: string | null; resetAfterFormatted?: string | null }) => {
+const toUsageWindow = (data: { usedPercent: number | null; windowSeconds: number | null; resetAt: number | null; valueLabel?: string | null }) => {
   const resetAfterSeconds = calculateResetAfterSeconds(data.resetAt);
   const resetFormatted = data.resetAt ? formatResetTime(data.resetAt) : null;
   return {
@@ -356,7 +342,7 @@ const toUsageWindow = (data: { usedPercent: number | null; windowSeconds: number
     resetAfterSeconds,
     resetAt: data.resetAt,
     resetAtFormatted: resetFormatted,
-    resetAfterFormatted: data.resetAfterFormatted ?? resetFormatted,
+    resetAfterFormatted: resetFormatted,
     ...(data.valueLabel ? { valueLabel: data.valueLabel } : {}),
   } satisfies UsageWindow;
 };
@@ -452,11 +438,6 @@ export const listConfiguredQuotaProviders = () => {
     configured.add('nano-gpt');
   }
 
-  const neuralwattAuth = normalizeAuthEntry(getAuthEntry(auth, ['neuralwatt', 'neural-watt', 'neural_watt']));
-  if (neuralwattAuth && ((neuralwattAuth as Record<string, unknown>).key || (neuralwattAuth as Record<string, unknown>).token)) {
-    configured.add('neuralwatt');
-  }
-
   const copilotAuth = normalizeAuthEntry(getAuthEntry(auth, ['github-copilot', 'copilot']));
   if (copilotAuth && ((copilotAuth as Record<string, unknown>).access || (copilotAuth as Record<string, unknown>).token)) {
     configured.add('github-copilot');
@@ -467,10 +448,6 @@ export const listConfiguredQuotaProviders = () => {
     configured.add('ollama-cloud');
   }
 
-  if (readTextFile(XIAOMI_TOKEN_PLAN_COOKIE_PATH)) {
-    configured.add('xiaomi-token-plan');
-  }
-
   const waferAuth = normalizeAuthEntry(getAuthEntry(auth, ['wafer', 'wafer-ai', 'wafer_ai', 'wafer.ai']));
   if (waferAuth && ((waferAuth as Record<string, unknown>).key || (waferAuth as Record<string, unknown>).token)) {
     configured.add('wafer');
@@ -479,7 +456,7 @@ export const listConfiguredQuotaProviders = () => {
   return Array.from(configured);
 };
 
-export const fetchCodexQuota = async (): Promise<ProviderResult> => {
+const fetchCodexQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['openai', 'codex', 'chatgpt'])) as Record<string, unknown> | null;
   const accessToken = (entry?.access as string | undefined) ?? (entry?.token as string | undefined);
@@ -746,7 +723,7 @@ const fetchGoogleModels = async (accessToken: string, projectId?: string) => {
   return null;
 };
 
-export const fetchGoogleQuota = async (): Promise<ProviderResult> => {
+const fetchGoogleQuota = async (): Promise<ProviderResult> => {
   const authSources = resolveGoogleAuthSources();
   if (!authSources.length) {
     return buildResult({
@@ -874,7 +851,7 @@ export const fetchGoogleQuota = async (): Promise<ProviderResult> => {
   });
 };
 
-export const fetchClaudeQuota = async (): Promise<ProviderResult> => {
+const fetchClaudeQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['anthropic', 'claude'])) as Record<string, unknown> | null;
   const accessToken = (entry?.access as string | undefined) ?? (entry?.token as string | undefined);
@@ -992,7 +969,7 @@ const buildCopilotWindows = (payload: Record<string, unknown>) => {
   return windows;
 };
 
-export const fetchCopilotQuota = async (): Promise<ProviderResult> => {
+const fetchCopilotQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['github-copilot', 'copilot'])) as Record<string, unknown> | null;
   const accessToken = (entry?.access as string | undefined) ?? (entry?.token as string | undefined);
@@ -1047,7 +1024,7 @@ export const fetchCopilotQuota = async (): Promise<ProviderResult> => {
   }
 };
 
-export const fetchCopilotAddonQuota = async (): Promise<ProviderResult> => {
+const fetchCopilotAddonQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['github-copilot', 'copilot'])) as Record<string, unknown> | null;
   const accessToken = (entry?.access as string | undefined) ?? (entry?.token as string | undefined);
@@ -1105,7 +1082,7 @@ export const fetchCopilotAddonQuota = async (): Promise<ProviderResult> => {
   }
 };
 
-export const fetchKimiQuota = async (): Promise<ProviderResult> => {
+const fetchKimiQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['kimi-for-coding', 'kimi'])) as Record<string, unknown> | null;
   const apiKey = (entry?.key as string | undefined) ?? (entry?.token as string | undefined);
@@ -1265,19 +1242,22 @@ const fetchMiniMaxQuota = async (data: {
     const weeklyStartAt = toTimestamp(firstModel.weekly_start_time);
     const weeklyResetAt = toTimestamp(firstModel.weekly_end_time);
 
-    const intervalUsedPercent = data.usageFieldsAreRemaining
-      ? remainingPercentToUsedPercent(firstModel.current_interval_remaining_percent)
-      : intervalTotal !== null && intervalTotal > 0 && intervalUsage !== null
-        ? Math.max(0, Math.min(100, (intervalUsage / intervalTotal) * 100))
-        : null;
+    const intervalUsed = data.usageFieldsAreRemaining && intervalTotal !== null && intervalUsage !== null
+      ? intervalTotal - intervalUsage
+      : intervalUsage;
+    const weeklyUsed = data.usageFieldsAreRemaining && weeklyTotal !== null && weeklyUsage !== null
+      ? weeklyTotal - weeklyUsage
+      : weeklyUsage;
+
+    const intervalUsedPercent = intervalTotal !== null && intervalTotal > 0 && intervalUsed !== null
+      ? Math.max(0, Math.min(100, (intervalUsed / intervalTotal) * 100))
+      : null;
     const intervalWindowSeconds = intervalStartAt && intervalResetAt && intervalResetAt > intervalStartAt
       ? Math.floor((intervalResetAt - intervalStartAt) / 1000)
       : null;
-    const weeklyUsedPercent = data.usageFieldsAreRemaining
-      ? remainingPercentToUsedPercent(firstModel.current_weekly_remaining_percent)
-      : weeklyTotal !== null && weeklyTotal > 0 && weeklyUsage !== null
-        ? Math.max(0, Math.min(100, (weeklyUsage / weeklyTotal) * 100))
-        : null;
+    const weeklyUsedPercent = weeklyTotal !== null && weeklyTotal > 0 && weeklyUsed !== null
+      ? Math.max(0, Math.min(100, (weeklyUsed / weeklyTotal) * 100))
+      : null;
     const weeklyWindowSeconds = weeklyStartAt && weeklyResetAt && weeklyResetAt > weeklyStartAt
       ? Math.floor((weeklyResetAt - weeklyStartAt) / 1000)
       : null;
@@ -1313,68 +1293,41 @@ const fetchMiniMaxQuota = async (data: {
   }
 };
 
-export const remainingPercentToUsedPercent = (value: unknown): number | null => {
-  const remainingPercent = toNumber(value);
-  if (remainingPercent === null) return null;
-  return Math.max(0, Math.min(100, 100 - remainingPercent));
-};
-
-export const fetchMiniMaxCodingPlanQuota = () => fetchMiniMaxQuota({
+const fetchMiniMaxCodingPlanQuota = () => fetchMiniMaxQuota({
   providerId: 'minimax-coding-plan',
   providerName: 'MiniMax Coding Plan (minimax.io)',
   endpoint: 'https://api.minimax.io/v1/api/openplatform/coding_plan/remains',
   usageFieldsAreRemaining: false,
 });
 
-export const fetchMiniMaxCnCodingPlanQuota = () => fetchMiniMaxQuota({
+const fetchMiniMaxCnCodingPlanQuota = () => fetchMiniMaxQuota({
   providerId: 'minimax-cn-coding-plan',
   providerName: 'MiniMax Coding Plan (minimaxi.com)',
   endpoint: 'https://www.minimaxi.com/v1/api/openplatform/coding_plan/remains',
   usageFieldsAreRemaining: true,
 });
 
-const normalizeSettingsText = (html: string) => html
-  .replace(/<[^>]+>/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim();
-
-const parseUsageSection = (text: string, label: string) => {
-  const sectionMatch = text.match(new RegExp(`${label}\\s+usage([\\s\\S]*?)(?=(?:Session|Weekly|Extra)\\s+usage|Balance\\s+remaining|Notify\\s+me|$)`, 'i'));
-  if (!sectionMatch) return null;
-  const section = sectionMatch[1] ?? '';
-  const percentMatch = section.match(/([0-9.]+)%\s*used/i);
-  if (!percentMatch) return null;
-  const resetMatch = section.match(/Resets\s+(in\s+[^.]+)/i);
-  return {
-    usedPercent: toNumber(percentMatch[1]),
-    resetAfterFormatted: resetMatch?.[1]?.trim() ?? null,
-  };
-};
-
 const parseOllamaSettingsHtml = (html: string) => {
-  const text = normalizeSettingsText(html);
   const windows: Record<string, UsageWindow> = {};
-  const sessionUsage = parseUsageSection(text, 'Session');
-  if (sessionUsage) {
+  const sessionMatch = html.match(/Session\s+usage[^0-9]*([0-9.]+)%/i);
+  if (sessionMatch) {
     windows.session = toUsageWindow({
-      usedPercent: sessionUsage.usedPercent,
+      usedPercent: toNumber(sessionMatch[1]),
       windowSeconds: null,
       resetAt: null,
-      resetAfterFormatted: sessionUsage.resetAfterFormatted,
     });
   }
 
-  const weeklyUsage = parseUsageSection(text, 'Weekly');
-  if (weeklyUsage) {
+  const weeklyMatch = html.match(/Weekly\s+usage[^0-9]*([0-9.]+)%/i);
+  if (weeklyMatch) {
     windows.weekly = toUsageWindow({
-      usedPercent: weeklyUsage.usedPercent,
+      usedPercent: toNumber(weeklyMatch[1]),
       windowSeconds: null,
       resetAt: null,
-      resetAfterFormatted: weeklyUsage.resetAfterFormatted,
     });
   }
 
-  const premiumMatch = text.match(/Premium[^0-9]*([0-9]+)\s*\/\s*([0-9]+)/i);
+  const premiumMatch = html.match(/Premium[^0-9]*([0-9]+)\s*\/\s*([0-9]+)/i);
   if (premiumMatch) {
     const used = toNumber(premiumMatch[1]);
     const total = toNumber(premiumMatch[2]);
@@ -1390,7 +1343,7 @@ const parseOllamaSettingsHtml = (html: string) => {
   return windows;
 };
 
-export const fetchOllamaCloudQuota = async (): Promise<ProviderResult> => {
+const fetchOllamaCloudQuota = async (): Promise<ProviderResult> => {
   const cookie = readTextFile(OLLAMA_CLOUD_COOKIE_PATH);
 
   if (!cookie) {
@@ -1440,151 +1393,7 @@ export const fetchOllamaCloudQuota = async (): Promise<ProviderResult> => {
   }
 };
 
-const isXiaomiSuccessPayload = (payload: XiaomiTokenPlanPayload) => (
-  payload.code === 0 && Boolean(payload.data)
-);
-
-const ratioToPercent = (value: unknown) => {
-  const ratio = toNumber(value);
-  if (ratio === null) return null;
-  return Math.max(0, Math.min(100, ratio * 100));
-};
-
-const formatTokenCount = (value: unknown) => {
-  const number = toNumber(value);
-  return number === null ? '0' : new Intl.NumberFormat('en-US').format(number);
-};
-
-const findXiaomiUsageItem = (items: unknown, name: string): XiaomiTokenUsageItem | null => {
-  if (!Array.isArray(items)) return null;
-  return items.find((item): item is XiaomiTokenUsageItem => (
-    Boolean(item) && typeof item === 'object' && (item as XiaomiTokenUsageItem).name === name
-  )) ?? null;
-};
-
-const formatXiaomiTokenValueLabel = (item: XiaomiTokenUsageItem, prefix: string | null = null) => {
-  const label = `${formatTokenCount(item.used)} / ${formatTokenCount(item.limit)} tokens`;
-  return prefix ? `${prefix} · ${label}` : label;
-};
-
-const parseXiaomiWindowFromItem = (data: {
-  item: XiaomiTokenUsageItem | null;
-  fallbackPercent: unknown;
-  resetAt?: number | null;
-  valuePrefix?: string | null;
-}) => {
-  if (!data.item) return null;
-  return toUsageWindow({
-    usedPercent: ratioToPercent(data.item.percent ?? data.fallbackPercent),
-    windowSeconds: null,
-    resetAt: data.resetAt ?? null,
-    valueLabel: formatXiaomiTokenValueLabel(data.item, data.valuePrefix ?? null),
-  });
-};
-
-export const parseXiaomiTokenPlanUsage = (data: {
-  usagePayload: XiaomiTokenPlanPayload;
-  detailPayload: XiaomiTokenPlanPayload;
-  balancePayload: XiaomiTokenPlanPayload;
-}) => {
-  const windows: Record<string, UsageWindow> = {};
-  const usageData = isXiaomiSuccessPayload(data.usagePayload) ? data.usagePayload.data : null;
-  const detailData = isXiaomiSuccessPayload(data.detailPayload) ? data.detailPayload.data : null;
-  const balanceData = isXiaomiSuccessPayload(data.balancePayload) ? data.balancePayload.data : null;
-  const monthUsage = asObject(usageData?.monthUsage);
-  const planUsage = asObject(usageData?.usage);
-  const resetAt = toTimestamp(detailData?.currentPeriodEnd);
-  const planName = asNonEmptyString(detailData?.planName);
-
-  const monthlyWindow = parseXiaomiWindowFromItem({
-    item: findXiaomiUsageItem(monthUsage?.items, 'month_total_token'),
-    fallbackPercent: monthUsage?.percent,
-    resetAt,
-  });
-  if (monthlyWindow) {
-    windows.monthly = monthlyWindow;
-  }
-
-  const planWindow = parseXiaomiWindowFromItem({
-    item: findXiaomiUsageItem(planUsage?.items, 'plan_total_token'),
-    fallbackPercent: planUsage?.percent,
-    resetAt,
-    valuePrefix: planName,
-  });
-  if (planWindow) {
-    windows.plan_limit = planWindow;
-  }
-
-  const balance = toNumber(balanceData?.balance);
-  const currency = asNonEmptyString(balanceData?.currency) ?? 'USD';
-  if (balance !== null) {
-    windows.credits_balance = toUsageWindow({
-      usedPercent: null,
-      windowSeconds: null,
-      resetAt: null,
-      valueLabel: `$${balance.toFixed(2)} ${currency}`,
-    });
-  }
-
-  return windows;
-};
-
-const fetchXiaomiTokenPlanJson = async (pathName: string, cookie: string) => {
-  const response = await fetch(`${XIAOMI_TOKEN_PLAN_API_BASE}${pathName}`, {
-    method: 'GET',
-    headers: {
-      Cookie: cookie,
-      Accept: 'application/json, text/plain, */*',
-      Referer: 'https://platform.xiaomimimo.com/',
-      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36',
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
-  }
-  return response.json() as Promise<XiaomiTokenPlanPayload>;
-};
-
-export const fetchXiaomiTokenPlanQuota = async (): Promise<ProviderResult> => {
-  const cookie = readTextFile(XIAOMI_TOKEN_PLAN_COOKIE_PATH);
-
-  if (!cookie) {
-    return buildResult({
-      providerId: 'xiaomi-token-plan',
-      providerName: 'Xiaomi Token Plan',
-      ok: false,
-      configured: false,
-      error: 'Not configured',
-    });
-  }
-
-  try {
-    const [usagePayload, detailPayload, balancePayload] = await Promise.all([
-      fetchXiaomiTokenPlanJson('/tokenPlan/usage', cookie),
-      fetchXiaomiTokenPlanJson('/tokenPlan/detail', cookie),
-      fetchXiaomiTokenPlanJson('/balance', cookie),
-    ]);
-    return buildResult({
-      providerId: 'xiaomi-token-plan',
-      providerName: 'Xiaomi Token Plan',
-      ok: true,
-      configured: true,
-      usage: {
-        windows: parseXiaomiTokenPlanUsage({ usagePayload, detailPayload, balancePayload }),
-      },
-    });
-  } catch (error) {
-    return buildResult({
-      providerId: 'xiaomi-token-plan',
-      providerName: 'Xiaomi Token Plan',
-      ok: false,
-      configured: true,
-      error: error instanceof Error ? error.message : 'Request failed',
-    });
-  }
-};
-
-export const fetchOpenRouterQuota = async (): Promise<ProviderResult> => {
+const fetchOpenRouterQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['openrouter'])) as Record<string, unknown> | null;
   const apiKey = (entry?.key as string | undefined) ?? (entry?.token as string | undefined);
@@ -1657,181 +1466,6 @@ export const fetchOpenRouterQuota = async (): Promise<ProviderResult> => {
   }
 };
 
-const formatUsd = (value: unknown) => {
-  const number = toNumber(value);
-  return number === null ? null : `$${formatMoney(number)} USD`;
-};
-
-const formatUsdShort = (value: unknown) => {
-  const number = toNumber(value);
-  return number === null ? null : `$${formatMoney(number)}`;
-};
-
-const formatCount = (value: unknown) => {
-  const number = toNumber(value);
-  return number === null ? '0' : new Intl.NumberFormat('en-US').format(number);
-};
-
-const neuralwattUsageSummary = (usage: Record<string, unknown> | null) => {
-  const cost = formatUsd(usage?.cost_usd) ?? '$0.00 USD';
-  const requests = formatCount(usage?.requests);
-  const tokens = formatCount(usage?.tokens);
-  const energy = toNumber(usage?.energy_kwh);
-  const energyLabel = energy === null ? '0 kWh' : `${energy.toFixed(4)} kWh`;
-  return `${cost} · ${requests} requests · ${tokens} tokens · ${energyLabel}`;
-};
-
-const neuralwattFormatCompactTokens = (value: unknown) => {
-  const number = toNumber(value);
-  if (number === null) return null;
-  if (number >= 1_000_000_000) return `${(number / 1_000_000_000).toFixed(2)}B`;
-  if (number >= 100_000) return `${(number / 1_000_000).toFixed(2)}M`;
-  return new Intl.NumberFormat('en-US').format(number);
-};
-
-const neuralwattFormatCompactRequests = (value: unknown) => {
-  const number = toNumber(value);
-  if (number === null) return null;
-  return `${new Intl.NumberFormat('en-US').format(number)}#`;
-};
-
-const neuralwattUsageBrief = (usage: Record<string, unknown> | null) => {
-  const parts = [
-    neuralwattFormatCompactRequests(usage?.requests),
-    neuralwattFormatCompactTokens(usage?.tokens),
-  ].filter((value): value is string => value !== null);
-  return parts.length > 0 ? parts.join(' · ') : null;
-};
-
-const neuralwattUsageBriefWithPercent = (usedPercent: number | null, usage: Record<string, unknown> | null) => {
-  const percentLabel = typeof usedPercent === 'number' && Number.isFinite(usedPercent)
-    ? `${Math.round(usedPercent)}%`
-    : null;
-  const parts = [percentLabel, neuralwattUsageBrief(usage)].filter((value): value is string => value !== null);
-  return parts.length > 0 ? parts.join(' · ') : null;
-};
-
-const NEURALWATT_MONTH_WINDOW_SECONDS = 30 * 24 * 60 * 60;
-
-const neuralwattKwhLabel = (value: unknown) => {
-  const number = toNumber(value);
-  if (number === null) return null;
-  if (number < 1) return `${(number * 1000).toFixed(1)} Wh`;
-  return `${number.toFixed(4)} kWh`;
-};
-
-const neuralwattMonthlyLabel = (usage: Record<string, unknown> | null) => {
-  const cost = formatUsd(usage?.cost_usd);
-  const energy = neuralwattKwhLabel(usage?.energy_kwh);
-  const parts = [cost, energy].filter((value): value is string => value !== null);
-  return parts.length > 0 ? parts.join(' · ') : null;
-};
-
-const percentUsed = (used: unknown, total: unknown) => {
-  const usedNumber = toNumber(used);
-  const totalNumber = toNumber(total);
-  if (usedNumber === null || totalNumber === null || totalNumber <= 0) return null;
-  return Math.max(0, Math.min(100, (usedNumber / totalNumber) * 100));
-};
-
-export const parseNeuralwattQuota = (payload: Record<string, unknown>): Record<string, UsageWindow> => {
-  const balance = asObject(payload.balance);
-  const usage = asObject(payload.usage);
-  const currentMonth = asObject(usage?.current_month);
-  const subscription = asObject(payload.subscription);
-  const windows: Record<string, UsageWindow> = {};
-
-  const kwhUsed = toNumber(subscription?.kwh_used);
-  const kwhIncluded = toNumber(subscription?.kwh_included);
-  const resetAt = toTimestamp(subscription?.kwh_reset_date ?? subscription?.current_period_end);
-
-  if (kwhUsed !== null || kwhIncluded !== null) {
-    const usedPercent = percentUsed(kwhUsed, kwhIncluded);
-    windows.billing_cycle = toUsageWindow({
-      usedPercent,
-      windowSeconds: kwhIncluded !== null ? NEURALWATT_MONTH_WINDOW_SECONDS : null,
-      resetAt,
-      valueLabel: currentMonth ? neuralwattUsageBriefWithPercent(usedPercent, currentMonth) : null,
-    });
-  }
-
-  if (currentMonth) {
-    windows.monthly = toUsageWindow({
-      usedPercent: percentUsed(kwhUsed ?? currentMonth.energy_kwh, kwhIncluded),
-      windowSeconds: kwhIncluded !== null ? NEURALWATT_MONTH_WINDOW_SECONDS : null,
-      resetAt: null,
-      valueLabel: neuralwattMonthlyLabel(currentMonth) ?? neuralwattUsageSummary(currentMonth),
-    });
-  }
-
-  const balanceShort = formatUsdShort(balance?.credits_remaining_usd);
-  if (balanceShort) {
-    windows.credits_balance = toUsageWindow({
-      usedPercent: percentUsed(balance?.credits_used_usd, balance?.total_credits_usd),
-      windowSeconds: null,
-      resetAt: null,
-      valueLabel: balanceShort,
-    });
-  }
-
-  return windows;
-};
-
-export const fetchNeuralwattQuota = async (): Promise<ProviderResult> => {
-  const auth = readAuthFile();
-  const entry = normalizeAuthEntry(getAuthEntry(auth, ['neuralwatt', 'neural-watt', 'neural_watt'])) as Record<string, unknown> | null;
-  const apiKey = (entry?.key as string | undefined) ?? (entry?.token as string | undefined);
-
-  if (!apiKey) {
-    return buildResult({
-      providerId: 'neuralwatt',
-      providerName: 'Neuralwatt',
-      ok: false,
-      configured: false,
-      error: 'Not configured',
-    });
-  }
-
-  try {
-    const response = await fetch('https://api.neuralwatt.com/v1/quota', {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      return buildResult({
-        providerId: 'neuralwatt',
-        providerName: 'Neuralwatt',
-        ok: false,
-        configured: true,
-        error: `API error: ${response.status}`,
-      });
-    }
-
-    const payload = await response.json() as Record<string, unknown>;
-    const windows = parseNeuralwattQuota(payload);
-
-    return buildResult({
-      providerId: 'neuralwatt',
-      providerName: 'Neuralwatt',
-      ok: true,
-      configured: true,
-      usage: { windows },
-    });
-  } catch (error) {
-    return buildResult({
-      providerId: 'neuralwatt',
-      providerName: 'Neuralwatt',
-      ok: false,
-      configured: true,
-      error: error instanceof Error ? error.message : 'Request failed',
-    });
-  }
-};
-
 
 const normalizeTimestamp = (value: unknown) => {
   if (typeof value !== 'number') return null;
@@ -1857,7 +1491,7 @@ const resolveWindowLabel = (windowSeconds: number | null) => {
   return `${windowSeconds}s`;
 };
 
-export const fetchZaiQuota = async (): Promise<ProviderResult> => {
+const fetchZaiQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['zai-coding-plan', 'zai', 'z.ai'])) as Record<string, unknown> | null;
   const apiKey = (entry?.key as string | undefined) ?? (entry?.token as string | undefined);
@@ -1926,7 +1560,7 @@ export const fetchZaiQuota = async (): Promise<ProviderResult> => {
   }
 };
 
-export const fetchZhipuaiCodingPlanQuota = async (): Promise<ProviderResult> => {
+const fetchZhipuaiCodingPlanQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['zhipuai-coding-plan'])) as Record<string, unknown> | null;
   const apiKey = (entry?.key as string | undefined) ?? (entry?.token as string | undefined);
@@ -2015,7 +1649,7 @@ export const fetchZhipuaiCodingPlanQuota = async (): Promise<ProviderResult> => 
 
 const NANO_GPT_DAILY_WINDOW_SECONDS = 86400;
 
-export const fetchNanoGptQuota = async (): Promise<ProviderResult> => {
+const fetchNanoGptQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['nano-gpt', 'nanogpt', 'nano_gpt'])) as Record<string, unknown> | null;
   const apiKey = (entry?.key as string | undefined) ?? (entry?.token as string | undefined);
@@ -2121,7 +1755,7 @@ export const fetchNanoGptQuota = async (): Promise<ProviderResult> => {
 const WAFER_QUOTA_URL = 'https://pass.wafer.ai/v1/inference/quota';
 const WAFER_WINDOW_SECONDS = 5 * 3600;
 
-export const fetchWaferQuota = async (): Promise<ProviderResult> => {
+const fetchWaferQuota = async (): Promise<ProviderResult> => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, ['wafer', 'wafer-ai', 'wafer_ai', 'wafer.ai'])) as Record<string, unknown> | null;
   const apiKey = (entry?.key as string | undefined) ?? (entry?.token as string | undefined);
@@ -2244,16 +1878,12 @@ export const fetchQuotaForProvider = async (providerId: string): Promise<Provide
       return fetchKimiQuota();
     case 'nano-gpt':
       return fetchNanoGptQuota();
-    case 'neuralwatt':
-      return fetchNeuralwattQuota();
     case 'minimax-coding-plan':
       return fetchMiniMaxCodingPlanQuota();
     case 'minimax-cn-coding-plan':
       return fetchMiniMaxCnCodingPlanQuota();
     case 'ollama-cloud':
       return fetchOllamaCloudQuota();
-    case 'xiaomi-token-plan':
-      return fetchXiaomiTokenPlanQuota();
     case 'openrouter':
       return fetchOpenRouterQuota();
     case 'zai-coding-plan':
