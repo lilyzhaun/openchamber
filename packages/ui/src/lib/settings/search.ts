@@ -288,6 +288,14 @@ const SETTINGS_SEARCH_ITEMS: readonly SettingsSearchItem[] = [
     isAvailable: (ctx) => ctx.isDesktopLocalOrigin,
   },
   {
+    id: 'sessions.desktop-keep-awake',
+    page: 'sessions',
+    titleKey: 'settings.openchamber.desktopNetwork.field.keepAwake',
+    descriptionKey: 'settings.openchamber.desktopNetwork.field.keepAwakeDescription',
+    keywords: ['desktop', 'sleep', 'awake', 'server', 'mobile', 'phone'],
+    isAvailable: (ctx) => ctx.isDesktopLocalOrigin,
+  },
+  {
     id: 'sessions.desktop-ui-password',
     page: 'sessions',
     titleKey: 'settings.openchamber.desktopPassword.field.password',
@@ -404,7 +412,7 @@ const SETTINGS_SEARCH_ITEMS: readonly SettingsSearchItem[] = [
     page: 'remote-instances',
     titleKey: 'settings.remoteInstances.direct.title',
     descriptionKey: 'settings.remoteInstances.direct.description',
-    keywords: ['server url', 'connection token', 'import link', 'host switcher'],
+    keywords: ['server url', 'connection token', 'import link', 'host switcher', 'additional headers', 'request headers', 'cloudflare access', 'service token'],
     isAvailable: (ctx) => ctx.isDesktop,
   },
   {
