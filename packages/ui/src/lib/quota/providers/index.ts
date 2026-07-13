@@ -22,4 +22,5 @@ export const QUOTA_PROVIDERS: QuotaProviderMeta[] = [
   { id: 'ollama-cloud', name: 'Ollama Cloud' },
   { id: 'xiaomi-token-plan', name: 'Xiaomi Token Plan' },
   { id: 'wafer', name: 'Wafer.ai' },
+  { id: 'opencode-go', name: 'OpenCode Go' },
 ];

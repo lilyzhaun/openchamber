@@ -1,26 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'bun:test';
+import { fetchOllamaCloudUsage } from './ollama-cloud.js';
 
-import { parseOllamaSettingsHtml } from './ollama-cloud.js';
+describe('Ollama Cloud quota provider', () => {
+  it('rejects redirects without forwarding credentials', async () => {
+    await expect(fetchOllamaCloudUsage({ cookie: 'session=secret' }, async () => new Response('', { status: 302 }))).rejects.toThrow('authentication failed');
+  });
 
-describe('parseOllamaSettingsHtml', () => {
-  it('captures reset labels from Ollama cloud usage text', () => {
-    const html = `
-      Cloud usage
-      Session usage
-      0.4% used
-
-      Resets in 3 hours.
-      Weekly usage
-      23.5% used
-      deepseek-v4-pro
-      31 requests
-
-      Resets in 3 days.
-    `;
-
-    const windows = parseOllamaSettingsHtml(html);
-
-    expect(windows.session?.resetAfterFormatted).toBe('in 3 hours');
-    expect(windows.weekly?.resetAfterFormatted).toBe('in 3 days');
+  it('rejects successful pages without usage data', async () => {
+    await expect(fetchOllamaCloudUsage({ cookie: 'session=secret' }, async () => new Response('<html></html>'))).rejects.toThrow('could not be parsed');
   });
 });
