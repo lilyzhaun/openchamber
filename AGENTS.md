@@ -1,98 +1,46 @@
 # OpenChamber Agent Guide
 
-## Purpose
+## 基本原则
 
-OpenChamber provides shared web, desktop, VS Code, hosted-mobile, and native-mobile UI surfaces for OpenCode.
+- 修改前先阅读相关代码、最近的 `DOCUMENTATION.md`、包级 `README.md` 和现有测试。
+- 保持改动最小且聚焦，不顺手重构无关代码，不覆盖用户已有修改。
+- 不修改 `../opencode`；它是独立的上游仓库。
+- 不擅自添加依赖，不记录或提交密钥、令牌及其他敏感信息。
+- 仅在确有必要时使用子代理；简单、局部、上下文清晰的任务直接完成，避免重复探索和无意义并行。
 
-This file contains only always-on repository rules and routing. Detailed workflows belong to project skills and module documentation.
+## 合并上游
 
-## Instruction Order
+处理本仓库与上游的合并冲突时，以上游当前逻辑为唯一基准：
 
-Before editing:
+1. 先按上游版本原封不动地解决冲突，不在冲突块中混入本仓库旧实现。
+2. 完整理解上游的新调用链、状态模型、接口和行为后，再重新评估本仓库原有改动。
+3. 如果本仓库改动已经无用，或上游已经实现等价功能，直接丢弃本仓库对应改动。
+4. 如果本仓库需求仍然存在，必须基于上游的新逻辑重新实现，不得强行保留旧结构或旧行为。
+5. 不为未发布的旧实现增加兼容层、回退路径或临时补丁；确有外部兼容要求时必须先明确说明。
+6. 冲突解决后检查完整差异，确认没有冲突标记、重复实现、失效分支或绕过上游新逻辑的代码。
 
-1. Follow this root guide.
-2. Load every matching project skill.
-3. Read the nearest `DOCUMENTATION.md` and package `README.md` when present.
-4. Follow local code and test precedent.
+## 修改节奏
 
-If these sources materially conflict, stop and resolve the conflict instead of silently choosing one.
+- 一轮修改应围绕一个完整目标进行，先完成实现和必要的局部检查，不要每改一个文件就重复运行全量测试。
+- 修改过程中只运行能快速暴露当前问题的定向检查；一轮整体修改结束后，再统一运行与影响范围相匹配的测试、类型检查、构建或运行验证。
+- 只有跨工作区契约、根级工具链、依赖或共享生成物发生变化时，才运行工作区级全量检查。
+- 测试通过后，若改动影响本机可执行产物或运行服务，再更新本机部署并验证实际运行结果；纯文档或不影响部署产物的变更无需部署。
+- 验证通过并完成必要部署后提交 commit。提交只包含本轮相关修改，不夹带无关文件。
+- 每轮结束时必须位于 `main` 分支，且工作区干净。如果因测试、部署或外部条件无法做到，必须明确报告阻塞，不得宣称完成。
 
-## Runtime Boundaries
+## 代码结构
 
-- `packages/ui`: shared React UI, state, sync, and runtime contracts.
-- `packages/web`: web surfaces, OpenChamber server, managed/external OpenCode lifecycle, and CLI.
-- `packages/electron`: native desktop shell and privileged Electron boundary.
-- `packages/vscode`: extension host, webview, and runtime bridge.
-- `packages/mobile`: Capacitor iOS/Android shell; bundles the mobile web surface and connects to an existing OpenChamber server.
-- `packages/docs`: product documentation; not a Bun workspace.
+- 严禁巨石代码。文件和模块必须保持单一职责，入口与桥接层保持轻薄。
+- 一个文件出现多个独立功能域、复杂状态机或大量不相关辅助逻辑时，应拆分到明确归属的模块。
+- 新功能优先放入现有负责该领域的模块；没有合适归属时，创建小而清晰的模块，不继续堆积到大型文件。
+- 避免为了减少文件数量而牺牲可读性、可测试性和模块边界。
 
-Shared UI calls official OpenCode APIs through `@opencode-ai/sdk/v2`. OpenChamber-owned capabilities use `RuntimeAPIs`, `runtimeFetch`, and shared browser/realtime transport helpers. Server-side upstream integrations may use their owning runtime modules.
+## 完成标准
 
-Electron starts the OpenChamber backend in-process, never as a sidecar. Development may load loopback/HMR UI; packaged builds load staged assets through `openchamber-ui://` while the loopback server remains the API backend. Keep domain backends in web/runtime modules unless behavior is inherently native.
+一轮修改只有同时满足以下条件才算完成：
 
-Shared contracts must define intentional behavior for every applicable runtime: web, desktop, VS Code, hosted mobile, and Capacitor mobile.
-
-## Always-On Constraints
-
-- Do not modify `../opencode`; it is a separate repository.
-- Do not run git or GitHub commands unless the user explicitly asks.
-- Do not add dependencies unless explicitly requested.
-- Never add or log secrets, bearer tokens, pairing credentials, or sensitive user data.
-- Keep changes minimal and preserve unrelated worktree changes.
-- Enforce security and correctness in core/runtime logic, not only UI visibility or prompts.
-- Keep entrypoints and bridges thin; place domain logic in focused owning modules.
-- Update owning documentation when module ownership, contracts, or invariants change.
-
-## Correctness Invariants
-
-- Prefer authoritative state over heuristics.
-- Derive live activity from live channels, not persisted history.
-- Scope temporary fallbacks narrowly and clear them when authoritative state arrives.
-- Never let fetch failure masquerade as authoritative empty success.
-- Make partial results, rollback, cleanup, and stale-data behavior explicit.
-- One failed entity must not erase or block unrelated complete entities.
-- Runtime-specific differences must be intentional and visible in code.
-
-## Documentation Discovery
-
-Before changing a module, search for the nearest `DOCUMENTATION.md`; before package-level work, read its `README.md`. Discover docs dynamically under `packages/**/DOCUMENTATION.md` rather than relying on a static exhaustive map.
-
-High-value anchors:
-
-- Sync: `packages/ui/src/sync/DOCUMENTATION.md`
-- Stores: `packages/ui/src/stores/DOCUMENTATION.md`
-- CLI: `packages/web/bin/lib/DOCUMENTATION.md`
-- VS Code runtime: `packages/vscode/src/DOCUMENTATION.md`
-- Electron: `packages/electron/README.md`
-- Mobile: `packages/mobile/README.md`
-
-## Project Skills
-
-Project skills live under `.agents/skills/*/SKILL.md`. Before editing, load every matching skill; multiple skills may apply. Skills are canonical for their detailed workflows and checklists.
-
-| Trigger | Required skill |
-|---|---|
-| Any source, dependency, export, build-config, generated-asset, package-contract, or module-ownership change | `openchamber-change-discipline` |
-| CLI commands, prompts, terminal output, non-TTY, `--quiet`, or `--json` behavior | `clack-cli-patterns` |
-| Shared UI data access, OpenCode SDK, `RuntimeAPIs`, runtime fetch/auth/URLs, bridges/proxies, runtime switching, or server API routes | `ui-api-decoupling` |
-| Electron main/preload, IPC, native UI, updater, deep links, SSH/tunnels, packaging, or child processes | `desktop-shell` |
-| Session sync, bootstrap/reconnect, reducers, polling, optimistic state, queues, live status, reconciliation, or directory-scoped caches | `sync-state-invariants` |
-| Render/store/event hot paths, large lists, caching/indexing, high CPU/memory, lag, jank, freezes, or performance regressions | `performance-engineering` |
-| WebSocket, SSE, streaming transport, runtime transport internals, or private relay | `relay-transport` |
-| UI components, styling, colors, buttons, or icons | `theme-system` |
-| User-facing or accessible UI text, labels, aria, toasts, dialogs, or navigation copy | `locale-ui-patterns` |
-| Settings UI, settings dialogs, configuration surfaces, or settings search | `settings-ui-patterns` |
-| Sortable or drag-to-reorder behavior, especially `@dnd-kit` and touch/wrapping layouts | `drag-to-reorder` |
-| iOS Simulator build, launch, preview, gestures, or `serve-sim` control | `serve-sim` |
-
-Pure code-reading or explanation does not require implementation skills unless needed to interpret a specialized subsystem.
-
-## Validation
-
-- Use `package.json` scripts as the command source of truth.
-- Prefer focused tests and package-scoped type-check/lint for executable source changes.
-- Use workspace-wide checks for cross-workspace contracts, root tooling, dependencies, or shared generated assets.
-- Run `bun run dead-code` when source files are added/deleted/renamed or exports, types, entrypoints, or import shape change; inspect its report because it is non-blocking.
-- Do not assume TypeScript/lint covers server JS, CLI JS, Electron helpers, or native behavior; run focused tests, syntax checks, builds, or runtime validation for the touched surface.
-- For docs-only or isolated config changes, run the narrowest relevant validation.
-- Report exactly what was and was not validated. Static checks alone do not prove runtime, relay, performance, or platform correctness.
+- 上游逻辑得到完整保留，本仓库差异已按上游新逻辑重新判断。
+- 相关测试和运行验证通过，或明确记录无法验证的原因。
+- 必要的本机部署已经更新并验证。
+- 修改已经提交到 `main`。
+- `git status` 显示工作区干净。
