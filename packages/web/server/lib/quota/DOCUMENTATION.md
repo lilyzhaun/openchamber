@@ -24,6 +24,7 @@ These provider IDs are currently dispatchable via `fetchQuotaForProvider(provide
 | `github-copilot-addon` | GitHub Copilot Add-on | `providers/copilot.js` | `github-copilot`, `copilot` |
 | `kimi-for-coding` | Kimi for Coding | `providers/kimi.js` | `kimi-for-coding`, `kimi` |
 | `nano-gpt` | NanoGPT | `providers/nanogpt.js` | `nano-gpt`, `nanogpt`, `nano_gpt` |
+| `neuralwatt` | Neuralwatt | `providers/neuralwatt.js` | `neuralwatt`, `neural-watt`, `neural_watt` |
 | `openrouter` | OpenRouter | `providers/openrouter.js` | `openrouter` |
 | `zai-coding-plan` | z.ai | `providers/zai.js` | `zai-coding-plan`, `zai`, `z.ai` |
 | `zhipuai-coding-plan` | Zhipu AI Coding Plan | `providers/zhipuai-coding-plan.js` | `zhipuai-coding-plan`, `zhipuai`, `zhipu` |
@@ -32,6 +33,7 @@ These provider IDs are currently dispatchable via `fetchQuotaForProvider(provide
 | `ollama-cloud` | Ollama Cloud | `providers/ollama-cloud.js` | Manual cookie stored under `~/.config/openchamber/quota/` |
 | `wafer` | Wafer.ai | `providers/wafer.js` | `wafer`, `wafer-ai`, `wafer_ai`, `wafer.ai` |
 | `opencode-go` | OpenCode Go | `providers/opencode-go.js` | Manual workspace ID and auth cookie stored under `~/.config/openchamber/quota/` |
+| `xiaomi-token-plan` | Xiaomi Token Plan | `providers/xiaomi-token-plan.js` | Cookie file at `~/.config/xiaomi-token-plan/cookie` |
 
 ## Internal-only provider module
 - `providers/openai.js` exists for logic parity/reuse but is intentionally not registered for dispatcher ID routing.
