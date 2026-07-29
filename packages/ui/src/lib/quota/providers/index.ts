@@ -13,7 +13,6 @@ export const QUOTA_PROVIDERS: QuotaProviderMeta[] = [
   { id: 'google', name: 'Google' },
   { id: 'kimi-for-coding', name: 'Kimi for Coding' },
   { id: 'nano-gpt', name: 'NanoGPT' },
-  { id: 'neuralwatt', name: 'Neuralwatt' },
   { id: 'openrouter', name: 'OpenRouter' },
   { id: 'zai-coding-plan', name: 'z.ai' },
   { id: 'zhipuai-coding-plan', name: 'Zhipu AI Coding Plan' },
@@ -23,4 +22,6 @@ export const QUOTA_PROVIDERS: QuotaProviderMeta[] = [
   { id: 'xiaomi-token-plan', name: 'Xiaomi Token Plan' },
   { id: 'wafer', name: 'Wafer.ai' },
   { id: 'opencode-go', name: 'OpenCode Go' },
+  { id: 'crof', name: 'CrofAI' },
+  { id: 'neuralwatt', name: 'NeuralWatt' },
 ];

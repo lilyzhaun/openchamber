@@ -10,17 +10,18 @@ import { buildResult } from '../utils/index.js';
 import * as claude from './claude.js';
 import * as codex from './codex.js';
 import * as copilot from './copilot.js';
+import * as crof from './crof.js';
 import * as cursor from './cursor.js';
 import * as google from './google/index.js';
 import * as kimi from './kimi.js';
 import * as nanogpt from './nanogpt.js';
-import * as neuralwatt from './neuralwatt.js';
 import * as openai from './openai.js';
 import * as openrouter from './openrouter.js';
 import * as zai from './zai.js';
 import * as zhipuaiCodingPlan from './zhipuai-coding-plan.js';
 import * as minimaxCodingPlan from './minimax-coding-plan.js';
 import * as minimaxCnCodingPlan from './minimax-cn-coding-plan.js';
+import * as neuralwatt from './neuralwatt.js';
 import * as ollamaCloud from './ollama-cloud.js';
 import * as wafer from './wafer.js';
 import * as opencodeGo from './opencode-go.js';
@@ -38,6 +39,12 @@ const registry = {
     providerName: codex.providerName,
     isConfigured: codex.isConfigured,
     fetchQuota: codex.fetchQuota
+  },
+  crof: {
+    providerId: crof.providerId,
+    providerName: crof.providerName,
+    isConfigured: crof.isConfigured,
+    fetchQuota: crof.fetchQuota
   },
   cursor: {
     providerId: cursor.providerId,
@@ -81,12 +88,6 @@ const registry = {
     isConfigured: nanogpt.isConfigured,
     fetchQuota: nanogpt.fetchQuota
   },
-  neuralwatt: {
-    providerId: neuralwatt.providerId,
-    providerName: neuralwatt.providerName,
-    isConfigured: neuralwatt.isConfigured,
-    fetchQuota: neuralwatt.fetchQuota
-  },
   'github-copilot': {
     providerId: copilot.providerId,
     providerName: copilot.providerName,
@@ -128,6 +129,12 @@ const registry = {
     providerName: opencodeGo.providerName,
     isConfigured: opencodeGo.isConfigured,
     fetchQuota: opencodeGo.fetchQuota
+  },
+  neuralwatt: {
+    providerId: neuralwatt.providerId,
+    providerName: neuralwatt.providerName,
+    isConfigured: neuralwatt.isConfigured,
+    fetchQuota: neuralwatt.fetchQuota
   },
   'xiaomi-token-plan': {
     providerId: xiaomiTokenPlan.providerId,
@@ -191,7 +198,6 @@ export const fetchOpenRouterQuota = openrouter.fetchQuota;
 export const fetchZaiQuota = zai.fetchQuota;
 const fetchZhipuaiCodingPlanQuota = zhipuaiCodingPlan.fetchQuota;
 export const fetchNanoGptQuota = nanogpt.fetchQuota;
-export const fetchNeuralwattQuota = neuralwatt.fetchQuota;
 export const fetchMinimaxCodingPlanQuota = minimaxCodingPlan.fetchQuota;
 export const fetchMinimaxCnCodingPlanQuota = minimaxCnCodingPlan.fetchQuota;
 export const fetchOllamaCloudQuota = ollamaCloud.fetchQuota;

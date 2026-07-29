@@ -8,7 +8,6 @@ export type QuotaProviderId =
   | 'google'
   | 'kimi-for-coding'
   | 'nano-gpt'
-  | 'neuralwatt'
   | 'openrouter'
   | 'zai-coding-plan'
   | 'zhipuai-coding-plan'
@@ -16,8 +15,10 @@ export type QuotaProviderId =
   | 'minimax-cn-coding-plan'
   | 'ollama-cloud'
   | 'wafer'
-  | 'xiaomi-token-plan'
-  | 'opencode-go';
+  | 'opencode-go'
+  | 'crof'
+  | 'neuralwatt'
+  | 'xiaomi-token-plan';
 
 export interface UsageWindow {
   usedPercent: number | null;

@@ -1,139 +1,40 @@
 import { readAuthFile } from '../../opencode/auth.js';
 import {
-  buildResult,
-  formatMoney,
   getAuthEntry,
   normalizeAuthEntry,
+  buildResult,
+  toUsageWindow,
   toNumber,
   toTimestamp,
-  toUsageWindow,
+  formatMoney,
+  asNonEmptyString
 } from '../utils/index.js';
 
 export const providerId = 'neuralwatt';
-export const providerName = 'Neuralwatt';
-export const aliases = ['neuralwatt', 'neural-watt', 'neural_watt'];
+export const providerName = 'NeuralWatt';
+const aliases = ['neuralwatt'];
+const NEURALWATT_QUOTA_URL = 'https://api.neuralwatt.com/v1/quota';
 
-const formatUsd = (value) => {
-  const number = toNumber(value);
-  return number === null ? null : `$${formatMoney(number)} USD`;
+// 30d month / 365d year are fixed approximations; real calendars vary but the
+// window is for the UI's progress bar label, not billing decisions.
+const periodToWindowSeconds = (period) => {
+  if (period === 'daily') return 86400;
+  if (period === 'weekly') return 604800;
+  if (period === 'monthly' || period === 'month') return 30 * 86400;
+  if (period === 'yearly' || period === 'year') return 365 * 86400;
+  return null;
 };
 
-const formatUsdShort = (value) => {
-  const number = toNumber(value);
-  return number === null ? null : `$${formatMoney(number)}`;
-};
-
-const formatCount = (value) => {
-  const number = toNumber(value);
-  return number === null ? '0' : new Intl.NumberFormat('en-US').format(number);
-};
-
-const formatCompactTokens = (value) => {
-  const number = toNumber(value);
-  if (number === null) return null;
-  if (number >= 1_000_000_000) return `${(number / 1_000_000_000).toFixed(2)}B`;
-  if (number >= 100_000) return `${(number / 1_000_000).toFixed(2)}M`;
-  return new Intl.NumberFormat('en-US').format(number);
-};
-
-const formatCompactRequests = (value) => {
-  const number = toNumber(value);
-  if (number === null) return null;
-  return `${new Intl.NumberFormat('en-US').format(number)}#`;
-};
-
-const usageBrief = (usage) => {
-  const parts = [
-    formatCompactRequests(usage?.requests),
-    formatCompactTokens(usage?.tokens),
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(' · ') : null;
-};
-
-const usageBriefWithPercent = (usedPercent, usage) => {
-  const percentLabel = typeof usedPercent === 'number' && Number.isFinite(usedPercent)
-    ? `${Math.round(usedPercent)}%`
-    : null;
-  const parts = [percentLabel, usageBrief(usage)].filter(Boolean);
-  return parts.length > 0 ? parts.join(' · ') : null;
-};
-
-const MONTH_WINDOW_SECONDS = 30 * 24 * 60 * 60;
-
-const kwhLabel = (value) => {
-  const number = toNumber(value);
-  if (number === null) return null;
-  if (number < 1) return `${(number * 1000).toFixed(1)} Wh`;
-  return `${number.toFixed(4)} kWh`;
-};
-
-const monthlyLabel = (usage) => {
-  const cost = formatUsd(usage?.cost_usd);
-  const energy = kwhLabel(usage?.energy_kwh);
-  const parts = [cost, energy].filter(Boolean);
-  return parts.length > 0 ? parts.join(' · ') : null;
-};
-
-const percentUsed = (used, total) => {
-  const usedNumber = toNumber(used);
-  const totalNumber = toNumber(total);
-  if (usedNumber === null || totalNumber === null || totalNumber <= 0) return null;
-  return Math.max(0, Math.min(100, (usedNumber / totalNumber) * 100));
-};
-
-export const parseNeuralwattQuota = (payload) => {
-  const balance = payload?.balance;
-  const usage = payload?.usage;
-  const subscription = payload?.subscription;
-  const windows = {};
-
-  const kwhUsed = toNumber(subscription?.kwh_used);
-  const kwhIncluded = toNumber(subscription?.kwh_included);
-  const resetAt = toTimestamp(subscription?.kwh_reset_date ?? subscription?.current_period_end);
-  const currentMonthUsage = usage?.current_month && typeof usage.current_month === 'object' ? usage.current_month : null;
-
-  if (kwhUsed !== null || kwhIncluded !== null) {
-    const usedPercent = percentUsed(kwhUsed, kwhIncluded);
-    windows.billing_cycle = toUsageWindow({
-      usedPercent,
-      windowSeconds: kwhIncluded !== null ? MONTH_WINDOW_SECONDS : null,
-      resetAt,
-      valueLabel: currentMonthUsage ? usageBriefWithPercent(usedPercent, currentMonthUsage) : null,
-    });
-  }
-
-  if (currentMonthUsage) {
-    windows.monthly = toUsageWindow({
-      usedPercent: percentUsed(kwhUsed ?? currentMonthUsage.energy_kwh, kwhIncluded),
-      windowSeconds: kwhIncluded !== null ? MONTH_WINDOW_SECONDS : null,
-      resetAt: null,
-      valueLabel: monthlyLabel(currentMonthUsage) ?? usageSummary(currentMonthUsage),
-    });
-  }
-
-  const balanceShort = formatUsdShort(balance?.credits_remaining_usd);
-  if (balanceShort) {
-    windows.credits_balance = toUsageWindow({
-      usedPercent: percentUsed(balance?.credits_used_usd, balance?.total_credits_usd),
-      windowSeconds: null,
-      resetAt: null,
-      valueLabel: balanceShort,
-    });
-  }
-
-  return windows;
-};
-
-const getApiKey = () => {
+export const isConfigured = () => {
   const auth = readAuthFile();
   const entry = normalizeAuthEntry(getAuthEntry(auth, aliases));
-  return entry?.key ?? entry?.token;
+  return Boolean(entry?.key || entry?.token);
 };
 
-export const isConfigured = () => Boolean(getApiKey());
-
 export const fetchQuota = async () => {
-  const apiKey = getApiKey();
+  const auth = readAuthFile();
+  const entry = normalizeAuthEntry(getAuthEntry(auth, aliases));
+  const apiKey = entry?.key ?? entry?.token;
 
   if (!apiKey) {
     return buildResult({
@@ -141,17 +42,20 @@ export const fetchQuota = async () => {
       providerName,
       ok: false,
       configured: false,
-      error: 'Not configured',
+      error: 'Not configured'
     });
   }
 
+  const timeoutSignal = AbortSignal.timeout(15_000);
+
   try {
-    const response = await fetch('https://api.neuralwatt.com/v1/quota', {
+    const response = await fetch(NEURALWATT_QUOTA_URL, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        'Accept-Encoding': 'identity'
       },
+      signal: timeoutSignal
     });
 
     if (!response.ok) {
@@ -160,27 +64,111 @@ export const fetchQuota = async () => {
         providerName,
         ok: false,
         configured: true,
-        error: `API error: ${response.status}`,
+        error: response.status === 401
+          ? 'Session expired — please re-authenticate with NeuralWatt'
+          : `API error: ${response.status}`
       });
     }
 
     const payload = await response.json();
-    const windows = parseNeuralwattQuota(payload);
+    const subscription = payload?.subscription ?? null;
+    const inOverage = Boolean(subscription?.in_overage);
+    const allowance = payload?.key?.allowance ?? null;
+    const keyName = payload?.key?.name ?? null;
+    const creditsRemaining = toNumber(payload?.balance?.credits_remaining_usd);
+
+    const windows = {};
+
+    if (subscription) {
+      const kwhIncluded = toNumber(subscription.kwh_included);
+      const kwhUsed = toNumber(subscription.kwh_used);
+      const plan = asNonEmptyString(subscription.plan);
+      // Subscription window title is the plan name; subscription limits reset
+      // monthly even on annual billing plans, but the API exposes no kWh window
+      // start to derive windowSeconds — pass null rather than fabricating a guess.
+      const subKey = plan ?? 'plan_limit';
+      const usedPercent = inOverage
+        ? 100
+        : (kwhIncluded !== null && kwhIncluded > 0 && kwhUsed !== null
+            ? Math.max(0, Math.min(100, (kwhUsed / kwhIncluded) * 100))
+            : null);
+      const subResetAt = toTimestamp(subscription.kwh_reset_date) ?? toTimestamp(subscription.current_period_end);
+      windows[subKey] = toUsageWindow({
+        usedPercent,
+        windowSeconds: null,
+        resetAt: subResetAt
+      });
+    }
+
+    if (allowance) {
+      const spent = toNumber(allowance.spent_usd);
+      const limit = toNumber(allowance.limit_usd);
+      // Credits wallet is reduced by each period's spend before the allowance cap
+      // bites, so the real ceiling is min(limit, creditsRemaining + spent).
+      const effectiveSpent = spent ?? 0;
+      const effectiveLimit = limit !== null && creditsRemaining !== null
+        ? Math.min(limit, creditsRemaining + effectiveSpent)
+        : (limit ?? creditsRemaining);
+      const period = asNonEmptyString(allowance.period);
+      const blocked = Boolean(allowance.blocked);
+      const usedPercent = blocked
+        ? 100
+        : (spent !== null && effectiveLimit !== null && effectiveLimit > 0
+            ? Math.max(0, Math.min(100, (spent / effectiveLimit) * 100))
+            : null);
+      // Window title is the localized period label (daily/weekly/monthly); key
+      // name is attached via valueLabel for identification (wafer precedent).
+      const periodKey = (period === 'daily' || period === 'weekly' || period === 'monthly' || period === 'month')
+        ? (period === 'month' ? 'monthly' : period)
+        : 'billing_cycle';
+      const labelName = asNonEmptyString(keyName);
+      const resetAt = toTimestamp(allowance.reset_at);
+      const windowSeconds = period ? periodToWindowSeconds(period) : null;
+      windows[periodKey] = toUsageWindow({
+        usedPercent,
+        windowSeconds,
+        resetAt,
+        ...(labelName ? { valueLabel: labelName } : {})
+      });
+    } else if (creditsRemaining !== null) {
+      windows.credits_balance = toUsageWindow({
+        usedPercent: null,
+        windowSeconds: null,
+        resetAt: null,
+        valueLabel: `$${formatMoney(creditsRemaining)}`
+      });
+    }
+
+    if (Object.keys(windows).length === 0) {
+      return buildResult({
+        providerId,
+        providerName,
+        ok: false,
+        configured: true,
+        error: 'No quota data in response'
+      });
+    }
 
     return buildResult({
       providerId,
       providerName,
       ok: true,
       configured: true,
-      usage: { windows },
+      usage: { windows }
     });
   } catch (error) {
+    const isTimeout = error instanceof DOMException && error.name === 'AbortError' && timeoutSignal.aborted;
+    const isParseError = error instanceof SyntaxError;
     return buildResult({
       providerId,
       providerName,
       ok: false,
       configured: true,
-      error: error instanceof Error ? error.message : 'Request failed',
+      error: isTimeout
+        ? 'Request timed out'
+        : isParseError
+          ? 'Invalid response from provider'
+          : (error instanceof Error ? error.message : 'Request failed')
     });
   }
 };
