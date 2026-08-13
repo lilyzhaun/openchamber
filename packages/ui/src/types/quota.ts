@@ -19,6 +19,7 @@ export type QuotaProviderId =
   | 'crof'
   | 'deepseek'
   | 'neuralwatt'
+  | 'xai'
   | 'xiaomi-token-plan';
 
 export interface UsageWindow {
