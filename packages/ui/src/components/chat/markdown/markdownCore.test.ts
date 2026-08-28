@@ -49,7 +49,10 @@ import { escapeRawMarkdownHtml, isLocalFileUrl, MARKDOWN_FORBIDDEN_TAGS } from '
 const {
   __markdownImageCandidateCacheForTests,
   extractMarkdownImageCandidates,
+  getCachedMarkdownBlocks,
+  renderMarkdownBlocks,
   renderMarkdownSync,
+  resetMarkdownHtmlCacheForTests,
 } = await import('./markdownCore');
 const { resolveMarkdownImageSource } = await import('./markdownImageAssets');
 
@@ -88,6 +91,47 @@ describe('markdown sanitization', () => {
     expect(html).not.toContain('href="ms-msdt:/id%20PCWDiagnostic"');
   });
 
+});
+
+describe('Markdown block cache reads', () => {
+  test('returns all settled blocks synchronously after a full cache hit', async () => {
+    resetMarkdownHtmlCacheForTests();
+    const text = '**cached** settled markdown';
+
+    expect(getCachedMarkdownBlocks(text)).toBeNull();
+    const rendered = await renderMarkdownBlocks(text, false);
+
+    expect(getCachedMarkdownBlocks(text)).toEqual(rendered);
+  });
+
+  test('returns null for a cold or partial settled miss', async () => {
+    resetMarkdownHtmlCacheForTests();
+    const first = 'first settled block';
+    const changed = 'first settled block\n\nsecond settled block';
+
+    await renderMarkdownBlocks(first, false);
+
+    expect(getCachedMarkdownBlocks(changed)).toBeNull();
+  });
+
+  test('keeps image mode identity out of the settled full hit', async () => {
+    resetMarkdownHtmlCacheForTests();
+    const text = '![image](https://example.test/image.png)';
+
+    await renderMarkdownBlocks(text, false, 'inline');
+
+    expect(getCachedMarkdownBlocks(text, 'label')).toBeNull();
+    expect(getCachedMarkdownBlocks(text, 'inline')).not.toBeNull();
+  });
+
+  test('does not treat streaming live-cache entries as settled full hits', async () => {
+    resetMarkdownHtmlCacheForTests();
+    const text = 'streaming markdown';
+
+    await renderMarkdownBlocks(text, true);
+
+    expect(getCachedMarkdownBlocks(text)).toBeNull();
+  });
 });
 
 describe('Markdown images', () => {
@@ -233,5 +277,32 @@ describe('Markdown images', () => {
 
     expect(html).toContain('<img src="https://example.test/image.png"');
     expect(html).not.toContain('data-openchamber-markdown-image');
+  });
+});
+
+describe('CJK-aware link parsing', () => {
+  const hrefOf = (html: string): string | null => /<a\b[^>]*href="([^"]*)"/.exec(html)?.[1] ?? null;
+
+  test('bare URL followed by a CJK annotation trims the annotation from the href', () => {
+    const html = renderMarkdownSync('访问 https://example.com/docs（中文说明）了解更多');
+    expect(hrefOf(html)).toBe('https://example.com/docs');
+  });
+
+  test('bare URL followed by CJK punctuation trims the punctuation', () => {
+    expect(hrefOf(renderMarkdownSync('地址 https://example.com/guide，详见'))).toBe(
+      'https://example.com/guide',
+    );
+    expect(hrefOf(renderMarkdownSync('官网 https://example.com。'))).toBe('https://example.com');
+  });
+
+  test('correct links are unaffected', () => {
+    expect(hrefOf(renderMarkdownSync('官方文档见 [这里](https://docs.example.com)（中文说明）'))).toBe(
+      'https://docs.example.com',
+    );
+    expect(hrefOf(renderMarkdownSync('[下载](https://dl.example.com/安装包（正式版）)'))).toBe(
+      'https://dl.example.com/安装包（正式版）',
+    );
+    expect(hrefOf(renderMarkdownSync('[a](url(1))'))).toBe('url(1)');
+    expect(hrefOf(renderMarkdownSync('[a](url "title")'))).toBe('url');
   });
 });

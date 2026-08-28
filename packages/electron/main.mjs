@@ -33,6 +33,7 @@ import {
 } from './linux-autostart.mjs';
 import { unsupportedAppSpecificOpenError, validateLocalPath } from './path-open-utils.mjs';
 import { shouldAllowBrowserPanelCertificateError } from './browser-panel-security.mjs';
+import { attachRendererRecovery } from './renderer-recovery.mjs';
 import { mintOutsideFileGrant } from '@openchamber/web/server/lib/fs/routes.js';
 
 const execFileAsync = promisify(execFile);
@@ -1240,7 +1241,15 @@ const registerPackagedUiProtocol = () => {
         if (filePath.endsWith('.html')) {
           const html = await fsp.readFile(filePath, 'utf8');
           const body = injectRuntimeConfigIntoHtml(html);
-          return new Response(body, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+          // index.html must never be cached: it names the hashed asset
+          // bundles, and a cached copy keeps a freshly installed build
+          // loading the previous version's UI from the renderer disk cache.
+          return new Response(body, {
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'no-store',
+            },
+          });
         }
         return electronNet.fetch(pathToFileURL(filePath).toString());
       }
@@ -1361,7 +1370,7 @@ const maybeShowNativeNotification = (rawInput) => {
   notification.on('click', () => {
     focusForegroundWindow();
     if (sessionId) {
-      emitToAllWindows('openchamber:open-session', { sessionId, directory });
+      emitToPrimaryWindow('openchamber:open-session', { sessionId, directory });
     }
     release();
   });
@@ -1762,6 +1771,15 @@ const computeBootOutcome = ({ envTargetUrl, probe, config, localAvailable }) => 
       : probe?.status === 'wrong-service'
         ? 'wrong-service'
         : 'ok';
+  // A relay-capable host is not a recovery case just because its stored
+  // direct URL failed the http probe — that URL is often the pairing
+  // creator's own loopback (unreachable here, or worse, someone else's
+  // service). The relay leg is activated in the renderer's relay restore,
+  // which cannot run from a recovery screen: boot to main on the local
+  // substrate and let it pick direct-or-relay.
+  if (status !== 'ok' && sanitizeHostRelayForStorage(host.relay)) {
+    return { target: 'remote', status: 'ok', hostId: host.id, url: host.apiUrl || host.url, ...availability };
+  }
   return { target: 'remote', status, hostId: host.id, url: host.apiUrl || host.url, ...availability };
 };
 
@@ -1987,6 +2005,18 @@ const emitToAllWindows = (event, detail) => {
   for (const browserWindow of BrowserWindow.getAllWindows()) {
     emitToWindow(browserWindow, event, detail);
   }
+};
+
+// Session navigation must land in ONE window. Broadcasting it makes every
+// open window adopt the same session, hijacking whatever the other windows
+// were doing.
+const emitToPrimaryWindow = (event, detail) => {
+  const windows = BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed());
+  if (windows.length === 0) return;
+  const target = (state.mainWindow && !state.mainWindow.isDestroyed())
+    ? state.mainWindow
+    : windows.find((window) => window.isFocused()) || windows.find((window) => window.isVisible()) || windows[0];
+  emitToWindow(target, event, detail);
 };
 
 const setTaskbarProgress = (value) => {
@@ -2270,7 +2300,7 @@ const dispatchDeepLink = (link) => {
   }
 
   if (link.type === 'session' && link.value) {
-    emitToAllWindows('openchamber:open-session', { sessionId: link.value });
+    emitToPrimaryWindow('openchamber:open-session', { sessionId: link.value });
     return;
   }
   if (link.type === 'host' && link.value) {
@@ -2627,6 +2657,7 @@ const createBrowserWindow = ({ label, restoreGeometry, url, runtimeConfig = {} }
   browserWindow.webContents.on('zoom-changed', () => {
     browserWindow.webContents.setZoomFactor(1);
   });
+  attachRendererRecovery(browserWindow, { log, label: 'window' });
 
   browserWindow.webContents.on('dom-ready', () => {
     if (browserWindow.__ocLabel === 'main') {
@@ -2864,6 +2895,8 @@ const createMiniChatWindow = async ({ mode, sessionId = '', directory = '', proj
   browserWindow.__ocMiniChatSessionId = sessionWindowKey;
   browserWindow.__ocPinned = false;
 
+  attachRendererRecovery(browserWindow, { log, label: 'mini chat' });
+
   if (sessionWindowKey) {
     state.miniChatWindowsBySession.set(sessionWindowKey, browserWindow);
   }
@@ -3005,12 +3038,24 @@ const resolveInitialUrl = async () => {
     }
   }
 
+  const defaultHostRelayCapable = Boolean(
+    config.defaultHostId
+    && config.defaultHostId !== LOCAL_HOST_ID
+    && sanitizeHostRelayForStorage(config.hosts.find((entry) => entry.id === config.defaultHostId)?.relay),
+  );
   if (apiBaseUrl && apiBaseUrl !== localUrl) {
     remoteProbe = await probeHostWithTimeout(apiBaseUrl, 2_000, clientToken, requestHeaders);
-    if (remoteProbe.status === 'unreachable') {
+    if (remoteProbe.status === 'unreachable' && !defaultHostRelayCapable) {
       remoteProbe = await probeHostWithTimeout(apiBaseUrl, 10_000, clientToken, requestHeaders);
     }
-    if (remoteProbe.status === 'unreachable') {
+    // The renderer's relay restore owns transport selection for relay-capable
+    // hosts; any failed direct probe falls back to the local substrate.
+    if (remoteProbe.status !== 'ok' && defaultHostRelayCapable) {
+      apiBaseUrl = localUrl || '';
+      clientToken = localUrl ? readDesktopLocalClientToken() : '';
+      requestHeaders = {};
+      initialUrl = localUiUrl;
+    } else if (remoteProbe.status === 'unreachable') {
       state.unreachableHosts.add(apiBaseUrl);
       apiBaseUrl = localUrl || '';
       clientToken = localUrl ? readDesktopLocalClientToken() : '';
